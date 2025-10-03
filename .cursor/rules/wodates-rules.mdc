@@ -1,0 +1,31 @@
+---
+alwaysApply: true
+---
+
+# Wodates Project Rules (Lean)
+
+- **Project**: Wodates v0.1 — strict MVP (no AI/premium). Local/in-memory data; Supabase is **interfaces only**.
+- **Stack (mandated)**: React Native + Expo (TS) for mobile; Node 20 + Fastify (TS) for backend.
+- **Architecture**: Clean Architecture + Ports & Adapters in **both** projects.
+  - `domain/` = entities, use-cases, repo interfaces, zod schemas (no external deps)
+  - `data/`   = repo impls, data-sources (AsyncStorage/InMemory now; Supabase later), mappers, seeds
+  - `app/`    = UI (mobile screens/components/stores/navigation) or HTTP (routes/controllers/middleware/plugins)
+- **Dependency rule**:
+  - `domain` → cannot import `data` nor `app`
+  - `data`   → can import `domain`, not `app`
+  - `app`    → can import `domain` and `data`
+- **Type safety & validation**: TypeScript **strict**; **Zod** at all boundaries (API req/res, forms, env, storage).
+- **Error model**: use-cases return `Result<T,E>`; **no throws**. Map domain errors → HTTP in backend.
+- **State (mobile)**: Zustand slices (auth, profile, feed, matches, chat). **UI never calls repos directly** (only use-cases).
+- **API**: version under `/api/v1` + **OpenAPI** generated. CORS in dev. Pino logging.
+- **Data v0.1**: backend **in-memory**; mobile **AsyncStorage**. Provide **seed with 10 users**.
+- **Constraints**: 1 profile photo; **text-only chat**; **polling every 5s**; **no Supabase implementation**; **no realtime**.
+- **Deliverables**: monorepo (`/mobile-app`, `/backend-api`, `/docs`), ESLint+Prettier, path aliases, `.env.example`, **min 2 tests** (key use-cases), clear README quick-start.
+- **Style**: English identifiers/comments; minimal deps (justify new ones).
+- **Navigation (mobile)**: Expo Router standard (file-based routing).
+  - All screens live under `/app` as lowercase files (e.g. `login.tsx`, `feed.tsx`, `chat.tsx`, `matches.tsx`).
+  - No `/screens` directory; no manual `Stack.Navigator` or `NavigationContainer`.
+  - Each file exports a PascalCase React component (e.g. `Login`, `Feed`, `Chat`, `Matches`).
+
+
+> Anything beyond v0.1 (JWT flow details, rate limits, pagination sizes, Supabase SQL/RLS) goes in `docs/ARCHITECTURE.md` and **MUST NOT** be implemented now.

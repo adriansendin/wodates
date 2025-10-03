@@ -1,0 +1,123 @@
+import { FastifyInstance } from 'fastify';
+import { FeedController } from '../controllers/feed-controller';
+import { z } from 'zod';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    getFeedUsers: any;
+    likeUser: any;
+    passUser: any;
+    authMiddleware: any;
+  }
+}
+
+const LikeSchema = z.object({
+  targetUserId: z.string().uuid(),
+});
+
+const PassSchema = z.object({
+  targetUserId: z.string().uuid(),
+});
+
+export async function feedRoutes(fastify: FastifyInstance) {
+  const feedController = new FeedController(
+    fastify.getFeedUsers,
+    fastify.likeUser,
+    fastify.passUser
+  );
+
+  fastify.get('/feed', {
+    schema: {
+      description: 'Get feed users',
+      tags: ['feed'],
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          limit: { type: 'number', minimum: 1, maximum: 50, default: 10 },
+          offset: { type: 'number', minimum: 0, default: 0 },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            users: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  bio: { type: 'string' },
+                  photoUrl: { type: 'string' },
+                  age: { type: 'number' },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                limit: { type: 'number' },
+                offset: { type: 'number' },
+                hasMore: { type: 'boolean' },
+              },
+            },
+          },
+        },
+      },
+    },
+    preHandler: fastify.authMiddleware,
+  }, feedController.getFeed.bind(feedController));
+
+  fastify.post('/likes', {
+    schema: {
+      description: 'Like a user',
+      tags: ['feed'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['targetUserId'],
+        properties: {
+          targetUserId: { type: 'string', format: 'uuid' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            action: { type: 'string' },
+            result: { type: 'object' },
+            isMatch: { type: 'boolean' },
+          },
+        },
+      },
+    },
+    preHandler: fastify.authMiddleware,
+  }, feedController.likeUser.bind(feedController));
+
+  fastify.post('/passes', {
+    schema: {
+      description: 'Pass on a user',
+      tags: ['feed'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['targetUserId'],
+        properties: {
+          targetUserId: { type: 'string', format: 'uuid' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            action: { type: 'string' },
+            result: { type: 'object' },
+          },
+        },
+      },
+    },
+    preHandler: fastify.authMiddleware,
+  }, feedController.passUser.bind(feedController));
+}

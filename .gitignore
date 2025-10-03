@@ -1,0 +1,186 @@
+# ===========================================
+# WODATES PROJECT - GITIGNORE
+# ===========================================
+# Monorepo: React Native + Expo + Node.js + Fastify
+# Clean Architecture + TypeScript + Testing
+
+# ===========================================
+# DEPENDENCIES
+# ===========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===========================================
+# ENVIRONMENT VARIABLES
+# ===========================================
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ===========================================
+# BUILD OUTPUTS
+# ===========================================
+# TypeScript compilation
+dist/
+build/
+*.tsbuildinfo
+
+# Expo/React Native
+.expo/
+.expo-shared/
+web-build/
+
+# Next.js (if used)
+.next/
+
+# ===========================================
+# TESTING
+# ===========================================
+# Coverage reports
+coverage/
+.nyc_output/
+.vitest/
+test-results/
+playwright-report/
+test-results.xml
+
+# Jest
+jest-cache/
+
+# ===========================================
+# LOGS
+# ===========================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ===========================================
+# RUNTIME DATA
+# ===========================================
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ===========================================
+# IDE & EDITORS
+# ===========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# ===========================================
+# OS GENERATED FILES
+# ===========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ===========================================
+# MOBILE SPECIFIC (React Native / Expo)
+# ===========================================
+# Native builds
+android/app/build/
+ios/build/
+ios/Pods/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+
+# Native certificates and keys
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.keystore
+
+# Metro bundler
+.metro-health-check*
+
+# ===========================================
+# BACKEND SPECIFIC
+# ===========================================
+uploads/
+temp/
+tmp/
+*.tmp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# ===========================================
+# CACHE
+# ===========================================
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# ===========================================
+# SECURITY & SECRETS
+# ===========================================
+*.pem
+*.p12
+*.key
+*.crt
+*.csr
+secrets/
+.secrets/
+
+# ===========================================
+# DOCUMENTATION BUILD
+# ===========================================
+docs/_build/
+docs/build/
+
+# ===========================================
+# BACKUP FILES
+# ===========================================
+*.bak
+*.backup
+*.old
+*.orig
+
+# ===========================================
+# TEMPORARY FILES
+# ===========================================
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# ===========================================
+# PACKAGE MANAGER LOCK FILES
+# ===========================================
+# Keep package-lock.json but ignore others
+yarn.lock
+pnpm-lock.yaml

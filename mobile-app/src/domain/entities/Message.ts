@@ -1,0 +1,17 @@
+import { z } from 'zod';
+
+export const MessageSchema = z.object({
+  id: z.string().uuid(),
+  matchId: z.string().uuid(),
+  senderId: z.string().uuid(),
+  content: z.string().min(1).max(1000),
+  createdAt: z.string().datetime(),
+});
+
+export const CreateMessageSchema = MessageSchema.omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Message = z.infer<typeof MessageSchema>;
+export type CreateMessage = z.infer<typeof CreateMessageSchema>;
