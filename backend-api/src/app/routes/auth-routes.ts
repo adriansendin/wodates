@@ -1,7 +1,5 @@
 import { FastifyInstance } from 'fastify';
 import { AuthController } from '../controllers/auth-controller';
-import { RegisterSchema, LoginSchema } from '../../domain/entities/Auth';
-import { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 declare module 'fastify' {
   interface FastifyInstance {

@@ -1,24 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { useFeedStore } from '../domain/stores/feedStore';
-import { useAuthStore } from '../domain/stores/authStore';
-import { FeedApi } from '../data/api/feedApi';
-import { ApiClient } from '../data/api/apiClient';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useFeedStore } from '../../src/domain/stores/feedStore';
+import { useAuthStore } from '../../src/domain/stores/authStore';
+import { FeedApi } from '../../src/data/api/feedApi';
+import { ApiClient } from '../../src/data/api/apiClient';
 
-const { width, height } = Dimensions.get('window');
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
+const getAge = (birthDate?: string) => {
+  if (!birthDate) {
+    return undefined;
+  }
+
+  const date = new Date(birthDate);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const monthDiff = now.getMonth() - date.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+    age -= 1;
+  }
+
+  return age;
+};
+
 export default function FeedScreen() {
-  const { users, currentIndex, isLoading, hasMore, setUsers, addUsers, nextUser, setLoading, setError } = useFeedStore();
+  const { users, currentIndex, isLoading, setUsers, nextUser, setLoading, setError } =
+    useFeedStore();
   const { tokens } = useAuthStore();
   const [isLiking, setIsLiking] = useState(false);
   const [isPassing, setIsPassing] = useState(false);
@@ -28,6 +40,7 @@ export default function FeedScreen() {
 
   useEffect(() => {
     loadFeed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadFeed = async () => {
@@ -61,7 +74,7 @@ export default function FeedScreen() {
       const result = await feedApi.likeUser(currentUser.id, tokens.accessToken);
       if (result.success) {
         if (result.data.isMatch) {
-          Alert.alert('It\'s a Match!', 'You and this person liked each other!');
+          Alert.alert("It's a Match!", 'You and this person liked each other!');
         }
         nextUser();
       } else {
@@ -117,6 +130,8 @@ export default function FeedScreen() {
     );
   }
 
+  const age = getAge(currentUser.birthDate);
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -126,10 +141,13 @@ export default function FeedScreen() {
           resizeMode="cover"
         />
         <View style={styles.overlay}>
-          <Text style={styles.name}>{currentUser.name}</Text>
-          {currentUser.bio && (
-            <Text style={styles.bio}>{currentUser.bio}</Text>
-          )}
+          <Text style={styles.name}>
+            {currentUser.name}
+            {typeof age === 'number' ? `, ${age}` : ''}
+          </Text>
+          <Text style={styles.bio} numberOfLines={3}>
+            {currentUser.bio || 'This user has not added a bio yet.'}
+          </Text>
         </View>
       </View>
 
@@ -139,7 +157,7 @@ export default function FeedScreen() {
           onPress={handlePass}
           disabled={isPassing}
         >
-          <Text style={styles.actionButtonText}>✕</Text>
+          <Ionicons name="close" size={28} color="#fff" />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -147,7 +165,7 @@ export default function FeedScreen() {
           onPress={handleLike}
           disabled={isLiking}
         >
-          <Text style={styles.actionButtonText}>♥</Text>
+          <Ionicons name="heart" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>
@@ -254,10 +272,5 @@ const styles = StyleSheet.create({
   },
   likeButton: {
     backgroundColor: '#4ecdc4',
-  },
-  actionButtonText: {
-    fontSize: 24,
-    color: '#fff',
-    fontWeight: 'bold',
   },
 });

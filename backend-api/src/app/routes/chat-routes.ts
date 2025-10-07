@@ -1,6 +1,5 @@
 import { FastifyInstance } from 'fastify';
 import { ChatController } from '../controllers/chat-controller';
-import { z } from 'zod';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -9,10 +8,6 @@ declare module 'fastify' {
     authMiddleware: any;
   }
 }
-
-const SendMessageSchema = z.object({
-  content: z.string().min(1).max(1000),
-});
 
 export async function chatRoutes(fastify: FastifyInstance) {
   const chatController = new ChatController(

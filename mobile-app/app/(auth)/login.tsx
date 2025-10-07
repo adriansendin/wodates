@@ -9,23 +9,29 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useAuthStore } from '../domain/stores/authStore';
-import { AuthApi } from '../data/api/authApi';
-import { ApiClient } from '../data/api/apiClient';
+import { useRouter } from 'expo-router';
+import { useAuthStore } from '../../src/domain/stores/authStore';
+import { AuthApi } from '../../src/data/api/authApi';
+import { ApiClient } from '../../src/data/api/apiClient';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const router = useRouter();
+  const [email, setEmail] = useState('bob@example.com');
+  const [password, setPassword] = useState('password123');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login, setError, clearError } = useAuthStore();
-  
+
   const apiClient = new ApiClient(API_URL);
   const authApi = new AuthApi(apiClient);
 
   const handleLogin = async () => {
+    console.log('🔵 Login button pressed');
+    console.log('📧 Email:', email);
+    console.log('🔑 Password:', password ? '***' : 'empty');
+    
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -35,16 +41,22 @@ export default function LoginScreen() {
     clearError();
 
     try {
+      console.log('🌐 Making API call to:', API_URL + '/auth/login');
       const result = await authApi.login({ email, password });
-      
+      console.log('📡 API Response:', result);
+
       if (result.success) {
         const { user, token } = result.data;
+        console.log('✅ Login successful, user:', user.name);
         login(user, { accessToken: token, refreshToken: '', expiresIn: 0 });
+        router.replace('/(app)/feed');
       } else {
+        console.log('❌ Login failed:', result.error.message);
         setError(result.error.message);
         Alert.alert('Login Failed', result.error.message);
       }
     } catch (error) {
+      console.log('💥 Network error:', error);
       setError('Network error');
       Alert.alert('Error', 'Network error. Please try again.');
     } finally {
@@ -53,14 +65,14 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
         <Text style={styles.title}>WODATES</Text>
-        <Text style={styles.subtitle}>Find your perfect match</Text>
-        
+        <Text style={styles.subtitle}>Find your perfect match(login)</Text>
+
         <View style={styles.form}>
           <TextInput
             style={styles.input}
@@ -71,7 +83,7 @@ export default function LoginScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
-          
+
           <TextInput
             style={styles.input}
             placeholder="Password"
@@ -81,11 +93,15 @@ export default function LoginScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
-          
+
           <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
+            style={[
+              styles.button, 
+              isLoading && styles.buttonDisabled,
+              (!email || !password) && styles.buttonDisabled
+            ]}
             onPress={handleLogin}
-            disabled={isLoading}
+            disabled={isLoading || !email || !password}
           >
             <Text style={styles.buttonText}>
               {isLoading ? 'Logging in...' : 'Login'}

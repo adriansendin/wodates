@@ -17,30 +17,25 @@ jest.mock('expo-constants', () => ({
   },
 }));
 
-// Mock navigation
-jest.mock('@react-navigation/native', () => ({
-  NavigationContainer: ({ children }) => children,
-  useNavigation: () => ({
-    navigate: jest.fn(),
-    goBack: jest.fn(),
-  }),
-  useRoute: () => ({
-    params: {},
-  }),
-}));
+// Mock Expo Router primitives for tests
+jest.mock('expo-router', () => {
+  const React = require('react');
+  const createStub = () => {
+    const Component = ({ children }) => React.createElement(React.Fragment, null, children);
+    Component.Screen = ({ children }) => React.createElement(React.Fragment, null, children);
+    return Component;
+  };
 
-// Mock React Navigation Stack
-jest.mock('@react-navigation/stack', () => ({
-  createStackNavigator: () => ({
-    Navigator: ({ children }) => children,
-    Screen: ({ children }) => children,
-  }),
-}));
-
-// Mock React Navigation Bottom Tabs
-jest.mock('@react-navigation/bottom-tabs', () => ({
-  createBottomTabNavigator: () => ({
-    Navigator: ({ children }) => children,
-    Screen: ({ children }) => children,
-  }),
-}));
+  return {
+    Link: ({ children }) => React.createElement(React.Fragment, null, children),
+    Redirect: () => null,
+    Stack: createStub(),
+    Tabs: createStub(),
+    useRouter: () => ({
+      push: jest.fn(),
+      replace: jest.fn(),
+      back: jest.fn(),
+    }),
+    useLocalSearchParams: jest.fn(() => ({})),
+  };
+});

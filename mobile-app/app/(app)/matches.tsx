@@ -8,28 +8,37 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { useMatchesStore } from '../domain/stores/matchesStore';
-import { useAuthStore } from '../domain/stores/authStore';
+import { useRouter } from 'expo-router';
+import { useMatchesStore } from '../../src/domain/stores/matchesStore';
+import { useAuthStore } from '../../src/domain/stores/authStore';
 
-export default function MatchesScreen({ navigation }: { navigation: any }) {
+type MatchWithUser = ReturnType<typeof useMatchesStore.getState>['matches'][number];
+
+export default function MatchesScreen() {
+  const router = useRouter();
   const { matches, isLoading, setMatches, setLoading } = useMatchesStore();
   const { user } = useAuthStore();
 
   useEffect(() => {
-    // In v0.1, we'll use mock data
-    // In production, fetch from API
     setLoading(true);
-    
-    // Mock matches data
-    const mockMatches = [
+
+    const now = new Date().toISOString();
+
+    const mockMatches: MatchWithUser[] = [
       {
         id: '1',
         userId1: user?.id || 'user-1',
         userId2: 'user-2',
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         otherUser: {
           id: 'user-2',
+          email: 'alice@example.com',
           name: 'Alice Johnson',
+          birthDate: new Date(1995, 5, 15).toISOString(),
+          gender: 'female',
+          createdAt: now,
+          updatedAt: now,
+          bio: 'Crossfit and yoga lover.',
           photoUrl: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400',
         },
         lastMessage: {
@@ -37,7 +46,7 @@ export default function MatchesScreen({ navigation }: { navigation: any }) {
           matchId: '1',
           senderId: 'user-2',
           content: 'Hey! How are you?',
-          createdAt: new Date().toISOString(),
+          createdAt: now,
         },
         unreadCount: 2,
       },
@@ -45,10 +54,16 @@ export default function MatchesScreen({ navigation }: { navigation: any }) {
         id: '2',
         userId1: user?.id || 'user-1',
         userId2: 'user-3',
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         otherUser: {
           id: 'user-3',
+          email: 'bob@example.com',
           name: 'Bob Smith',
+          birthDate: new Date(1992, 10, 5).toISOString(),
+          gender: 'male',
+          createdAt: now,
+          updatedAt: now,
+          bio: 'Runner and nutrition geek.',
           photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
         },
         lastMessage: {
@@ -56,33 +71,39 @@ export default function MatchesScreen({ navigation }: { navigation: any }) {
           matchId: '2',
           senderId: user?.id || 'user-1',
           content: 'Thanks for the match!',
-          createdAt: new Date().toISOString(),
+          createdAt: now,
         },
         unreadCount: 0,
       },
     ];
-    
-    setTimeout(() => {
+
+    const timeout = setTimeout(() => {
       setMatches(mockMatches);
       setLoading(false);
     }, 1000);
+
+    return () => clearTimeout(timeout);
   }, [user, setMatches, setLoading]);
 
-  const handleMatchPress = (match: any) => {
-    navigation.navigate('Chat', { matchId: match.id, otherUser: match.otherUser });
+  const handleMatchPress = (match: MatchWithUser) => {
+    router.push({
+      pathname: '/chat/[matchId]',
+      params: {
+        matchId: match.id,
+        name: match.otherUser?.name ?? 'Chat',
+        photoUrl: match.otherUser?.photoUrl ?? '',
+      },
+    });
   };
 
-  const renderMatch = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.matchItem}
-      onPress={() => handleMatchPress(item)}
-    >
+  const renderMatch = ({ item }: { item: MatchWithUser }) => (
+    <TouchableOpacity style={styles.matchItem} onPress={() => handleMatchPress(item)}>
       <Image
-        source={{ uri: item.otherUser.photoUrl || 'https://via.placeholder.com/60x60' }}
+        source={{ uri: item.otherUser?.photoUrl || 'https://via.placeholder.com/60x60' }}
         style={styles.avatar}
       />
       <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{item.otherUser.name}</Text>
+        <Text style={styles.matchName}>{item.otherUser?.name ?? 'Unknown user'}</Text>
         <Text style={styles.lastMessage} numberOfLines={1}>
           {item.lastMessage?.content || 'No messages yet'}
         </Text>
@@ -110,15 +131,10 @@ export default function MatchesScreen({ navigation }: { navigation: any }) {
       {matches.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No matches yet</Text>
-          <Text style={styles.emptySubtext}>Keep swiping to find your perfect match!</Text>
+          <Text style={styles.emptySubtext}>Keep swiping to find your perfect match(matches)!</Text>
         </View>
       ) : (
-        <FlatList
-          data={matches}
-          renderItem={renderMatch}
-          keyExtractor={(item) => item.id}
-          style={styles.matchesList}
-        />
+        <FlatList data={matches} renderItem={renderMatch} keyExtractor={(item) => item.id} />
       )}
     </View>
   );
@@ -162,9 +178,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
-  },
-  matchesList: {
-    flex: 1,
   },
   matchItem: {
     flexDirection: 'row',

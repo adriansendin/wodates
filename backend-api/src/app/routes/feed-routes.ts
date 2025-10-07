@@ -1,6 +1,5 @@
 import { FastifyInstance } from 'fastify';
 import { FeedController } from '../controllers/feed-controller';
-import { z } from 'zod';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -10,14 +9,6 @@ declare module 'fastify' {
     authMiddleware: any;
   }
 }
-
-const LikeSchema = z.object({
-  targetUserId: z.string().uuid(),
-});
-
-const PassSchema = z.object({
-  targetUserId: z.string().uuid(),
-});
 
 export async function feedRoutes(fastify: FastifyInstance) {
   const feedController = new FeedController(

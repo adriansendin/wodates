@@ -4,12 +4,12 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.(ts|tsx|js)', '**/*.(test|spec).(ts|tsx|js)'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
+    'app/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/tests/**',
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@domain/(.*)$': '<rootDir>/src/domain/$1',
     '^@data/(.*)$': '<rootDir>/src/data/$1',
-    '^@app/(.*)$': '<rootDir>/src/app/$1',
   },
 };
