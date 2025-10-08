@@ -29,7 +29,7 @@ export default function Home() {
 
       <Link href="/(auth)/login" asChild>
         <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Iniciar Sesion</Text>
+          <Text style={styles.buttonText}>Iniciar Sesion2</Text>
         </TouchableOpacity>
       </Link>
     </View>
