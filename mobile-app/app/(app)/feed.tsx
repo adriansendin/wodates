@@ -31,12 +31,19 @@ const getAge = (birthDate?: string) => {
 export default function FeedScreen() {
   const { users, currentIndex, isLoading, setUsers, nextUser, setLoading, setError } =
     useFeedStore();
-  const { tokens } = useAuthStore();
+  const { tokens, user } = useAuthStore(); // Agregar 'user' aquí
   const [isLiking, setIsLiking] = useState(false);
   const [isPassing, setIsPassing] = useState(false);
 
   const apiClient = new ApiClient(API_URL);
   const feedApi = new FeedApi(apiClient);
+
+  const welcomeMessage = user?.name ? `Hola ${user.name}` : 'Hola';
+  const renderWelcome = () => (
+    <View style={styles.welcomeContainer}>
+      <Text style={styles.welcomeText}>{welcomeMessage}</Text>
+    </View>
+  );
 
   useEffect(() => {
     loadFeed();
@@ -113,6 +120,7 @@ export default function FeedScreen() {
   if (isLoading && users.length === 0) {
     return (
       <View style={styles.loadingContainer}>
+        {renderWelcome()}
         <ActivityIndicator size="large" color="#e91e63" />
         <Text style={styles.loadingText}>Loading feed...</Text>
       </View>
@@ -122,6 +130,7 @@ export default function FeedScreen() {
   if (!currentUser) {
     return (
       <View style={styles.emptyContainer}>
+        {renderWelcome()}
         <Text style={styles.emptyText}>No more users to show</Text>
         <TouchableOpacity style={styles.refreshButton} onPress={loadFeed}>
           <Text style={styles.refreshButtonText}>Refresh</Text>
@@ -134,6 +143,8 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.container}>
+      {renderWelcome()}
+
       <View style={styles.card}>
         <Image
           source={{ uri: currentUser.photoUrl || 'https://via.placeholder.com/300x400' }}
@@ -272,5 +283,26 @@ const styles = StyleSheet.create({
   },
   likeButton: {
     backgroundColor: '#4ecdc4',
+  },
+  welcomeContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 5,
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginTop: 10,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  welcomeText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#e91e63',
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 });
