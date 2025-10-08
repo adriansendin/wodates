@@ -8,6 +8,7 @@ import { authMiddleware } from './middleware/auth';
 import { authRoutes } from './routes/auth-routes';
 import { feedRoutes } from './routes/feed-routes';
 import { chatRoutes } from './routes/chat-routes';
+import { userRoutes } from './routes/user-routes';
 
 // Import repositories
 import { InMemoryUserRepository } from '../data/repositories/InMemoryUserRepository';
@@ -106,6 +107,7 @@ async function buildApp() {
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
   await fastify.register(feedRoutes, { prefix: '/api/v1' });
   await fastify.register(chatRoutes, { prefix: '/api/v1' });
+  await fastify.register(userRoutes, { prefix: '/api/v1' });
 
   // Health check
   fastify.get('/health', async () => {

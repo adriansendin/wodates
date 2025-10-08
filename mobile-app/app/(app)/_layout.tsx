@@ -19,6 +19,7 @@ export default function AppTabsLayout() {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
             feed: focused ? 'heart' : 'heart-outline',
             matches: focused ? 'people' : 'people-outline',
+            profile: focused ? 'person' : 'person-outline',
           };
 
           return <Ionicons name={icons[route.name] ?? 'ellipse'} size={size} color={color} />;
@@ -35,6 +36,12 @@ export default function AppTabsLayout() {
         name="matches"
         options={{
           title: 'Matches',
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Perfil',
         }}
       />
     </Tabs>
