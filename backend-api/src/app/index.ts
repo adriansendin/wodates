@@ -31,16 +31,21 @@ import { GetMessages } from '../domain/use-cases/chat/GetMessages';
 import { demoUsers, demoPreferences } from '../data/seeds/demo-users';
 
 async function buildApp() {
+  const logLevel = process.env.FASTIFY_LOG_LEVEL ?? (process.env.NODE_ENV === 'development' ? 'warn' : 'info');
+
   const fastify = Fastify({
-    logger: process.env.NODE_ENV === 'development' ? {
-      level: 'info',
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-        },
-      },
-    } : true,
+    logger: process.env.NODE_ENV === 'development'
+      ? {
+          level: logLevel,
+          transport: {
+            target: 'pino-pretty',
+            options: {
+              colorize: true,
+            },
+          },
+        }
+      : { level: logLevel },
+    disableRequestLogging: logLevel !== 'info',
   }).withTypeProvider<ZodTypeProvider>();
 
   // Register plugins

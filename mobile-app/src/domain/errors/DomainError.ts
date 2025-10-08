@@ -37,3 +37,13 @@ export class NetworkError extends DomainError {
   readonly code = 'NETWORK_ERROR';
   readonly statusCode = 0;
 }
+
+export class ServerError extends DomainError {
+  readonly code = 'SERVER_ERROR';
+  readonly statusCode = 500;
+}
+
+export class UnexpectedError extends DomainError {
+  readonly code = 'UNEXPECTED_ERROR';
+  readonly statusCode = 520;
+}

@@ -1,6 +1,16 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { Result, success, failure } from '../../domain/Result';
-import { DomainError, NetworkError, UnauthorizedError } from '../../domain/errors/DomainError';
+import {
+  ConflictError,
+  DomainError,
+  ForbiddenError,
+  NetworkError,
+  NotFoundError,
+  ServerError,
+  UnauthorizedError,
+  UnexpectedError,
+  ValidationError,
+} from '../../domain/errors/DomainError';
 
 export class ApiClient {
   private client: AxiosInstance;
@@ -78,16 +88,36 @@ export class ApiClient {
     }
     
     if (axios.isAxiosError(error)) {
-      if (error.response?.status === 401) {
-        return new UnauthorizedError('Unauthorized');
+      const status = error.response?.status;
+      const message =
+        typeof error.response?.data === 'object' && error.response?.data !== null && 'message' in error.response.data
+          ? String((error.response.data as { message?: unknown }).message ?? error.message)
+          : error.message;
+
+      if (!status) {
+        return new NetworkError(message ?? 'Network error');
       }
-      if (error.response?.status === 404) {
-        return new DomainError('Not found');
+
+      if (status === 400) {
+        return new ValidationError(message ?? 'Invalid request');
       }
-      if (error.response?.status >= 500) {
-        return new DomainError('Server error');
+      if (status === 401) {
+        return new UnauthorizedError(message ?? 'Unauthorized');
       }
-      return new DomainError(error.message);
+      if (status === 403) {
+        return new ForbiddenError(message ?? 'Forbidden');
+      }
+      if (status === 404) {
+        return new NotFoundError(message ?? 'Not found');
+      }
+      if (status === 409) {
+        return new ConflictError(message ?? 'Conflict detected');
+      }
+      if (status >= 500) {
+        return new ServerError(message ?? 'Server error');
+      }
+
+      return new UnexpectedError(message ?? 'Unexpected response');
     }
     
     return new NetworkError('Unknown error');

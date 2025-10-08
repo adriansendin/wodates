@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,6 +29,11 @@ type FormState = {
   city: string;
 };
 
+type Feedback = {
+  type: 'success' | 'error' | 'info';
+  message: string;
+};
+
 const emptyForm: FormState = {
   birthDate: '',
   gender: '',
@@ -38,6 +43,26 @@ const emptyForm: FormState = {
   bio: '',
   city: '',
 };
+
+const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
+  birthDate: nextProfile?.birthDate ?? '',
+  gender: nextProfile?.gender ?? '',
+  looking_for: nextProfile?.looking_for ?? '',
+  min_age: nextProfile?.min_age?.toString() ?? '',
+  max_age: nextProfile?.max_age?.toString() ?? '',
+  bio: nextProfile?.bio ?? '',
+  city: nextProfile?.city ?? '',
+});
+
+const formFields: (keyof FormState)[] = [
+  'birthDate',
+  'gender',
+  'looking_for',
+  'min_age',
+  'max_age',
+  'bio',
+  'city',
+];
 
 const isValidDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
@@ -56,6 +81,16 @@ export default function ProfileScreen() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const baselineForm = useMemo(() => (profile ? mapProfileToForm(profile) : emptyForm), [profile]);
+  const isPristine = useMemo(() => {
+    if (!profile) {
+      return false;
+    }
+    return formFields.every((field) => baselineForm[field] === form[field]);
+  }, [baselineForm, form, profile]);
+  const isSaveDisabled = isSaving || isPristine || isLoading;
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
@@ -65,27 +100,27 @@ export default function ProfileScreen() {
       return;
     }
 
+    setFeedback(null);
     setIsLoading(true);
     try {
       const result = await profileApi.getProfile(tokens.accessToken);
       if (result.success) {
         const nextProfile = result.data;
         setProfile(nextProfile);
-        setForm({
-          birthDate: nextProfile.birthDate ?? '',
-          gender: nextProfile.gender ?? '',
-          looking_for: nextProfile.looking_for ?? '',
-          min_age: nextProfile.min_age?.toString() ?? '',
-          max_age: nextProfile.max_age?.toString() ?? '',
-          bio: nextProfile.bio ?? '',
-          city: nextProfile.city ?? '',
-        });
+        setForm(mapProfileToForm(nextProfile));
+        setFormErrors({});
       } else {
-        Alert.alert('Error', result.error.message ?? 'No se pudo cargar el perfil.');
+        setFeedback({
+          type: 'error',
+          message: result.error.message ?? 'No se pudo cargar el perfil.',
+        });
       }
     } catch (error) {
       console.error('[Profile] loadProfile error', error);
-      Alert.alert('Error', 'No se pudo cargar el perfil. Inténtalo de nuevo.');
+      setFeedback({
+        type: 'error',
+        message: 'No se pudo cargar el perfil. Intentalo de nuevo.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -100,68 +135,120 @@ export default function ProfileScreen() {
       ...prev,
       [field]: value,
     }));
+    setFormErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   };
 
   const handleSave = async () => {
     if (!tokens?.accessToken) {
-      Alert.alert('Sesión expirada', 'Vuelve a iniciar sesión para guardar los cambios.');
+      setFeedback({
+        type: 'error',
+        message: 'Sesion expirada. Vuelve a iniciar sesion para guardar los cambios.',
+      });
       return;
     }
 
-    if (form.birthDate && !isValidDate(form.birthDate)) {
-      Alert.alert('Fecha inválida', 'Usa el formato YYYY-MM-DD para la fecha de nacimiento.');
-      return;
+    const nextErrors: Partial<Record<keyof FormState, string>> = {};
+
+    const trimmedBirthDate = form.birthDate.trim();
+    const birthDateValue = trimmedBirthDate ? trimmedBirthDate : null;
+    const trimmedGender = form.gender.trim();
+    const trimmedLookingFor = form.looking_for.trim();
+    const trimmedBio = form.bio.trim();
+    const trimmedCity = form.city.trim();
+    if (birthDateValue && !isValidDate(birthDateValue)) {
+      nextErrors.birthDate = 'Usa el formato YYYY-MM-DD.';
     }
 
     const minAge = toNullableNumber(form.min_age);
     if (Number.isNaN(minAge)) {
-      Alert.alert('Edad mínima inválida', 'Introduce un número válido para la edad mínima.');
-      return;
+      nextErrors.min_age = 'Introduce un numero valido.';
     }
 
     const maxAge = toNullableNumber(form.max_age);
     if (Number.isNaN(maxAge)) {
-      Alert.alert('Edad máxima inválida', 'Introduce un número válido para la edad máxima.');
+      nextErrors.max_age = 'Introduce un numero valido.';
+    }
+
+    if (
+      nextErrors.min_age === undefined &&
+      nextErrors.max_age === undefined &&
+      minAge !== null &&
+      maxAge !== null &&
+      minAge > maxAge
+    ) {
+      nextErrors.min_age = 'La edad minima no puede ser mayor que la maxima.';
+      nextErrors.max_age = 'La edad maxima debe ser mayor o igual a la minima.';
+    }
+
+    if (trimmedGender && trimmedGender.length > 50) {
+      nextErrors.gender = 'No puede superar 50 caracteres.';
+    }
+
+    if (trimmedLookingFor && trimmedLookingFor.length > 100) {
+      nextErrors.looking_for = 'Describe lo que buscas en 100 caracteres o menos.';
+    }
+
+    if (trimmedBio.length > 500) {
+      nextErrors.bio = 'La biografia no puede superar 500 caracteres.';
+    }
+
+    if (trimmedCity && trimmedCity.length > 100) {
+      nextErrors.city = 'La ciudad no puede superar 100 caracteres.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFormErrors(nextErrors);
+      setFeedback({
+        type: 'error',
+        message: 'Revisa los campos resaltados antes de guardar.',
+      });
       return;
     }
 
-    if (minAge !== null && maxAge !== null && minAge > maxAge) {
-      Alert.alert('Rango de edad inválido', 'La edad mínima no puede ser mayor que la máxima.');
-      return;
-    }
+    setFormErrors({});
 
     const payload: UpdateUserProfile = {
-      birthDate: form.birthDate.trim() ? form.birthDate.trim() : null,
-      gender: form.gender.trim() ? form.gender.trim() : null,
-      looking_for: form.looking_for.trim() ? form.looking_for.trim() : null,
+      birthDate: birthDateValue,
+      gender: trimmedGender ? trimmedGender : null,
+      looking_for: trimmedLookingFor ? trimmedLookingFor : null,
       min_age: minAge,
       max_age: maxAge,
-      bio: form.bio.trim() ? form.bio.trim() : null,
-      city: form.city.trim() ? form.city.trim() : null,
+      bio: trimmedBio ? trimmedBio : null,
+      city: trimmedCity ? trimmedCity : null,
     };
 
     setIsSaving(true);
+    setFeedback(null);
     try {
       const result = await profileApi.updateProfile(payload, tokens.accessToken);
       if (result.success) {
         const updated = result.data;
         setProfile(updated);
-        setForm({
-          birthDate: updated.birthDate ?? '',
-          gender: updated.gender ?? '',
-          looking_for: updated.looking_for ?? '',
-          min_age: updated.min_age?.toString() ?? '',
-          max_age: updated.max_age?.toString() ?? '',
-          bio: updated.bio ?? '',
-          city: updated.city ?? '',
+        setForm(mapProfileToForm(updated));
+        setFormErrors({});
+        setFeedback({
+          type: 'success',
+          message: 'Perfil actualizado correctamente.',
         });
-        Alert.alert('Perfil actualizado', 'Tus cambios se han guardado correctamente.');
       } else {
-        Alert.alert('Error', result.error.message ?? 'No se pudo actualizar el perfil.');
+        setFeedback({
+          type: 'error',
+          message: result.error.message ?? 'No se pudo actualizar el perfil.',
+        });
       }
     } catch (error) {
       console.error('[Profile] handleSave error', error);
-      Alert.alert('Error', 'No se pudo actualizar el perfil. Inténtalo de nuevo.');
+      setFeedback({
+        type: 'error',
+        message: 'No se pudo actualizar el perfil. Intentalo de nuevo.',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -171,16 +258,41 @@ export default function ProfileScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.infoText}>
-          Tu sesión no es válida. Inicia sesión de nuevo para ver tu perfil.
+          Tu sesion no es valida. Inicia sesion de nuevo para ver tu perfil.
         </Text>
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={isLoading}
+          onRefresh={loadProfile}
+          tintColor="#e91e63"
+        />
+      }
+      keyboardShouldPersistTaps="handled"
+    >
+      {feedback && (
+        <View
+          style={[
+            styles.banner,
+            feedback.type === 'success'
+              ? styles.bannerSuccess
+              : feedback.type === 'info'
+              ? styles.bannerInfo
+              : styles.bannerError,
+          ]}
+        >
+          <Text style={styles.bannerText}>{feedback.message}</Text>
+        </View>
+      )}
+
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Información básica</Text>
+        <Text style={styles.sectionTitle}>Informacion basica</Text>
         <View style={styles.readonlyField}>
           <Text style={styles.label}>Nombre</Text>
           <Text style={styles.valueText}>
@@ -192,83 +304,138 @@ export default function ProfileScreen() {
         <View style={styles.field}>
           <Text style={styles.label}>Fecha de nacimiento (YYYY-MM-DD)</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              formErrors.birthDate ? styles.inputError : null,
+            ]}
             placeholder="1990-05-12"
             value={form.birthDate}
             onChangeText={handleChange('birthDate')}
             keyboardType="numbers-and-punctuation"
+            autoCapitalize="none"
           />
+          {formErrors.birthDate ? (
+            <Text style={styles.errorText}>{formErrors.birthDate}</Text>
+          ) : (
+            <Text style={styles.helperText}>Usa el formato 1990-05-12.</Text>
+          )}
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Género</Text>
+          <Text style={styles.label}>Genero</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              formErrors.gender ? styles.inputError : null,
+            ]}
             placeholder="female / male / non-binary / other"
             value={form.gender}
             onChangeText={handleChange('gender')}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
+          {formErrors.gender ? (
+            <Text style={styles.errorText}>{formErrors.gender}</Text>
+          ) : null}
         </View>
 
         <View style={styles.field}>
           <Text style={styles.label}>Busco</Text>
           <TextInput
-            style={styles.input}
-            placeholder="Describe a quién buscas"
+            style={[
+              styles.input,
+              formErrors.looking_for ? styles.inputError : null,
+            ]}
+            placeholder="Describe a quien buscas"
             value={form.looking_for}
             onChangeText={handleChange('looking_for')}
+            autoCapitalize="sentences"
           />
+          {formErrors.looking_for ? (
+            <Text style={styles.errorText}>{formErrors.looking_for}</Text>
+          ) : null}
         </View>
 
         <View style={styles.row}>
           <View style={[styles.field, styles.rowField]}>
-            <Text style={styles.label}>Edad mínima</Text>
+            <Text style={styles.label}>Edad minima</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                formErrors.min_age ? styles.inputError : null,
+              ]}
               placeholder="18"
               value={form.min_age}
               onChangeText={handleChange('min_age')}
               keyboardType="number-pad"
             />
+            {formErrors.min_age ? (
+              <Text style={styles.errorText}>{formErrors.min_age}</Text>
+            ) : null}
           </View>
           <View style={[styles.field, styles.rowField]}>
-            <Text style={styles.label}>Edad máxima</Text>
+            <Text style={styles.label}>Edad maxima</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                formErrors.max_age ? styles.inputError : null,
+              ]}
               placeholder="99"
               value={form.max_age}
               onChangeText={handleChange('max_age')}
               keyboardType="number-pad"
             />
+            {formErrors.max_age ? (
+              <Text style={styles.errorText}>{formErrors.max_age}</Text>
+            ) : null}
           </View>
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Biografía</Text>
+          <Text style={styles.label}>Biografia</Text>
           <TextInput
-            style={[styles.input, styles.multiline]}
-            placeholder="Cuéntanos algo sobre ti"
+            style={[
+              styles.input,
+              styles.multiline,
+              formErrors.bio ? styles.inputError : null,
+            ]}
+            placeholder="Cuentanos algo sobre ti"
             value={form.bio}
             onChangeText={handleChange('bio')}
             multiline
             numberOfLines={4}
           />
+          {formErrors.bio ? (
+            <Text style={styles.errorText}>{formErrors.bio}</Text>
+          ) : (
+            <Text style={styles.helperText}>Puedes escribir hasta 500 caracteres.</Text>
+          )}
         </View>
 
         <View style={styles.field}>
           <Text style={styles.label}>Ciudad</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              formErrors.city ? styles.inputError : null,
+            ]}
             placeholder="Barcelona"
             value={form.city}
             onChangeText={handleChange('city')}
+            autoCapitalize="words"
           />
+          {formErrors.city ? (
+            <Text style={styles.errorText}>{formErrors.city}</Text>
+          ) : null}
         </View>
 
         <TouchableOpacity
-          style={[styles.button, isSaving && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            isSaveDisabled ? styles.buttonDisabled : null,
+          ]}
           onPress={handleSave}
-          disabled={isSaving}
+          disabled={isSaveDisabled}
         >
           {isSaving ? (
             <ActivityIndicator color="#fff" />
@@ -293,6 +460,32 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
     backgroundColor: '#f5f5f5',
+  },
+  banner: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#f0f0f0',
+  },
+  bannerSuccess: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#2e7d32',
+  },
+  bannerInfo: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#1976d2',
+  },
+  bannerError: {
+    backgroundColor: '#fdecea',
+    borderColor: '#d32f2f',
+  },
+  bannerText: {
+    textAlign: 'center',
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '500',
   },
   card: {
     backgroundColor: '#fff',
@@ -334,6 +527,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fafafa',
   },
+  inputError: {
+    borderColor: '#d32f2f',
+  },
   multiline: {
     minHeight: 100,
     textAlignVertical: 'top',
@@ -351,6 +547,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#d32f2f',
   },
   overlay: {
     position: 'absolute',
@@ -398,3 +598,4 @@ const styles = StyleSheet.create({
     color: '#999',
   },
 });
+

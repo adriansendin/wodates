@@ -2,7 +2,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
   DomainError,
   InternalError,
-  NotFoundError,
 } from '../../domain/errors/DomainError';
 
 type SupabaseConfig = {
@@ -12,6 +11,7 @@ type SupabaseConfig = {
 
 type UserProfileRow = {
   id: string;
+  email: string | null;
   name: string | null;
   birthDate: string | null;
   gender: string | null;
@@ -64,32 +64,8 @@ export class SupabaseUserService {
 
   async getProfile(userId: string): Promise<UserProfile> {
     try {
-      const existingProfile = await this.findProfileRow(userId);
-      if (existingProfile) {
-        return this.mapRow(existingProfile);
-      }
-
-      const defaultName = await this.resolveUserName(userId);
-      const { data, error } = await this.client
-        .from('users')
-        .insert({
-          id: userId,
-          name: defaultName,
-        })
-        .select(
-          'id, name, birthDate, gender, looking_for, min_age, max_age, bio, city',
-        )
-        .single();
-
-      if (error) {
-        throw new InternalError('Failed to create user profile record', error);
-      }
-
-      if (!data) {
-        throw new InternalError('Supabase did not return a profile row');
-      }
-
-      return this.mapRow(data as UserProfileRow);
+      const profile = await this.ensureProfileRow(userId);
+      return this.mapRow(profile);
     } catch (error) {
       if (error instanceof DomainError) {
         throw error;
@@ -104,10 +80,7 @@ export class SupabaseUserService {
     input: UpdateUserProfileInput,
   ): Promise<UserProfile> {
     try {
-      const profile = await this.findProfileRow(userId);
-      if (!profile) {
-        throw new NotFoundError('User profile not found');
-      }
+      const profile = await this.ensureProfileRow(userId);
 
       const updatePayload: Record<string, unknown> = {};
 
@@ -142,12 +115,20 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, name, birthDate, gender, looking_for, min_age, max_age, bio, city',
+          'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city',
         )
         .single();
 
       if (error) {
-        throw new InternalError('Failed to update user profile', error);
+        console.error('[SupabaseUserService] updateProfile failed', {
+          userId,
+          input,
+          error,
+        });
+        throw new InternalError(
+          `Failed to update user profile: ${this.formatSupabaseError(error)}`,
+          error,
+        );
       }
 
       if (!data) {
@@ -164,33 +145,129 @@ export class SupabaseUserService {
     }
   }
 
+  private async ensureProfileRow(userId: string): Promise<UserProfileRow> {
+    const existingProfile = await this.findProfileRow(userId);
+    if (existingProfile) {
+      return existingProfile;
+    }
+
+    const defaults = await this.resolveAuthUserDefaults(userId);
+
+    const { data, error } = await this.client
+      .from('users')
+      .upsert(defaults, { onConflict: 'id' })
+      .select(
+        'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city',
+      )
+      .single();
+
+    if (error) {
+      console.error('[SupabaseUserService] ensureProfileRow upsert failed', {
+        userId,
+        defaults,
+        error,
+      });
+      throw new InternalError(
+        `Failed to create user profile record: ${this.formatSupabaseError(error)}`,
+        error,
+      );
+    }
+
+    if (!data) {
+      throw new InternalError('Supabase did not return a profile row');
+    }
+
+    return data as UserProfileRow;
+  }
+
   private async findProfileRow(
     userId: string,
   ): Promise<UserProfileRow | null> {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, name, birthDate, gender, looking_for, min_age, max_age, bio, city',
+        'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city',
       )
       .eq('id', userId)
       .maybeSingle();
 
     if (error) {
-      throw new InternalError('Failed to query user profile', error);
+      console.error('[SupabaseUserService] findProfileRow query failed', {
+        userId,
+        error,
+      });
+      throw new InternalError(
+        `Failed to query user profile: ${this.formatSupabaseError(error)}`,
+        error,
+      );
     }
 
     return (data as UserProfileRow | null) ?? null;
   }
 
-  private async resolveUserName(userId: string): Promise<string> {
+  private async resolveAuthUserDefaults(userId: string) {
     const { data, error } = await this.client.auth.admin.getUserById(userId);
     if (error) {
-      throw new InternalError('Unable to resolve Supabase auth user', error);
+      console.error('[SupabaseUserService] resolveAuthUserDefaults failed', {
+        userId,
+        error,
+      });
+      throw new InternalError(
+        `Unable to resolve Supabase auth user: ${this.formatSupabaseError(error)}`,
+        error,
+      );
     }
 
     const metadata = data?.user?.user_metadata as Record<string, unknown> | null;
     const email = data?.user?.email ?? undefined;
 
+    if (!email) {
+      throw new InternalError('Supabase auth user is missing mandatory email');
+    }
+
+    const name = this.resolveName(metadata, email);
+
+    let birthDate: string | null = null;
+    if (metadata && typeof metadata.birthDate === 'string') {
+      const trimmed = metadata.birthDate.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        birthDate = trimmed;
+      }
+    }
+
+    const gender =
+      metadata && typeof metadata.gender === 'string'
+        ? metadata.gender.trim() || null
+        : null;
+
+    const city =
+      metadata && typeof metadata.city === 'string'
+        ? metadata.city.trim() || null
+        : null;
+
+    const bio =
+      metadata && typeof metadata.bio === 'string'
+        ? metadata.bio.trim() || null
+        : null;
+
+    return {
+      id: userId,
+      name,
+      email,
+      birthDate,
+      gender,
+      looking_for: null,
+      min_age: null,
+      max_age: null,
+      bio,
+      city,
+    };
+  }
+
+  private resolveName(
+    metadata: Record<string, unknown> | null,
+    email: string | undefined,
+  ): string {
     if (metadata && typeof metadata.name === 'string') {
       const trimmed = metadata.name.trim();
       if (trimmed) {
@@ -220,6 +297,26 @@ export class SupabaseUserService {
       bio: row.bio,
       city: row.city,
     };
+  }
+
+  private formatSupabaseError(error: unknown): string {
+    if (error && typeof error === 'object') {
+      const maybeMessage = (error as { message?: unknown }).message;
+      const maybeDetails = (error as { details?: unknown }).details;
+      const maybeHint = (error as { hint?: unknown }).hint;
+
+      const segments = [
+        typeof maybeMessage === 'string' ? maybeMessage.trim() : null,
+        typeof maybeDetails === 'string' ? maybeDetails.trim() : null,
+        typeof maybeHint === 'string' ? maybeHint.trim() : null,
+      ].filter((segment): segment is string => Boolean(segment));
+
+      if (segments.length > 0) {
+        return segments.join(' | ');
+      }
+    }
+
+    return typeof error === 'string' ? error : 'Unknown Supabase error';
   }
 
   private resolveConfig(config?: Partial<SupabaseConfig>): SupabaseConfig {
