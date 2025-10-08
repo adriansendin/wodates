@@ -39,6 +39,9 @@ export class GetFeedUsers {
     const filteredUsers: User[] = [];
     
     for (const user of feedUsers) {
+      if (user.id === userId) {
+        continue;
+      }
       const hasLikedResult = await this.likeRepository.hasLiked(userId, user.id);
       const hasPassedResult = await this.passRepository.hasPassed(userId, user.id);
       

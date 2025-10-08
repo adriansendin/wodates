@@ -16,6 +16,8 @@
       "type-check": "tsc --noEmit"
     },
     "dependencies": {
+      "@supabase/supabase-js": "2.45.4",
+      "dotenv": "16.4.5",
       "fastify": "4.28.1",
       "@fastify/cors": "8.4.2",
       "@fastify/rate-limit": "9.1.0",

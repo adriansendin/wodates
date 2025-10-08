@@ -1,64 +1,61 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { RegisterUser } from '../../domain/use-cases/auth/RegisterUser';
-import { LoginUser } from '../../domain/use-cases/auth/LoginUser';
 import { RegisterSchema, LoginSchema } from '../../domain/entities/Auth';
 import { DomainError } from '../../domain/errors/DomainError';
+import { SupabaseAuthService } from '../services/supabase-auth-service';
+import { ZodError } from 'zod';
 
 export class AuthController {
-  constructor(
-    private registerUser: RegisterUser,
-    private loginUser: LoginUser
-  ) {}
+  constructor(private readonly authService: SupabaseAuthService) {}
 
   async register(request: FastifyRequest, reply: FastifyReply) {
     try {
       const userData = RegisterSchema.parse(request.body);
-      
-      const result = await this.registerUser.execute(userData);
-      
-      if (result.success) {
-        const user = result.data;
-        const token = this.generateToken(user.id, user.email);
-        
-        return reply.status(201).send({
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-          },
-          token,
-        });
-      } else {
-        return this.handleError(reply, result.error);
-      }
+
+      const user = await this.authService.registerUser(userData);
+      const token = this.generateToken(user.id, user.email);
+
+      return reply.status(201).send({
+        user: this.buildResponseUser(user),
+        token,
+      });
     } catch (error) {
-      return this.handleValidationError(reply, error);
+      if (error instanceof DomainError) {
+        return this.handleError(reply, error);
+      }
+
+      if (error instanceof ZodError) {
+        return this.handleValidationError(reply, error);
+      }
+
+      return this.handleUnexpectedError(reply, error);
     }
   }
 
   async login(request: FastifyRequest, reply: FastifyReply) {
     try {
+      request.log.info({ body: request.body }, 'Login request received');
+
       const { email, password } = LoginSchema.parse(request.body);
-      
-      const result = await this.loginUser.execute(email, password);
-      
-      if (result.success) {
-        const user = result.data;
-        const token = this.generateToken(user.id, user.email);
-        
-        return reply.send({
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-          },
-          token,
-        });
-      } else {
-        return this.handleError(reply, result.error);
-      }
+
+      const user = await this.authService.validateCredentials(email, password);
+      const token = this.generateToken(user.id, user.email);
+
+      request.log.info({ userId: user.id, email: user.email }, 'Login successful');
+
+      return reply.send({
+        user: this.buildResponseUser(user),
+        token,
+      });
     } catch (error) {
-      return this.handleValidationError(reply, error);
+      if (error instanceof DomainError) {
+        return this.handleError(reply, error);
+      }
+
+      if (error instanceof ZodError) {
+        return this.handleValidationError(reply, error);
+      }
+
+      return this.handleUnexpectedError(reply, error);
     }
   }
 
@@ -104,11 +101,27 @@ export class AuthController {
     });
   }
 
-  private handleValidationError(reply: FastifyReply, error: unknown) {
+  private handleValidationError(reply: FastifyReply, error: ZodError) {
     return reply.status(400).send({
       error: 'VALIDATION_ERROR',
       message: 'Invalid request data',
+      details: error.flatten(),
+    });
+  }
+
+  private handleUnexpectedError(reply: FastifyReply, error: unknown) {
+    return reply.status(500).send({
+      error: 'INTERNAL_ERROR',
+      message: 'Unexpected error while processing request',
       details: error,
     });
+  }
+
+  private buildResponseUser(user: { id: string; email: string; name: string }) {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    };
   }
 }

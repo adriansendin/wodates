@@ -1,32 +1,104 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuthStore } from '../../src/domain/stores/authStore';
+import { ApiClient } from '../../src/data/api/apiClient';
+import { AuthApi } from '../../src/data/api/authApi';
+import { AuthTokens } from '../../src/domain/entities/Auth';
+import { User, Gender } from '../../src/domain/entities/User';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+
+const normalizeUser = (rawUser: Record<string, unknown>): User => {
+  const now = new Date().toISOString();
+
+  if (typeof rawUser?.id !== 'string' || typeof rawUser?.email !== 'string') {
+    throw new Error('User payload is missing required fields.');
+  }
+
+  const gender = (rawUser.gender ?? 'other') as Gender;
+
+  return {
+    id: rawUser.id,
+    email: rawUser.email,
+    name: typeof rawUser.name === 'string' ? rawUser.name : '',
+    birthDate: typeof rawUser.birthDate === 'string' ? rawUser.birthDate : now,
+    gender,
+    bio: typeof rawUser.bio === 'string' ? rawUser.bio : undefined,
+    photoUrl: typeof rawUser.photoUrl === 'string' ? rawUser.photoUrl : undefined,
+    location: rawUser.location as User['location'],
+    createdAt: typeof rawUser.createdAt === 'string' ? rawUser.createdAt : now,
+    updatedAt: typeof rawUser.updatedAt === 'string' ? rawUser.updatedAt : now,
+  };
+};
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('bob@example.com');
+  const [email, setEmail] = useState('test4@example.com');
   const [password, setPassword] = useState('password123');
+  const { login, setLoading, setError, isLoading, error } = useAuthStore();
+
+  const apiClient = useMemo(() => new ApiClient(API_URL), []);
+  const authApi = useMemo(() => new AuthApi(apiClient), [apiClient]);
 
   const handleLogin = async () => {
-    console.log('🔵 Intentando login con:', email);
-    
-    // Navegación directa a feed
-    router.replace('/(app)/feed');
+    if (isLoading) {
+      return;
+    }
+
+    console.log('[Login] handleLogin pressed');
+    Alert.alert('Login', 'Iniciando sesión...');
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await authApi.login({ email, password });
+
+      console.log('[Login] API response', result);
+
+      if (!result.success) {
+        const message = result.error.message ?? 'No se pudo iniciar sesion. Revisa tus credenciales.';
+        setError(message);
+        Alert.alert('Error de inicio de sesion', message);
+        return;
+      }
+
+      const { user, token } = result.data;
+      const normalizedUser = normalizeUser(user as Record<string, unknown>);
+      const tokens: AuthTokens = {
+        accessToken: token,
+        refreshToken: token,
+        expiresIn: 7 * 24 * 60 * 60, // 7 dias en segundos
+      };
+
+      login(normalizedUser, tokens);
+      Alert.alert('Login', 'Inicio de sesión correcto, redirigiendo al feed.');
+      router.replace('/(app)/feed');
+    } catch (err) {
+      console.error('Login error', err);
+      const message = 'Error de red. Intentalo de nuevo.';
+      setError(message);
+      Alert.alert('Error', message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>WODATES</Text>
       <Text style={styles.subtitle}>Find your perfect match</Text>
-      
+
       <View style={styles.form}>
         <TextInput
           style={styles.input}
           placeholder="Email"
           value={email}
           onChangeText={setEmail}
+          autoCapitalize="none"
         />
-        
+
         <TextInput
           style={styles.input}
           placeholder="Password"
@@ -34,12 +106,17 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry
         />
-        
-        <Link href="/(app)/feed" asChild>
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Login</Text>
-          </TouchableOpacity>
-        </Link>
+
+        <TouchableOpacity
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleLogin}
+          disabled={isLoading}
+        >
+          <Text style={styles.buttonText}>{isLoading ? 'Entrando...' : 'Login'}</Text>
+        </TouchableOpacity>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <Text style={styles.debugText}>API URL: {API_URL}</Text>
       </View>
     </View>
   );
@@ -83,9 +160,23 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
   },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  errorText: {
+    marginTop: 8,
+    color: '#ff4d4d',
+    textAlign: 'center',
+  },
+  debugText: {
+    marginTop: 12,
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
   },
 });

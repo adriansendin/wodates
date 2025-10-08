@@ -1,19 +1,16 @@
 import { FastifyInstance } from 'fastify';
 import { AuthController } from '../controllers/auth-controller';
+import { SupabaseAuthService } from '../services/supabase-auth-service';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    registerUser: any;
-    loginUser: any;
     authMiddleware: any;
   }
 }
 
 export async function authRoutes(fastify: FastifyInstance) {
-  const authController = new AuthController(
-    fastify.registerUser,
-    fastify.loginUser
-  );
+  const authService = new SupabaseAuthService();
+  const authController = new AuthController(authService);
 
   fastify.post('/register', {
     schema: {
