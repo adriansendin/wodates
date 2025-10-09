@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,81 +9,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMatchesStore } from '../../src/domain/stores/matchesStore';
-import { useAuthStore } from '../../src/domain/stores/authStore';
-
-type MatchWithUser = ReturnType<typeof useMatchesStore.getState>['matches'][number];
+import { useMatchesStore, MatchWithUser } from '../../src/domain/stores/matchesStore';
 
 export default function MatchesScreen() {
   const router = useRouter();
-  const { matches, isLoading, setMatches, setLoading } = useMatchesStore();
-  const { user } = useAuthStore();
-
-  useEffect(() => {
-    setLoading(true);
-
-    const now = new Date().toISOString();
-
-    const mockMatches: MatchWithUser[] = [
-      {
-        id: '1',
-        userId1: user?.id || 'user-1',
-        userId2: 'user-2',
-        createdAt: now,
-        otherUser: {
-          id: 'user-2',
-          email: 'alice@example.com',
-          name: 'Alice Johnson',
-          birthDate: new Date(1995, 5, 15).toISOString(),
-          gender: 'female',
-          createdAt: now,
-          updatedAt: now,
-          bio: 'Crossfit and yoga lover.',
-          photoUrl: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400',
-        },
-        lastMessage: {
-          id: 'msg-1',
-          matchId: '1',
-          senderId: 'user-2',
-          content: 'Hey! How are you?',
-          createdAt: now,
-        },
-        unreadCount: 2,
-      },
-      {
-        id: '2',
-        userId1: user?.id || 'user-1',
-        userId2: 'user-3',
-        createdAt: now,
-        otherUser: {
-          id: 'user-3',
-          email: 'bob@example.com',
-          name: 'Bob Smith',
-          birthDate: new Date(1992, 10, 5).toISOString(),
-          gender: 'male',
-          createdAt: now,
-          updatedAt: now,
-          bio: 'Runner and nutrition geek.',
-          photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-        },
-        lastMessage: {
-          id: 'msg-2',
-          matchId: '2',
-          senderId: user?.id || 'user-1',
-          content: 'Thanks for the match!',
-          createdAt: now,
-        },
-        unreadCount: 0,
-      },
-    ];
-
-    const timeout = setTimeout(() => {
-      setMatches(mockMatches);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timeout);
-  }, [user, setMatches, setLoading]);
+  const { matches, isLoading } = useMatchesStore();
 
   const handleMatchPress = (match: MatchWithUser) => {
     router.push({

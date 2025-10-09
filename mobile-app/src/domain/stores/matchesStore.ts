@@ -3,8 +3,10 @@ import { Match } from '../entities/Match';
 import { User } from '../entities/User';
 import { Message } from '../entities/Message';
 
-interface MatchWithUser extends Match {
-  otherUser: User;
+export type MatchUser = Pick<User, 'id' | 'name'> & Partial<User>;
+
+export interface MatchWithUser extends Match {
+  otherUser: MatchUser;
   lastMessage?: Message;
   unreadCount: number;
 }
@@ -33,9 +35,17 @@ export const useMatchesStore = create<MatchesState & MatchesActions>((set, get) 
 
   // Actions
   setMatches: (matches) => set({ matches }),
-  addMatch: (match) => set((state) => ({ 
-    matches: [...state.matches, match] 
-  })),
+  addMatch: (match) => set((state) => {
+    const exists = state.matches.some((existing) => existing.id === match.id);
+
+    return {
+      matches: exists
+        ? state.matches.map((existing) =>
+            existing.id === match.id ? { ...existing, ...match } : existing,
+          )
+        : [...state.matches, match],
+    };
+  }),
   updateMatch: (matchId, updates) => set((state) => ({
     matches: state.matches.map(match => 
       match.id === matchId ? { ...match, ...updates } : match

@@ -13,6 +13,8 @@ import { useFeedStore } from '../../src/domain/stores/feedStore';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { FeedApi } from '../../src/data/api/feedApi';
 import { ApiClient } from '../../src/data/api/apiClient';
+import { useMatchesStore } from '../../src/domain/stores/matchesStore';
+import { MatchSchema } from '../../src/domain/entities/Match';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 const FALLBACK_PHOTO = 'https://via.placeholder.com/300x400';
@@ -76,6 +78,7 @@ export default function FeedScreen() {
     setError,
   } = useFeedStore();
   const { tokens, user } = useAuthStore();
+  const addMatch = useMatchesStore((state) => state.addMatch);
   const [isLiking, setIsLiking] = useState(false);
   const [isPassing, setIsPassing] = useState(false);
 
@@ -131,6 +134,24 @@ export default function FeedScreen() {
       }
 
       if (result.data.isMatch) {
+        const validation = MatchSchema.safeParse(result.data.result);
+        if (validation.success) {
+          const match = validation.data;
+          addMatch({
+            ...match,
+            otherUser: {
+              id: currentUser.id,
+              name: currentUser.name,
+              photoUrl: currentUser.photoUrl ?? undefined,
+              bio: currentUser.bio ?? undefined,
+              gender: currentUser.gender ?? undefined,
+              birthDate: currentUser.birthDate ?? undefined,
+            },
+            unreadCount: 0,
+          });
+        } else {
+          console.warn('Invalid match payload received', validation.error);
+        }
         Alert.alert("It's a Match!", 'You and this person liked each other!');
       }
       nextUser();

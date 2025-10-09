@@ -15,7 +15,7 @@ import { InMemoryUserRepository } from '../data/repositories/InMemoryUserReposit
 import { InMemoryPreferencesRepository } from '../data/repositories/InMemoryPreferencesRepository';
 import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
 import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
-import { InMemoryMatchRepository } from '../data/repositories/InMemoryMatchRepository';
+import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepository';
 import { InMemoryMessageRepository } from '../data/repositories/InMemoryMessageRepository';
 
 // Import use cases
@@ -83,7 +83,7 @@ async function buildApp() {
   const preferencesRepository = new InMemoryPreferencesRepository();
   const likeRepository = new SupabaseLikeRepository();
   const passRepository = new SupabasePassRepository();
-  const matchRepository = new InMemoryMatchRepository();
+  const matchRepository = new SupabaseMatchRepository();
   const messageRepository = new InMemoryMessageRepository();
 
   // Initialize use cases

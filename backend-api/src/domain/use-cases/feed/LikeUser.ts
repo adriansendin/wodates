@@ -42,6 +42,10 @@ export class LikeUser {
       if (isSuccess(matchResult)) {
         return success(matchResult.data);
       }
+
+      if (isFailure(matchResult)) {
+        return failure(matchResult.error);
+      }
     }
 
     return success(like);
