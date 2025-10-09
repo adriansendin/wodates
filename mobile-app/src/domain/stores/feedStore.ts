@@ -1,10 +1,8 @@
 import { create } from 'zustand';
-import { User } from '../entities/User';
-import { Result } from '../Result';
-import { DomainError } from '../errors/DomainError';
+import { FeedCandidate } from '../entities/FeedCandidate';
 
 interface FeedState {
-  users: User[];
+  users: FeedCandidate[];
   currentIndex: number;
   isLoading: boolean;
   error: string | null;
@@ -12,8 +10,8 @@ interface FeedState {
 }
 
 interface FeedActions {
-  setUsers: (users: User[]) => void;
-  addUsers: (users: User[]) => void;
+  setUsers: (users: FeedCandidate[]) => void;
+  addUsers: (users: FeedCandidate[]) => void;
   setCurrentIndex: (index: number) => void;
   nextUser: () => void;
   setLoading: (loading: boolean) => void;

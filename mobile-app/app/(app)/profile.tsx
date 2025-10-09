@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   RefreshControl,
   ScrollView,
@@ -25,6 +26,7 @@ import {
 } from '../../src/domain/entities/Gender';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const AVATAR_PLACEHOLDER = 'https://via.placeholder.com/240x240.png?text=Profile';
 
 type LookingForFormValue = LookingForOption | '';
 type GenderFormValue = GenderOption | '';
@@ -142,6 +144,10 @@ export default function ProfileScreen() {
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
+  const avatarUri = useMemo(
+    () => profile?.avatarUrl ?? AVATAR_PLACEHOLDER,
+    [profile?.avatarUrl],
+  );
 
   const loadProfile = useCallback(async () => {
     if (!tokens?.accessToken) {
@@ -464,6 +470,13 @@ export default function ProfileScreen() {
       )}
 
       <View style={styles.card}>
+        <View style={styles.avatarContainer}>
+          <Image
+            source={{ uri: avatarUri }}
+            style={styles.avatarImage}
+            resizeMode="cover"
+          />
+        </View>
         <Text style={styles.sectionTitle}>Informacion basica</Text>
         <View style={styles.readonlyField}>
           <Text style={styles.label}>Nombre</Text>
@@ -693,6 +706,17 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
     gap: 16,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  avatarImage: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: '#f0f0f0',
   },
   sectionTitle: {
     fontSize: 20,

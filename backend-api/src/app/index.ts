@@ -13,15 +13,14 @@ import { userRoutes } from './routes/user-routes';
 // Import repositories
 import { InMemoryUserRepository } from '../data/repositories/InMemoryUserRepository';
 import { InMemoryPreferencesRepository } from '../data/repositories/InMemoryPreferencesRepository';
-import { InMemoryLikeRepository } from '../data/repositories/InMemoryLikeRepository';
-import { InMemoryPassRepository } from '../data/repositories/InMemoryPassRepository';
+import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
+import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
 import { InMemoryMatchRepository } from '../data/repositories/InMemoryMatchRepository';
 import { InMemoryMessageRepository } from '../data/repositories/InMemoryMessageRepository';
 
 // Import use cases
 import { RegisterUser } from '../domain/use-cases/auth/RegisterUser';
 import { LoginUser } from '../domain/use-cases/auth/LoginUser';
-import { GetFeedUsers } from '../domain/use-cases/feed/GetFeedUsers';
 import { LikeUser } from '../domain/use-cases/feed/LikeUser';
 import { PassUser } from '../domain/use-cases/feed/PassUser';
 import { SendMessage } from '../domain/use-cases/chat/SendMessage';
@@ -82,15 +81,14 @@ async function buildApp() {
   // Initialize repositories
   const userRepository = new InMemoryUserRepository();
   const preferencesRepository = new InMemoryPreferencesRepository();
-  const likeRepository = new InMemoryLikeRepository();
-  const passRepository = new InMemoryPassRepository();
+  const likeRepository = new SupabaseLikeRepository();
+  const passRepository = new SupabasePassRepository();
   const matchRepository = new InMemoryMatchRepository();
   const messageRepository = new InMemoryMessageRepository();
 
   // Initialize use cases
   const registerUser = new RegisterUser(userRepository, preferencesRepository);
   const loginUser = new LoginUser(userRepository);
-  const getFeedUsers = new GetFeedUsers(userRepository, likeRepository, passRepository, preferencesRepository);
   const likeUser = new LikeUser(likeRepository, matchRepository);
   const passUser = new PassUser(passRepository);
   const sendMessage = new SendMessage(messageRepository, matchRepository);
@@ -99,7 +97,6 @@ async function buildApp() {
   // Decorate fastify with use cases
   fastify.decorate('registerUser', registerUser);
   fastify.decorate('loginUser', loginUser);
-  fastify.decorate('getFeedUsers', getFeedUsers);
   fastify.decorate('likeUser', likeUser);
   fastify.decorate('passUser', passUser);
   fastify.decorate('sendMessage', sendMessage);

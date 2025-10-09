@@ -22,6 +22,7 @@ type UserProfileRow = {
   max_age: number | null;
   bio: string | null;
   city: string | null;
+  avatar_url: string | null;
 };
 
 export type UserProfile = {
@@ -34,6 +35,7 @@ export type UserProfile = {
   max_age: number | null;
   bio: string | null;
   city: string | null;
+  avatarUrl: string | null;
 };
 
 export type UpdateUserProfileInput = {
@@ -44,6 +46,7 @@ export type UpdateUserProfileInput = {
   max_age?: number | null;
   bio?: string | null;
   city?: string | null;
+  avatarUrl?: string | null;
 };
 
 /**
@@ -107,6 +110,9 @@ export class SupabaseUserService {
       if ('city' in input) {
         updatePayload.city = input.city ?? null;
       }
+      if ('avatarUrl' in input) {
+        updatePayload.avatar_url = this.sanitizeAvatarUrl(input.avatarUrl);
+      }
 
       if (Object.keys(updatePayload).length === 0) {
         return this.mapRow(profile);
@@ -117,7 +123,7 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city',
+          'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
         )
         .single();
 
@@ -159,7 +165,7 @@ export class SupabaseUserService {
       .from('users')
       .upsert(defaults, { onConflict: 'id' })
       .select(
-        'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city',
+        'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
       )
       .single();
 
@@ -188,7 +194,7 @@ export class SupabaseUserService {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city',
+        'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
       )
       .eq('id', userId)
       .maybeSingle();
@@ -249,6 +255,8 @@ export class SupabaseUserService {
         ? metadata.bio.trim() || null
         : null;
 
+    const avatarUrl = this.resolveAvatarUrl(metadata);
+
     return {
       id: userId,
       name,
@@ -260,6 +268,7 @@ export class SupabaseUserService {
       max_age: null,
       bio,
       city,
+      avatar_url: avatarUrl,
     };
   }
 
@@ -295,7 +304,55 @@ export class SupabaseUserService {
       max_age: row.max_age,
       bio: row.bio,
       city: row.city,
+      avatarUrl: this.sanitizeAvatarUrl(row.avatar_url),
     };
+  }
+
+  private resolveAvatarUrl(
+    metadata: Record<string, unknown> | null,
+  ): string | null {
+    if (!metadata) {
+      return null;
+    }
+
+    const candidateKeys = [
+      'avatar_url',
+      'avatarUrl',
+      'picture',
+      'photoUrl',
+      'image',
+      'image_url',
+    ];
+
+    for (const key of candidateKeys) {
+      const value = metadata[key];
+      if (typeof value === 'string') {
+        const sanitized = this.sanitizeAvatarUrl(value);
+        if (sanitized) {
+          return sanitized;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private sanitizeAvatarUrl(value: string | null | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    try {
+      const url = new URL(trimmed);
+      return url.toString();
+    } catch {
+      return null;
+    }
   }
 
   private formatSupabaseError(error: unknown): string {

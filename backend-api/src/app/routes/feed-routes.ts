@@ -1,9 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { FeedController } from '../controllers/feed-controller';
+import { SupabaseFeedService } from '../services/supabase-feed-service';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    getFeedUsers: any;
     likeUser: any;
     passUser: any;
     authMiddleware: any;
@@ -11,8 +11,9 @@ declare module 'fastify' {
 }
 
 export async function feedRoutes(fastify: FastifyInstance) {
+  const feedService = new SupabaseFeedService();
   const feedController = new FeedController(
-    fastify.getFeedUsers,
+    feedService,
     fastify.likeUser,
     fastify.passUser
   );
@@ -40,9 +41,11 @@ export async function feedRoutes(fastify: FastifyInstance) {
                 properties: {
                   id: { type: 'string' },
                   name: { type: 'string' },
-                  bio: { type: 'string' },
-                  photoUrl: { type: 'string' },
-                  age: { type: 'number' },
+                  gender: { type: 'string', nullable: true },
+                  birthDate: { type: 'string', format: 'date-time', nullable: true },
+                  age: { type: 'number', nullable: true },
+                  bio: { type: 'string', nullable: true },
+                  photoUrl: { type: 'string', nullable: true },
                 },
               },
             },

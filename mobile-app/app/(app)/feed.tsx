@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFeedStore } from '../../src/domain/stores/feedStore';
 import { useAuthStore } from '../../src/domain/stores/authStore';
@@ -7,31 +15,67 @@ import { FeedApi } from '../../src/data/api/feedApi';
 import { ApiClient } from '../../src/data/api/apiClient';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const FALLBACK_PHOTO = 'https://via.placeholder.com/300x400';
 
-const getAge = (birthDate?: string) => {
+const getAgeFromBirthDate = (birthDate?: string | null) => {
   if (!birthDate) {
     return undefined;
   }
 
-  const date = new Date(birthDate);
-  if (Number.isNaN(date.getTime())) {
+  const parsed = new Date(birthDate);
+  if (Number.isNaN(parsed.getTime())) {
     return undefined;
   }
 
-  const now = new Date();
-  let age = now.getFullYear() - date.getFullYear();
-  const monthDiff = now.getMonth() - date.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+  const today = new Date();
+  let age = today.getFullYear() - parsed.getFullYear();
+  const monthDiff = today.getMonth() - parsed.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < parsed.getDate())) {
     age -= 1;
   }
 
   return age;
 };
 
+const resolveAge = (candidate: { age?: number | null; birthDate?: string | null }) => {
+  if (typeof candidate.age === 'number') {
+    return candidate.age;
+  }
+  return getAgeFromBirthDate(candidate.birthDate);
+};
+
+const resolveBio = (bio?: string | null) => {
+  if (!bio) {
+    return 'This user has not added a bio yet.';
+  }
+
+  const trimmed = bio.trim();
+  return trimmed || 'This user has not added a bio yet.';
+};
+
+const resolvePhotoUrl = (photoUrl?: string | null) => {
+  if (typeof photoUrl === 'string') {
+    const trimmed = photoUrl.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+
+  return FALLBACK_PHOTO;
+};
+
 export default function FeedScreen() {
-  const { users, currentIndex, isLoading, setUsers, nextUser, setLoading, setError } =
-    useFeedStore();
-  const { tokens, user } = useAuthStore(); // Agregar 'user' aquí
+  const {
+    users,
+    currentIndex,
+    isLoading,
+    setUsers,
+    nextUser,
+    setLoading,
+    setError,
+  } = useFeedStore();
+  const { tokens, user } = useAuthStore();
   const [isLiking, setIsLiking] = useState(false);
   const [isPassing, setIsPassing] = useState(false);
 
@@ -39,11 +83,6 @@ export default function FeedScreen() {
   const feedApi = new FeedApi(apiClient);
 
   const welcomeMessage = user?.name ? `Hola ${user.name}` : 'Hola';
-  const renderWelcome = () => (
-    <View style={styles.welcomeContainer}>
-      <Text style={styles.welcomeText}>{welcomeMessage}</Text>
-    </View>
-  );
 
   useEffect(() => {
     loadFeed();
@@ -51,7 +90,9 @@ export default function FeedScreen() {
   }, []);
 
   const loadFeed = async () => {
-    if (!tokens?.accessToken) return;
+    if (!tokens?.accessToken) {
+      return;
+    }
 
     setLoading(true);
     try {
@@ -71,22 +112,28 @@ export default function FeedScreen() {
   };
 
   const handleLike = async () => {
-    if (!tokens?.accessToken || isLiking) return;
-
     const currentUser = users[currentIndex];
-    if (!currentUser) return;
+    if (!currentUser) {
+      return;
+    }
+
+    if (!tokens?.accessToken || isLiking) {
+      nextUser();
+      return;
+    }
 
     setIsLiking(true);
     try {
       const result = await feedApi.likeUser(currentUser.id, tokens.accessToken);
-      if (result.success) {
-        if (result.data.isMatch) {
-          Alert.alert("It's a Match!", 'You and this person liked each other!');
-        }
-        nextUser();
-      } else {
+      if (!result.success) {
         Alert.alert('Error', result.error.message);
+        return;
       }
+
+      if (result.data.isMatch) {
+        Alert.alert("It's a Match!", 'You and this person liked each other!');
+      }
+      nextUser();
     } catch (error) {
       Alert.alert('Error', 'Network error. Please try again.');
     } finally {
@@ -95,19 +142,25 @@ export default function FeedScreen() {
   };
 
   const handlePass = async () => {
-    if (!tokens?.accessToken || isPassing) return;
-
     const currentUser = users[currentIndex];
-    if (!currentUser) return;
+    if (!currentUser) {
+      return;
+    }
+
+    if (!tokens?.accessToken || isPassing) {
+      nextUser();
+      return;
+    }
 
     setIsPassing(true);
     try {
       const result = await feedApi.passUser(currentUser.id, tokens.accessToken);
-      if (result.success) {
-        nextUser();
-      } else {
+      if (!result.success) {
         Alert.alert('Error', result.error.message);
+        return;
       }
+
+      nextUser();
     } catch (error) {
       Alert.alert('Error', 'Network error. Please try again.');
     } finally {
@@ -116,6 +169,12 @@ export default function FeedScreen() {
   };
 
   const currentUser = users[currentIndex];
+
+  const renderWelcome = () => (
+    <View style={styles.welcomeContainer}>
+      <Text style={styles.welcomeText}>{welcomeMessage}</Text>
+    </View>
+  );
 
   if (isLoading && users.length === 0) {
     return (
@@ -139,25 +198,23 @@ export default function FeedScreen() {
     );
   }
 
-  const age = getAge(currentUser.birthDate);
+  const age = resolveAge(currentUser);
+  const bio = resolveBio(currentUser.bio);
+  const photoUrl = resolvePhotoUrl(currentUser.photoUrl);
 
   return (
     <View style={styles.container}>
       {renderWelcome()}
 
       <View style={styles.card}>
-        <Image
-          source={{ uri: currentUser.photoUrl || 'https://via.placeholder.com/300x400' }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: photoUrl }} style={styles.image} resizeMode="cover" />
         <View style={styles.overlay}>
           <Text style={styles.name}>
             {currentUser.name}
             {typeof age === 'number' ? `, ${age}` : ''}
           </Text>
           <Text style={styles.bio} numberOfLines={3}>
-            {currentUser.bio || 'This user has not added a bio yet.'}
+            {bio}
           </Text>
         </View>
       </View>

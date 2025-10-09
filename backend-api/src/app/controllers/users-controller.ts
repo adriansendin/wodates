@@ -104,6 +104,7 @@ const UpdateProfileSchema = z
     max_age: nullableInt(18, 100).optional(),
     bio: nullableText(500).optional(),
     city: nullableString(100).optional(),
+    avatarUrl: nullableString(500).optional(),
   })
   .refine(
     (data) => {
@@ -170,6 +171,9 @@ export class UsersController {
       }
       if ('city' in payload) {
         updateInput.city = payload.city ?? null;
+      }
+      if ('avatarUrl' in payload) {
+        updateInput.avatarUrl = payload.avatarUrl ?? null;
       }
 
       const profile = await this.userService.updateProfile(

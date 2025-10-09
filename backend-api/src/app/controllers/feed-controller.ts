@@ -1,9 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { GetFeedUsers } from '../../domain/use-cases/feed/GetFeedUsers';
 import { LikeUser } from '../../domain/use-cases/feed/LikeUser';
 import { PassUser } from '../../domain/use-cases/feed/PassUser';
 import { DomainError } from '../../domain/errors/DomainError';
 import { z } from 'zod';
+import { SupabaseFeedService } from '../services/supabase-feed-service';
 
 const LikeSchema = z.object({
   targetUserId: z.string().uuid(),
@@ -14,13 +14,13 @@ const PassSchema = z.object({
 });
 
 const FeedQuerySchema = z.object({
-  limit: z.string().transform(Number).optional(),
-  offset: z.string().transform(Number).optional(),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 export class FeedController {
   constructor(
-    private getFeedUsersUseCase: GetFeedUsers,
+    private readonly feedService: SupabaseFeedService,
     private likeUserUseCase: LikeUser,
     private passUserUseCase: PassUser
   ) {}
@@ -30,21 +30,24 @@ export class FeedController {
       const userId = request.user!.id;
       const { limit = 10, offset = 0 } = FeedQuerySchema.parse(request.query);
       
-      const result = await this.getFeedUsersUseCase.execute(userId, limit, offset);
-      
-      if (result.success) {
-        return reply.send({
-          users: result.data,
-          pagination: {
-            limit,
-            offset,
-            hasMore: result.data.length === limit,
-          },
-        });
-      } else {
-        return this.handleError(reply, result.error);
-      }
+      const candidates = await this.feedService.getFeedCandidates(
+        userId,
+        limit,
+        offset
+      );
+
+      return reply.send({
+        users: candidates,
+        pagination: {
+          limit,
+          offset,
+          hasMore: candidates.length === limit,
+        },
+      });
     } catch (error) {
+      if (error instanceof DomainError) {
+        return this.handleError(reply, error);
+      }
       return this.handleValidationError(reply, error);
     }
   }
