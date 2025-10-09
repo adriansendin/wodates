@@ -191,7 +191,7 @@ export default function ChatScreen() {
             style={styles.textInput}
             value={message}
             onChangeText={setMessage}
-            placeholder="Type a message..."
+            placeholder="Type a message222..."
             multiline
             maxLength={1000}
           />

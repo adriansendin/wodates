@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
-export const GenderSchema = z.enum(['male', 'female', 'non-binary', 'other']);
+export const GENDER_VALUES = [
+  'male',
+  'female',
+  'non_binary',
+  'other',
+  'prefer_not_to_say',
+] as const;
+
+export const GenderSchema = z.enum(GENDER_VALUES);
 
 export const UserSchema = z.object({
   id: z.string().uuid(),

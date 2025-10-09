@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { GenderSchema } from './User';
+import { GenderSchema } from './Gender';
 
 export const PreferencesSchema = z.object({
   id: z.string().uuid(),

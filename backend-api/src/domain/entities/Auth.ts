@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { GENDER_VALUES } from './User';
 
 export const LoginSchema = z.object({
   email: z.string().email(),
@@ -10,7 +11,7 @@ export const RegisterSchema = z.object({
   password: z.string().min(6),
   name: z.string().min(1).max(100),
   birthDate: z.string().datetime(),
-  gender: z.enum(['male', 'female', 'non-binary', 'other']),
+  gender: z.enum(GENDER_VALUES),
 });
 
 export const RefreshTokenSchema = z.object({

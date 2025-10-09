@@ -30,7 +30,7 @@ export class RegisterUser {
       userId: user.id,
       ageMin: 18,
       ageMax: 35,
-      genderFilter: ['male', 'female', 'non-binary', 'other'],
+      genderFilter: ['male', 'female', 'non_binary', 'other', 'prefer_not_to_say'],
       maxDistance: 50,
     });
 

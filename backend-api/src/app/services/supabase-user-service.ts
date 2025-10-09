@@ -3,6 +3,8 @@ import {
   DomainError,
   InternalError,
 } from '../../domain/errors/DomainError';
+import { LookingForValue } from '../../domain/entities/LookingFor';
+import { GENDER_VALUES, Gender } from '../../domain/entities/User';
 
 type SupabaseConfig = {
   url: string;
@@ -14,8 +16,8 @@ type UserProfileRow = {
   email: string | null;
   name: string | null;
   birthDate: string | null;
-  gender: string | null;
-  looking_for: string | null;
+  gender: Gender | null;
+  looking_for: LookingForValue | null;
   min_age: number | null;
   max_age: number | null;
   bio: string | null;
@@ -26,8 +28,8 @@ export type UserProfile = {
   id: string;
   name: string;
   birthDate: string | null;
-  gender: string | null;
-  looking_for: string | null;
+  gender: Gender | null;
+  looking_for: LookingForValue | null;
   min_age: number | null;
   max_age: number | null;
   bio: string | null;
@@ -36,8 +38,8 @@ export type UserProfile = {
 
 export type UpdateUserProfileInput = {
   birthDate?: string | null;
-  gender?: string | null;
-  looking_for?: string | null;
+  gender?: Gender | null;
+  looking_for?: LookingForValue | null;
   min_age?: number | null;
   max_age?: number | null;
   bio?: string | null;
@@ -235,10 +237,7 @@ export class SupabaseUserService {
       }
     }
 
-    const gender =
-      metadata && typeof metadata.gender === 'string'
-        ? metadata.gender.trim() || null
-        : null;
+    const gender = this.normalizeGender(metadata?.gender);
 
     const city =
       metadata && typeof metadata.city === 'string'
@@ -317,6 +316,27 @@ export class SupabaseUserService {
     }
 
     return typeof error === 'string' ? error : 'Unknown Supabase error';
+  }
+
+  private normalizeGender(value: unknown): Gender | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const normalized = value
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+
+    if (!normalized) {
+      return null;
+    }
+
+    if (GENDER_VALUES.includes(normalized as Gender)) {
+      return normalized as Gender;
+    }
+
+    return null;
   }
 
   private resolveConfig(config?: Partial<SupabaseConfig>): SupabaseConfig {

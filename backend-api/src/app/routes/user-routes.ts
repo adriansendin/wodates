@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { UsersController } from '../controllers/users-controller';
 import { SupabaseUserService } from '../services/supabase-user-service';
+import { LOOKING_FOR_VALUES } from '../../domain/entities/LookingFor';
+import { GENDER_VALUES } from '../../domain/entities/User';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -11,6 +13,8 @@ declare module 'fastify' {
 export async function userRoutes(fastify: FastifyInstance) {
   const userService = new SupabaseUserService();
   const controller = new UsersController(userService);
+  const genderEnum = [...GENDER_VALUES, null];
+  const lookingForEnum = [...LOOKING_FOR_VALUES, null];
 
   fastify.get(
     '/users/me',
@@ -26,8 +30,8 @@ export async function userRoutes(fastify: FastifyInstance) {
               id: { type: 'string', format: 'uuid' },
               name: { type: 'string' },
               birthDate: { type: ['string', 'null'], format: 'date' },
-              gender: { type: ['string', 'null'] },
-              looking_for: { type: ['string', 'null'] },
+              gender: { type: ['string', 'null'], enum: genderEnum },
+              looking_for: { type: ['string', 'null'], enum: lookingForEnum },
               min_age: { type: ['number', 'null'] },
               max_age: { type: ['number', 'null'] },
               bio: { type: ['string', 'null'] },
@@ -52,8 +56,8 @@ export async function userRoutes(fastify: FastifyInstance) {
           type: 'object',
           properties: {
             birthDate: { type: ['string', 'null'], format: 'date' },
-            gender: { type: ['string', 'null'] },
-            looking_for: { type: ['string', 'null'] },
+            gender: { type: ['string', 'null'], enum: genderEnum },
+            looking_for: { type: ['string', 'null'], enum: lookingForEnum },
             min_age: { type: ['number', 'null'] },
             max_age: { type: ['number', 'null'] },
             bio: { type: ['string', 'null'] },
@@ -67,8 +71,8 @@ export async function userRoutes(fastify: FastifyInstance) {
               id: { type: 'string', format: 'uuid' },
               name: { type: 'string' },
               birthDate: { type: ['string', 'null'], format: 'date' },
-              gender: { type: ['string', 'null'] },
-              looking_for: { type: ['string', 'null'] },
+              gender: { type: ['string', 'null'], enum: genderEnum },
+              looking_for: { type: ['string', 'null'], enum: lookingForEnum },
               min_age: { type: ['number', 'null'] },
               max_age: { type: ['number', 'null'] },
               bio: { type: ['string', 'null'] },

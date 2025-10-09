@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { AuthController } from '../controllers/auth-controller';
 import { SupabaseAuthService } from '../services/supabase-auth-service';
+import { GENDER_VALUES } from '../../domain/entities/User';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -24,7 +25,7 @@ export async function authRoutes(fastify: FastifyInstance) {
           password: { type: 'string', minLength: 6 },
           name: { type: 'string', minLength: 1, maxLength: 100 },
           birthDate: { type: 'string', format: 'date-time' },
-          gender: { type: 'string', enum: ['male', 'female', 'non-binary', 'other'] }
+          gender: { type: 'string', enum: GENDER_VALUES },
         }
       },
       response: {

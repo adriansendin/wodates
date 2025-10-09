@@ -30,7 +30,14 @@ export class InMemoryPreferencesRepository implements PreferencesRepository {
       userId: preferencesData.userId,
       ageMin: preferencesData.ageMin ?? 18,
       ageMax: preferencesData.ageMax ?? 35,
-      genderFilter: preferencesData.genderFilter ?? ['male', 'female', 'non-binary', 'other'],
+      genderFilter:
+        preferencesData.genderFilter ?? [
+          'male',
+          'female',
+          'non_binary',
+          'other',
+          'prefer_not_to_say',
+        ],
       maxDistance: preferencesData.maxDistance ?? 50,
       createdAt: now,
       updatedAt: now,

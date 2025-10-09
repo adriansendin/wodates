@@ -4,6 +4,8 @@ import {
   DomainError,
   UnauthorizedError,
 } from '../../domain/errors/DomainError';
+import { LOOKING_FOR_VALUES } from '../../domain/entities/LookingFor';
+import { GENDER_VALUES } from '../../domain/entities/User';
 import {
   SupabaseUserService,
   UpdateUserProfileInput,
@@ -56,6 +58,21 @@ const nullableText = (max: number) =>
     z.string().max(max).nullable(),
   );
 
+const nullableEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed === '') {
+          return null;
+        }
+        return trimmed;
+      }
+      return value;
+    },
+    z.enum(values).nullable(),
+  );
+
 const nullableInt = (min: number, max: number) =>
   z.preprocess((value) => {
     if (value === '' || value === null || value === undefined) {
@@ -81,8 +98,8 @@ const nullableInt = (min: number, max: number) =>
 const UpdateProfileSchema = z
   .object({
     birthDate: dateSchema.optional(),
-    gender: nullableString(50).optional(),
-    looking_for: nullableString(100).optional(),
+    gender: nullableEnum(GENDER_VALUES).optional(),
+    looking_for: nullableEnum(LOOKING_FOR_VALUES).optional(),
     min_age: nullableInt(18, 100).optional(),
     max_age: nullableInt(18, 100).optional(),
     bio: nullableText(500).optional(),

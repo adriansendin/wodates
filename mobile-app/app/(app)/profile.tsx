@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,16 +14,25 @@ import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { ProfileApi } from '../../src/data/api/profileApi';
 import {
+  LOOKING_FOR_OPTIONS,
+  LookingForOption,
   UpdateUserProfile,
   UserProfile,
 } from '../../src/domain/entities/UserProfile';
+import {
+  GENDER_OPTIONS,
+  GenderOption,
+} from '../../src/domain/entities/Gender';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
+type LookingForFormValue = LookingForOption | '';
+type GenderFormValue = GenderOption | '';
+
 type FormState = {
   birthDate: string;
-  gender: string;
-  looking_for: string;
+  gender: GenderFormValue;
+  looking_for: LookingForFormValue;
   min_age: string;
   max_age: string;
   bio: string;
@@ -33,6 +43,42 @@ type Feedback = {
   type: 'success' | 'error' | 'info';
   message: string;
 };
+
+const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
+  male: 'Hombres',
+  female: 'Mujeres',
+  both: 'Ambos',
+};
+
+const LOOKING_FOR_CHOICES: Array<{ value: LookingForFormValue; label: string }> = [
+  { value: '', label: 'Sin preferencia' },
+  ...LOOKING_FOR_OPTIONS.map((value) => ({
+    value,
+    label: LOOKING_FOR_LABELS[value],
+  })),
+];
+
+const getLookingForLabel = (value: LookingForFormValue) =>
+  value ? LOOKING_FOR_LABELS[value] : 'Sin preferencia';
+
+const GENDER_LABELS: Record<GenderOption, string> = {
+  male: 'Hombre',
+  female: 'Mujer',
+  non_binary: 'No binario',
+  other: 'Otro',
+  prefer_not_to_say: 'Prefiero no decirlo',
+};
+
+const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> = [
+  { value: '', label: 'Sin especificar' },
+  ...GENDER_OPTIONS.map((value) => ({
+    value,
+    label: GENDER_LABELS[value],
+  })),
+];
+
+const getGenderLabel = (value: GenderFormValue) =>
+  value ? GENDER_LABELS[value] : 'Sin especificar';
 
 const emptyForm: FormState = {
   birthDate: '',
@@ -83,6 +129,8 @@ export default function ProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [isGenderModalVisible, setIsGenderModalVisible] = useState(false);
+  const [isLookingForModalVisible, setIsLookingForModalVisible] = useState(false);
   const baselineForm = useMemo(() => (profile ? mapProfileToForm(profile) : emptyForm), [profile]);
   const isPristine = useMemo(() => {
     if (!profile) {
@@ -145,6 +193,36 @@ export default function ProfileScreen() {
     });
   };
 
+  const handleSelectGender = (value: GenderFormValue) => {
+    setForm((prev) => ({
+      ...prev,
+      gender: value,
+    }));
+    setFormErrors((prev) => {
+      if (!prev.gender) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next.gender;
+      return next;
+    });
+  };
+
+  const handleSelectLookingFor = (value: LookingForFormValue) => {
+    setForm((prev) => ({
+      ...prev,
+      looking_for: value,
+    }));
+    setFormErrors((prev) => {
+      if (!prev.looking_for) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next.looking_for;
+      return next;
+    });
+  };
+
   const handleSave = async () => {
     if (!tokens?.accessToken) {
       setFeedback({
@@ -158,8 +236,8 @@ export default function ProfileScreen() {
 
     const trimmedBirthDate = form.birthDate.trim();
     const birthDateValue = trimmedBirthDate ? trimmedBirthDate : null;
-    const trimmedGender = form.gender.trim();
-    const trimmedLookingFor = form.looking_for.trim();
+    const selectedGender = form.gender;
+    const selectedLookingFor = form.looking_for;
     const trimmedBio = form.bio.trim();
     const trimmedCity = form.city.trim();
     if (birthDateValue && !isValidDate(birthDateValue)) {
@@ -187,12 +265,15 @@ export default function ProfileScreen() {
       nextErrors.max_age = 'La edad maxima debe ser mayor o igual a la minima.';
     }
 
-    if (trimmedGender && trimmedGender.length > 50) {
-      nextErrors.gender = 'No puede superar 50 caracteres.';
+    if (selectedGender && !GENDER_OPTIONS.includes(selectedGender)) {
+      nextErrors.gender = 'Selecciona una opcion valida.';
     }
 
-    if (trimmedLookingFor && trimmedLookingFor.length > 100) {
-      nextErrors.looking_for = 'Describe lo que buscas en 100 caracteres o menos.';
+    if (
+      selectedLookingFor &&
+      !LOOKING_FOR_OPTIONS.includes(selectedLookingFor)
+    ) {
+      nextErrors.looking_for = 'Selecciona una opcion valida.';
     }
 
     if (trimmedBio.length > 500) {
@@ -216,8 +297,8 @@ export default function ProfileScreen() {
 
     const payload: UpdateUserProfile = {
       birthDate: birthDateValue,
-      gender: trimmedGender ? trimmedGender : null,
-      looking_for: trimmedLookingFor ? trimmedLookingFor : null,
+      gender: selectedGender ? selectedGender : null,
+      looking_for: selectedLookingFor ? selectedLookingFor : null,
       min_age: minAge,
       max_age: maxAge,
       bio: trimmedBio ? trimmedBio : null,
@@ -265,12 +346,103 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={isLoading}
-          onRefresh={loadProfile}
+    <>
+      <Modal
+        visible={isGenderModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsGenderModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecciona tu genero</Text>
+            {GENDER_CHOICES.map((option) => {
+              const isActive =
+                form.gender === option.value ||
+                (!form.gender && option.value === '');
+              return (
+                <TouchableOpacity
+                  key={option.value || 'unspecified'}
+                  style={[
+                    styles.modalOption,
+                    isActive ? styles.modalOptionActive : null,
+                  ]}
+                  onPress={() => {
+                    handleSelectGender(option.value);
+                    setIsGenderModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      isActive ? styles.modalOptionTextActive : null,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setIsGenderModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={isLookingForModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLookingForModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecciona a quien buscas</Text>
+            {LOOKING_FOR_CHOICES.map((option) => {
+              const isActive =
+                form.looking_for === option.value ||
+                (!form.looking_for && option.value === '');
+              return (
+                <TouchableOpacity
+                  key={option.value || 'none'}
+                  style={[
+                    styles.modalOption,
+                    isActive ? styles.modalOptionActive : null,
+                  ]}
+                  onPress={() => {
+                    handleSelectLookingFor(option.value);
+                    setIsLookingForModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      isActive ? styles.modalOptionTextActive : null,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setIsLookingForModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={loadProfile}
           tintColor="#e91e63"
         />
       }
@@ -323,37 +495,60 @@ export default function ProfileScreen() {
 
         <View style={styles.field}>
           <Text style={styles.label}>Genero</Text>
-          <TextInput
+          <TouchableOpacity
             style={[
               styles.input,
+              styles.selectTrigger,
               formErrors.gender ? styles.inputError : null,
             ]}
-            placeholder="female / male / non-binary / other"
-            value={form.gender}
-            onChangeText={handleChange('gender')}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+            activeOpacity={0.7}
+            onPress={() => setIsGenderModalVisible(true)}
+          >
+            <Text
+              style={
+                form.gender ? styles.selectValue : styles.selectPlaceholder
+              }
+            >
+              {getGenderLabel(form.gender)}
+            </Text>
+          </TouchableOpacity>
           {formErrors.gender ? (
             <Text style={styles.errorText}>{formErrors.gender}</Text>
-          ) : null}
+          ) : (
+            <Text style={styles.helperText}>
+              Escoge la opcion que mejor te describa.
+            </Text>
+          )}
         </View>
 
         <View style={styles.field}>
           <Text style={styles.label}>Busco</Text>
-          <TextInput
+          <TouchableOpacity
             style={[
               styles.input,
+              styles.selectTrigger,
               formErrors.looking_for ? styles.inputError : null,
             ]}
-            placeholder="Describe a quien buscas"
-            value={form.looking_for}
-            onChangeText={handleChange('looking_for')}
-            autoCapitalize="sentences"
-          />
+            activeOpacity={0.7}
+            onPress={() => setIsLookingForModalVisible(true)}
+          >
+            <Text
+              style={
+                form.looking_for
+                  ? styles.selectValue
+                  : styles.selectPlaceholder
+              }
+            >
+              {getLookingForLabel(form.looking_for)}
+            </Text>
+          </TouchableOpacity>
           {formErrors.looking_for ? (
             <Text style={styles.errorText}>{formErrors.looking_for}</Text>
-          ) : null}
+          ) : (
+            <Text style={styles.helperText}>
+              Selecciona a quien quieres conocer.
+            </Text>
+          )}
         </View>
 
         <View style={styles.row}>
@@ -370,11 +565,11 @@ export default function ProfileScreen() {
               keyboardType="number-pad"
             />
             {formErrors.min_age ? (
-              <Text style={styles.errorText}>{formErrors.min_age}</Text>
-            ) : null}
-          </View>
-          <View style={[styles.field, styles.rowField]}>
-            <Text style={styles.label}>Edad maxima</Text>
+            <Text style={styles.errorText}>{formErrors.min_age}</Text>
+          ) : null}
+        </View>
+        <View style={[styles.field, styles.rowField]}>
+          <Text style={styles.label}>Edad maxima</Text>
             <TextInput
               style={[
                 styles.input,
@@ -451,7 +646,8 @@ export default function ProfileScreen() {
           <Text style={styles.loadingText}>Cargando perfil...</Text>
         </View>
       )}
-    </ScrollView>
+        </ScrollView>
+    </>
   );
 }
 
@@ -527,6 +723,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fafafa',
   },
+  selectTrigger: {
+    justifyContent: 'center',
+  },
+  selectPlaceholder: {
+    fontSize: 16,
+    color: '#999',
+  },
+  selectValue: {
+    fontSize: 16,
+    color: '#222',
+    fontWeight: '500',
+  },
   inputError: {
     borderColor: '#d32f2f',
   },
@@ -551,6 +759,59 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: '#d32f2f',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#222',
+    textAlign: 'center',
+  },
+  modalOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  modalOptionActive: {
+    borderColor: '#e91e63',
+    backgroundColor: '#fde4ed',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+  },
+  modalOptionTextActive: {
+    color: '#e91e63',
+    fontWeight: '600',
+  },
+  modalClose: {
+    marginTop: 4,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f5',
+  },
+  modalCloseText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#555',
+    fontWeight: '500',
   },
   overlay: {
     position: 'absolute',

@@ -62,7 +62,7 @@ export const demoUsers: CreateUser[] = [
     email: 'eve@example.com',
     name: 'Eve Wilson',
     birthDate: '1996-09-30T00:00:00.000Z',
-    gender: 'non-binary',
+    gender: 'non_binary',
     bio: 'Writer, poet, and coffee addict. Looking for deep conversations and meaningful connections.',
     photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
     location: {
@@ -160,7 +160,7 @@ export const demoPreferences: CreatePreferences[] = [
   {
     ageMin: 20,
     ageMax: 28,
-    genderFilter: ['female', 'non-binary'],
+    genderFilter: ['female', 'non_binary'],
     maxDistance: 20,
   },
   {
@@ -172,7 +172,7 @@ export const demoPreferences: CreatePreferences[] = [
   {
     ageMin: 24,
     ageMax: 32,
-    genderFilter: ['male', 'female', 'non-binary'],
+    genderFilter: ['male', 'female', 'non_binary'],
     maxDistance: 15,
   },
   {
