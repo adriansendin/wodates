@@ -298,6 +298,10 @@ export class SupabaseMatchRepository implements MatchRepository {
       [userId1, userId2] = [userId2, userId1];
     }
 
+    if (!userId1 || !userId2) {
+      return null; // garantía: no devolvemos match con ids vacíos
+    }    
+
     return {
       id: row.id,
       userId1,

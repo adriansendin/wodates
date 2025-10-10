@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../../domain/entities/User';
 import { Result, success, failure } from '../../domain/Result';
-import { DomainError } from '../../domain/errors/DomainError';
+import { ServerError, DomainError } from '../../domain/errors/DomainError';
 
 const FEED_USERS_KEY = '@wodates_feed_users';
 const LIKED_USERS_KEY = '@wodates_liked_users';
@@ -13,7 +13,7 @@ export class AsyncStorageFeedRepository {
       await AsyncStorage.setItem(FEED_USERS_KEY, JSON.stringify(users));
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError('Failed to save feed users', error));
+      return failure(new ServerError('Failed to save feed users', error));
     }
   }
 
@@ -23,11 +23,10 @@ export class AsyncStorageFeedRepository {
       if (!usersJson) {
         return success([]);
       }
-      
       const users = JSON.parse(usersJson) as User[];
       return success(users);
     } catch (error) {
-      return failure(new DomainError('Failed to get feed users', error));
+      return failure(new ServerError('Failed to get feed users', error));
     }
   }
 
@@ -42,7 +41,7 @@ export class AsyncStorageFeedRepository {
       }
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError('Failed to add liked user', error));
+      return failure(new ServerError('Failed to add liked user', error));
     }
   }
 
@@ -52,11 +51,10 @@ export class AsyncStorageFeedRepository {
       if (!likedJson) {
         return success([]);
       }
-      
       const likedUsers = JSON.parse(likedJson) as string[];
       return success(likedUsers);
     } catch (error) {
-      return failure(new DomainError('Failed to get liked users', error));
+      return failure(new ServerError('Failed to get liked users', error));
     }
   }
 
@@ -71,7 +69,7 @@ export class AsyncStorageFeedRepository {
       }
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError('Failed to add passed user', error));
+      return failure(new ServerError('Failed to add passed user', error));
     }
   }
 
@@ -81,20 +79,23 @@ export class AsyncStorageFeedRepository {
       if (!passedJson) {
         return success([]);
       }
-      
       const passedUsers = JSON.parse(passedJson) as string[];
       return success(passedUsers);
     } catch (error) {
-      return failure(new DomainError('Failed to get passed users', error));
+      return failure(new ServerError('Failed to get passed users', error));
     }
   }
 
   async clearFeed(): Promise<Result<void, DomainError>> {
     try {
-      await AsyncStorage.multiRemove([FEED_USERS_KEY, LIKED_USERS_KEY, PASSED_USERS_KEY]);
+      await AsyncStorage.multiRemove([
+        FEED_USERS_KEY,
+        LIKED_USERS_KEY,
+        PASSED_USERS_KEY,
+      ]);
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError('Failed to clear feed', error));
+      return failure(new ServerError('Failed to clear feed', error));
     }
   }
 }

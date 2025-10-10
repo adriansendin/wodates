@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Message } from '../../domain/entities/Message';
 import { Result, success, failure } from '../../domain/Result';
-import { DomainError } from '../../domain/errors/DomainError';
+import { DomainError, ServerError } from '../../domain/errors/DomainError';
 
 const MESSAGES_KEY = '@wodates_messages';
 
@@ -12,7 +12,7 @@ export class AsyncStorageChatRepository {
       await AsyncStorage.setItem(key, JSON.stringify(messages));
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError('Failed to save messages', error));
+      return failure(new ServerError('Failed to save messages', error));
     }
   }
 
@@ -23,11 +23,11 @@ export class AsyncStorageChatRepository {
       if (!messagesJson) {
         return success([]);
       }
-      
+
       const messages = JSON.parse(messagesJson) as Message[];
       return success(messages);
     } catch (error) {
-      return failure(new DomainError('Failed to get messages', error));
+      return failure(new ServerError('Failed to get messages', error));
     }
   }
 
@@ -41,7 +41,7 @@ export class AsyncStorageChatRepository {
         return this.saveMessages(matchId, [message]);
       }
     } catch (error) {
-      return failure(new DomainError('Failed to add message', error));
+      return failure(new ServerError('Failed to add message', error));
     }
   }
 
@@ -51,7 +51,7 @@ export class AsyncStorageChatRepository {
       await AsyncStorage.removeItem(key);
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError('Failed to clear messages', error));
+      return failure(new ServerError('Failed to clear messages', error));
     }
   }
 }

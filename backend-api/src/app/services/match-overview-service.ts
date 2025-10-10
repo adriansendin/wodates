@@ -107,7 +107,7 @@ export class MatchOverviewService {
       }
 
       overviews.push({
-        ...match,
+        ...(match as any),
         otherUser: otherUserRow
           ? {
               id: otherUserRow.id,
@@ -118,7 +118,7 @@ export class MatchOverviewService {
               gender: otherUserRow.gender,
             }
           : null,
-        lastMessage,
+        lastMessage: lastMessage ?? undefined,
         unreadCount: 0,
       });
     }

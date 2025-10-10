@@ -68,6 +68,16 @@ export default function MatchesScreen() {
         }
         return;
       }
+      const normalizeGender = (
+        g?: string | null
+      ): "male" | "female" | "non_binary" | "other" | "prefer_not_to_say" | undefined => {
+        const allowed = ["male", "female", "non_binary", "other", "prefer_not_to_say"] as const;
+        if (g && allowed.includes(g as any)) {
+          return g as typeof allowed[number];
+        }
+        return undefined;
+      };
+      
 
       const normalizedMatches: MatchWithUser[] = result.data.matches.map((match) => {
         const otherUserId =
@@ -79,7 +89,7 @@ export default function MatchesScreen() {
               name: match.otherUser.name,
               bio: match.otherUser.bio ?? undefined,
               photoUrl: match.otherUser.photoUrl ?? undefined,
-              gender: match.otherUser.gender ?? undefined,
+              gender: normalizeGender(match.otherUser.gender ?? undefined),
               birthDate: match.otherUser.birthDate ?? undefined,
             }
           : {

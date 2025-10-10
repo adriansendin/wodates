@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../../domain/entities/User';
 import { AuthTokens } from '../../domain/entities/Auth';
 import { Result, success, failure } from '../../domain/Result';
-import { DomainError, NotFoundError } from '../../domain/errors/DomainError';
+import { DomainError, NotFoundError, ServerError } from '../../domain/errors/DomainError';
 
 const USER_KEY = '@wodates_user';
 const TOKENS_KEY = '@wodates_tokens';
@@ -13,7 +13,7 @@ export class AsyncStorageAuthRepository {
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError('Failed to save user', error));
+      return failure(new ServerError('Failed to save user', error));
     }
   }
 
@@ -23,11 +23,11 @@ export class AsyncStorageAuthRepository {
       if (!userJson) {
         return failure(new NotFoundError('User not found'));
       }
-      
+
       const user = JSON.parse(userJson) as User;
       return success(user);
     } catch (error) {
-      return failure(new DomainError('Failed to get user', error));
+      return failure(new ServerError('Failed to get user', error));
     }
   }
 
@@ -36,7 +36,7 @@ export class AsyncStorageAuthRepository {
       await AsyncStorage.setItem(TOKENS_KEY, JSON.stringify(tokens));
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError('Failed to save tokens', error));
+      return failure(new ServerError('Failed to save tokens', error));
     }
   }
 
@@ -46,11 +46,11 @@ export class AsyncStorageAuthRepository {
       if (!tokensJson) {
         return failure(new NotFoundError('Tokens not found'));
       }
-      
+
       const tokens = JSON.parse(tokensJson) as AuthTokens;
       return success(tokens);
     } catch (error) {
-      return failure(new DomainError('Failed to get tokens', error));
+      return failure(new ServerError('Failed to get tokens', error));
     }
   }
 
@@ -59,7 +59,7 @@ export class AsyncStorageAuthRepository {
       await AsyncStorage.multiRemove([USER_KEY, TOKENS_KEY]);
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError('Failed to clear auth', error));
+      return failure(new ServerError('Failed to clear auth', error));
     }
   }
 }
