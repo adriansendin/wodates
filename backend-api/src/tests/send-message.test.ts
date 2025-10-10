@@ -1,16 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SendMessage } from '../domain/use-cases/chat/SendMessage';
-import { InMemoryMessageRepository } from '../data/repositories/InMemoryMessageRepository';
-import { InMemoryMatchRepository } from '../data/repositories/InMemoryMatchRepository';
+import {
+  TestMatchRepository,
+  TestMessageRepository,
+} from './helpers/fakeRepositories';
 
 describe('SendMessage', () => {
   let sendMessage: SendMessage;
-  let messageRepository: InMemoryMessageRepository;
-  let matchRepository: InMemoryMatchRepository;
+  let messageRepository: TestMessageRepository;
+  let matchRepository: TestMatchRepository;
 
   beforeEach(() => {
-    messageRepository = new InMemoryMessageRepository();
-    matchRepository = new InMemoryMatchRepository();
+    messageRepository = new TestMessageRepository();
+    matchRepository = new TestMatchRepository();
     sendMessage = new SendMessage(messageRepository, matchRepository);
   });
 

@@ -60,7 +60,7 @@ cp env.example .env
 ```
 src/
 ├── domain/          # Business logic (entities, use-cases, repositories)
-├── data/           # Data layer (repositories, seeds)
+├── data/           # Data layer (repositories, external integrations)
 ├── app/            # Application layer (routes, controllers, middleware)
 └── tests/          # Test files
 ```

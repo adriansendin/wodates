@@ -1,16 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LikeUser } from '../domain/use-cases/feed/LikeUser';
-import { InMemoryLikeRepository } from '../data/repositories/InMemoryLikeRepository';
-import { InMemoryMatchRepository } from '../data/repositories/InMemoryMatchRepository';
+import {
+  TestLikeRepository,
+  TestMatchRepository,
+} from './helpers/fakeRepositories';
 
 describe('LikeUser', () => {
   let likeUser: LikeUser;
-  let likeRepository: InMemoryLikeRepository;
-  let matchRepository: InMemoryMatchRepository;
+  let likeRepository: TestLikeRepository;
+  let matchRepository: TestMatchRepository;
 
   beforeEach(() => {
-    likeRepository = new InMemoryLikeRepository();
-    matchRepository = new InMemoryMatchRepository();
+    likeRepository = new TestLikeRepository();
+    matchRepository = new TestMatchRepository();
     likeUser = new LikeUser(likeRepository, matchRepository);
   });
 

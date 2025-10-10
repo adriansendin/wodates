@@ -13,7 +13,7 @@ Create a monorepo with:
 
 /docs: minimal architecture + API contracts
 
-Scope v0.1 = local/in-memory data, mocked auth, Supabase prepared (interfaces only, NOT implemented).
+Scope v0.1 = Supabase-backed persistence with mocked auth for JWT issuance.
 
 ARCHITECTURE (MANDATORY)
 
@@ -23,7 +23,7 @@ Folder layout (per project):
 
 src/
   domain/      # entities, use-cases, repo interfaces, zod schemas, domain errors
-  data/        # repo impls, data-sources (AsyncStorage/InMemory now, Supabase TODO), mappers, seeds
+  data/        # repo impls, data-sources (AsyncStorage mobile cache, Supabase integrations), mappers
   app/         # UI (mobile: screens/components/stores/navigation) or HTTP (backend: routes/controllers/middleware/plugins)
 
 
@@ -72,7 +72,7 @@ GET /matches
 GET /chats/:matchId/messages?limit&before, POST /chats/:matchId/messages
 Use Fastify + @fastify/type-provider-zod, @fastify/swagger, @fastify/rate-limit, @fastify/cors, pino.
 
-Data sources v0.1: in-memory (backend) and AsyncStorage (mobile). Seed 10 demo users (data/seeds/demo-users.ts).
+Data sources v0.1: Supabase (backend) and AsyncStorage (mobile).
 
 Tests (min 2):
 Backend (vitest): LikeUser, SendMessage (happy path + error path).
@@ -82,6 +82,6 @@ OpenAPI generated and served at /documentation.
 
 .env.example for both apps; API_URL in mobile points to backend.
 
-Constraints: one profile photo, text-only chat, no realtime (polling), no Supabase yet.
+Constraints: one profile photo, text-only chat, no realtime (polling), Supabase in place for persistence.
 
-Success = both apps run; feed→like→match→chat flows work with seed data; OpenAPI available; tests pass; README quick-start is clear.
+Success = both apps run; feed→like→match→chat flows work against Supabase; OpenAPI available; tests pass; README quick-start is clear.

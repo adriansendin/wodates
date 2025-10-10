@@ -10,25 +10,15 @@ import { feedRoutes } from './routes/feed-routes';
 import { chatRoutes } from './routes/chat-routes';
 import { userRoutes } from './routes/user-routes';
 import { matchRoutes } from './routes/match-routes';
-
-// Import repositories
-import { InMemoryUserRepository } from '../data/repositories/InMemoryUserRepository';
-import { InMemoryPreferencesRepository } from '../data/repositories/InMemoryPreferencesRepository';
 import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
 import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
 import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepository';
 import { SupabaseMessageRepository } from '../data/repositories/SupabaseMessageRepository';
-
-// Import use cases
-import { RegisterUser } from '../domain/use-cases/auth/RegisterUser';
-import { LoginUser } from '../domain/use-cases/auth/LoginUser';
 import { LikeUser } from '../domain/use-cases/feed/LikeUser';
 import { PassUser } from '../domain/use-cases/feed/PassUser';
 import { SendMessage } from '../domain/use-cases/chat/SendMessage';
 import { GetMessages } from '../domain/use-cases/chat/GetMessages';
-
-// Import seed data
-import { demoUsers, demoPreferences } from '../data/seeds/demo-users';
+import { MatchOverviewService } from './services/match-overview-service';
 
 async function buildApp() {
   const logLevel = process.env.FASTIFY_LOG_LEVEL ?? (process.env.NODE_ENV === 'development' ? 'warn' : 'info');
@@ -80,16 +70,12 @@ async function buildApp() {
   fastify.decorate('authMiddleware', authMiddleware);
 
   // Initialize repositories
-  const userRepository = new InMemoryUserRepository();
-  const preferencesRepository = new InMemoryPreferencesRepository();
   const likeRepository = new SupabaseLikeRepository();
   const passRepository = new SupabasePassRepository();
   const matchRepository = new SupabaseMatchRepository();
   const messageRepository = new SupabaseMessageRepository();
 
   // Initialize use cases
-  const registerUser = new RegisterUser(userRepository, preferencesRepository);
-  const loginUser = new LoginUser(userRepository);
   const likeUser = new LikeUser(likeRepository, matchRepository);
   const passUser = new PassUser(passRepository);
   const sendMessage = new SendMessage(messageRepository, matchRepository);
@@ -100,16 +86,11 @@ async function buildApp() {
   );
 
   // Decorate fastify with use cases
-  fastify.decorate('registerUser', registerUser);
-  fastify.decorate('loginUser', loginUser);
   fastify.decorate('likeUser', likeUser);
   fastify.decorate('passUser', passUser);
   fastify.decorate('sendMessage', sendMessage);
   fastify.decorate('getMessages', getMessages);
   fastify.decorate('matchOverviewService', matchOverviewService);
-
-  // Seed demo data
-  await seedDemoData(userRepository, preferencesRepository);
 
   // Register routes
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
@@ -124,45 +105,6 @@ async function buildApp() {
   });
 
   return fastify;
-}
-
-async function seedDemoData(
-  userRepository: InMemoryUserRepository,
-  preferencesRepository: InMemoryPreferencesRepository
-) {
-  console.log('Seeding demo data...');
-  
-  for (let i = 0; i < demoUsers.length; i++) {
-    const userData = demoUsers[i];
-    const preferencesData = demoPreferences[i];
-    
-    if (!userData || !preferencesData) {
-      console.warn(`Skipping user at index ${i} - missing data`);
-      continue;
-    }
-    
-    // Create user
-    const userResult = await userRepository.create(userData);
-    if (userResult.success) {
-      const user = userResult.data;
-      
-      // Create preferences
-      const preferencesResult = await preferencesRepository.create({
-        ...preferencesData,
-        userId: user.id,
-      });
-      
-      if (preferencesResult.success) {
-        console.log(`Created user: ${user.name} (${user.email}) with preferences`);
-      } else {
-        console.error(`Failed to create preferences for user ${user.name}:`, preferencesResult.error);
-      }
-    } else {
-      console.error(`Failed to create user at index ${i}:`, userResult.error);
-    }
-  }
-  
-  console.log('Demo data seeded successfully');
 }
 
 async function start() {
@@ -183,6 +125,4 @@ async function start() {
 
 // Start server if this file is run directly
 start();
-  
 export { buildApp };
-import { MatchOverviewService } from './services/match-overview-service';
