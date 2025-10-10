@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useMatchesStore, MatchWithUser } from '../../src/domain/stores/matchesStore';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
@@ -32,14 +32,30 @@ export default function MatchesScreen() {
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
 
+  const isInitialLoad = useRef(true);
+  const isFetching = useRef(false);
+
   const loadMatches = useCallback(async () => {
+    const shouldShowLoader = isInitialLoad.current;
+
     if (!tokens?.accessToken || !user?.id) {
       setMatches([]);
-      setLoading(false);
+      if (shouldShowLoader) {
+        setLoading(false);
+        isInitialLoad.current = false;
+      }
       return;
     }
 
-    setLoading(true);
+    if (isFetching.current) {
+      return;
+    }
+
+    isFetching.current = true;
+
+    if (shouldShowLoader) {
+      setLoading(true);
+    }
     clearError();
 
     try {
@@ -47,7 +63,9 @@ export default function MatchesScreen() {
 
       if (!result.success) {
         setError(result.error.message);
-        Alert.alert('Error', result.error.message);
+        if (shouldShowLoader) {
+          Alert.alert('Error', result.error.message);
+        }
         return;
       }
 
@@ -85,15 +103,31 @@ export default function MatchesScreen() {
       console.error('Failed to load matches', error);
       const message = 'Network error. Please try again.';
       setError(message);
-      Alert.alert('Error', message);
+      if (shouldShowLoader) {
+        Alert.alert('Error', message);
+      }
     } finally {
-      setLoading(false);
+      if (shouldShowLoader) {
+        setLoading(false);
+      }
+      isInitialLoad.current = false;
+      isFetching.current = false;
     }
   }, [clearError, matchApi, setError, setLoading, setMatches, tokens, user]);
 
-  useEffect(() => {
-    loadMatches();
-  }, [loadMatches]);
+  useFocusEffect(
+    useCallback(() => {
+      loadMatches();
+
+      const interval = setInterval(() => {
+        loadMatches();
+      }, 5000);
+
+      return () => {
+        clearInterval(interval);
+      };
+    }, [loadMatches]),
+  );
 
   const handleMatchPress = (match: MatchWithUser) => {
     router.push({

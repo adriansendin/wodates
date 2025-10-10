@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { RangeSlider } from '../../src/components/RangeSlider';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { ProfileApi } from '../../src/data/api/profileApi';
@@ -35,8 +36,8 @@ type FormState = {
   birthDate: string;
   gender: GenderFormValue;
   looking_for: LookingForFormValue;
-  min_age: string;
-  max_age: string;
+  min_age: number;
+  max_age: number;
   bio: string;
   city: string;
 };
@@ -86,8 +87,8 @@ const emptyForm: FormState = {
   birthDate: '',
   gender: '',
   looking_for: '',
-  min_age: '',
-  max_age: '',
+  min_age: 18,
+  max_age: 99,
   bio: '',
   city: '',
 };
@@ -96,8 +97,8 @@ const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
   birthDate: nextProfile?.birthDate ?? '',
   gender: nextProfile?.gender ?? '',
   looking_for: nextProfile?.looking_for ?? '',
-  min_age: nextProfile?.min_age?.toString() ?? '',
-  max_age: nextProfile?.max_age?.toString() ?? '',
+  min_age: nextProfile?.min_age ?? 18,
+  max_age: nextProfile?.max_age ?? 99,
   bio: nextProfile?.bio ?? '',
   city: nextProfile?.city ?? '',
 });
@@ -113,15 +114,6 @@ const formFields: (keyof FormState)[] = [
 ];
 
 const isValidDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
-
-const toNullableNumber = (value: string) => {
-  if (!value.trim()) {
-    return null;
-  }
-
-  const numericValue = Number.parseInt(value.trim(), 10);
-  return Number.isNaN(numericValue) ? NaN : numericValue;
-};
 
 export default function ProfileScreen() {
   const { tokens, user } = useAuthStore();
@@ -229,6 +221,20 @@ export default function ProfileScreen() {
     });
   };
 
+  const handleAgeRangeChange = (minAge: number, maxAge: number) => {
+    setForm((prev) => ({
+      ...prev,
+      min_age: minAge,
+      max_age: maxAge,
+    }));
+    setFormErrors((prev) => {
+      const next = { ...prev };
+      delete next.min_age;
+      delete next.max_age;
+      return next;
+    });
+  };
+
   const handleSave = async () => {
     if (!tokens?.accessToken) {
       setFeedback({
@@ -250,21 +256,20 @@ export default function ProfileScreen() {
       nextErrors.birthDate = 'Usa el formato YYYY-MM-DD.';
     }
 
-    const minAge = toNullableNumber(form.min_age);
-    if (Number.isNaN(minAge)) {
-      nextErrors.min_age = 'Introduce un numero valido.';
+    const minAge = form.min_age;
+    const maxAge = form.max_age;
+
+    if (minAge < 18 || minAge > 99) {
+      nextErrors.min_age = 'La edad minima debe estar entre 18 y 99 años.';
     }
 
-    const maxAge = toNullableNumber(form.max_age);
-    if (Number.isNaN(maxAge)) {
-      nextErrors.max_age = 'Introduce un numero valido.';
+    if (maxAge < 18 || maxAge > 99) {
+      nextErrors.max_age = 'La edad maxima debe estar entre 18 y 99 años.';
     }
 
     if (
       nextErrors.min_age === undefined &&
       nextErrors.max_age === undefined &&
-      minAge !== null &&
-      maxAge !== null &&
       minAge > maxAge
     ) {
       nextErrors.min_age = 'La edad minima no puede ser mayor que la maxima.';
@@ -564,39 +569,27 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <View style={styles.row}>
-          <View style={[styles.field, styles.rowField]}>
-            <Text style={styles.label}>Edad minima</Text>
-            <TextInput
-              style={[
-                styles.input,
-                formErrors.min_age ? styles.inputError : null,
-              ]}
-              placeholder="18"
-              value={form.min_age}
-              onChangeText={handleChange('min_age')}
-              keyboardType="number-pad"
-            />
-            {formErrors.min_age ? (
-            <Text style={styles.errorText}>{formErrors.min_age}</Text>
-          ) : null}
-        </View>
-        <View style={[styles.field, styles.rowField]}>
-          <Text style={styles.label}>Edad maxima</Text>
-            <TextInput
-              style={[
-                styles.input,
-                formErrors.max_age ? styles.inputError : null,
-              ]}
-              placeholder="99"
-              value={form.max_age}
-              onChangeText={handleChange('max_age')}
-              keyboardType="number-pad"
-            />
-            {formErrors.max_age ? (
-              <Text style={styles.errorText}>{formErrors.max_age}</Text>
-            ) : null}
-          </View>
+        <View style={styles.field}>
+          <Text style={styles.label}>Rango de edad que buscas</Text>
+          <RangeSlider
+            min={18}
+            max={99}
+            minValue={form.min_age}
+            maxValue={form.max_age}
+            onValueChange={handleAgeRangeChange}
+            step={1}
+            style={[
+              formErrors.min_age || formErrors.max_age ? styles.sliderError : null,
+            ]}
+          />
+          {(formErrors.min_age || formErrors.max_age) && (
+            <Text style={styles.errorText}>
+              {formErrors.min_age || formErrors.max_age}
+            </Text>
+          )}
+          <Text style={styles.helperText}>
+            Desliza las bolitas para seleccionar el rango de edad.
+          </Text>
         </View>
 
         <View style={styles.field}>
@@ -881,6 +874,9 @@ const styles = StyleSheet.create({
   helperText: {
     fontSize: 12,
     color: '#999',
+  },
+  sliderError: {
+    opacity: 0.7,
   },
 });
 

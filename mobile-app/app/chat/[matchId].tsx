@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   messageTime: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#666',
   },
   ownMessageTime: {
