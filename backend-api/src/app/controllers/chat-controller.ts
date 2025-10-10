@@ -9,7 +9,20 @@ const SendMessageSchema = z.object({
 });
 
 const GetMessagesQuerySchema = z.object({
-  limit: z.string().transform(Number).optional(),
+  limit: z
+    .union([z.string(), z.number()])
+    .transform((value, ctx) => {
+      const parsed = Number(value);
+      if (Number.isNaN(parsed)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Invalid limit value',
+        });
+        return z.NEVER;
+      }
+      return parsed;
+    })
+    .optional(),
   before: z.string().optional(),
 });
 

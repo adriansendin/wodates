@@ -9,6 +9,7 @@ import { authRoutes } from './routes/auth-routes';
 import { feedRoutes } from './routes/feed-routes';
 import { chatRoutes } from './routes/chat-routes';
 import { userRoutes } from './routes/user-routes';
+import { matchRoutes } from './routes/match-routes';
 
 // Import repositories
 import { InMemoryUserRepository } from '../data/repositories/InMemoryUserRepository';
@@ -16,7 +17,7 @@ import { InMemoryPreferencesRepository } from '../data/repositories/InMemoryPref
 import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
 import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
 import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepository';
-import { InMemoryMessageRepository } from '../data/repositories/InMemoryMessageRepository';
+import { SupabaseMessageRepository } from '../data/repositories/SupabaseMessageRepository';
 
 // Import use cases
 import { RegisterUser } from '../domain/use-cases/auth/RegisterUser';
@@ -84,7 +85,7 @@ async function buildApp() {
   const likeRepository = new SupabaseLikeRepository();
   const passRepository = new SupabasePassRepository();
   const matchRepository = new SupabaseMatchRepository();
-  const messageRepository = new InMemoryMessageRepository();
+  const messageRepository = new SupabaseMessageRepository();
 
   // Initialize use cases
   const registerUser = new RegisterUser(userRepository, preferencesRepository);
@@ -93,6 +94,10 @@ async function buildApp() {
   const passUser = new PassUser(passRepository);
   const sendMessage = new SendMessage(messageRepository, matchRepository);
   const getMessages = new GetMessages(messageRepository, matchRepository);
+  const matchOverviewService = new MatchOverviewService(
+    matchRepository,
+    messageRepository,
+  );
 
   // Decorate fastify with use cases
   fastify.decorate('registerUser', registerUser);
@@ -101,6 +106,7 @@ async function buildApp() {
   fastify.decorate('passUser', passUser);
   fastify.decorate('sendMessage', sendMessage);
   fastify.decorate('getMessages', getMessages);
+  fastify.decorate('matchOverviewService', matchOverviewService);
 
   // Seed demo data
   await seedDemoData(userRepository, preferencesRepository);
@@ -109,6 +115,7 @@ async function buildApp() {
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
   await fastify.register(feedRoutes, { prefix: '/api/v1' });
   await fastify.register(chatRoutes, { prefix: '/api/v1' });
+  await fastify.register(matchRoutes, { prefix: '/api/v1' });
   await fastify.register(userRoutes, { prefix: '/api/v1' });
 
   // Health check
@@ -178,3 +185,4 @@ async function start() {
 start();
   
 export { buildApp };
+import { MatchOverviewService } from './services/match-overview-service';

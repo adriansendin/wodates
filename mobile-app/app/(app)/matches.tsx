@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,93 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMatchesStore, MatchWithUser } from '../../src/domain/stores/matchesStore';
+import { useAuthStore } from '../../src/domain/stores/authStore';
+import { ApiClient } from '../../src/data/api/apiClient';
+import { MatchApi } from '../../src/data/api/matchApi';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 export default function MatchesScreen() {
   const router = useRouter();
-  const { matches, isLoading } = useMatchesStore();
+  const {
+    matches,
+    isLoading,
+    setMatches,
+    setLoading,
+    setError,
+    clearError,
+  } = useMatchesStore();
+  const { user, tokens } = useAuthStore();
+
+  const apiClient = useMemo(() => new ApiClient(API_URL), []);
+  const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
+
+  const loadMatches = useCallback(async () => {
+    if (!tokens?.accessToken || !user?.id) {
+      setMatches([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    clearError();
+
+    try {
+      const result = await matchApi.getMatches(tokens.accessToken);
+
+      if (!result.success) {
+        setError(result.error.message);
+        Alert.alert('Error', result.error.message);
+        return;
+      }
+
+      const normalizedMatches: MatchWithUser[] = result.data.matches.map((match) => {
+        const otherUserId =
+          match.userId1 === user.id ? match.userId2 : match.userId1;
+
+        const otherUser = match.otherUser
+          ? {
+              id: match.otherUser.id,
+              name: match.otherUser.name,
+              bio: match.otherUser.bio ?? undefined,
+              photoUrl: match.otherUser.photoUrl ?? undefined,
+              gender: match.otherUser.gender ?? undefined,
+              birthDate: match.otherUser.birthDate ?? undefined,
+            }
+          : {
+              id: otherUserId,
+              name: 'User',
+            };
+
+        return {
+          id: match.id,
+          userId1: match.userId1,
+          userId2: match.userId2,
+          createdAt: match.createdAt,
+          otherUser,
+          lastMessage: match.lastMessage ?? undefined,
+          unreadCount: match.unreadCount,
+        };
+      });
+
+      setMatches(normalizedMatches);
+    } catch (error) {
+      console.error('Failed to load matches', error);
+      const message = 'Network error. Please try again.';
+      setError(message);
+      Alert.alert('Error', message);
+    } finally {
+      setLoading(false);
+    }
+  }, [clearError, matchApi, setError, setLoading, setMatches, tokens, user]);
+
+  useEffect(() => {
+    loadMatches();
+  }, [loadMatches]);
 
   const handleMatchPress = (match: MatchWithUser) => {
     router.push({

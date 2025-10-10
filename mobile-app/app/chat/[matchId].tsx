@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,55 +9,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, useLocalSearchParams, Redirect } from 'expo-router';
+import { ApiClient } from '../../src/data/api/apiClient';
+import { ChatApi } from '../../src/data/api/chatApi';
+import { useAuthStore } from '../../src/domain/stores/authStore';
+import { useChatStore } from '../../src/domain/stores/chatStore';
+import { Message, MessageSchema } from '../../src/domain/entities/Message';
+import { useMatchesStore } from '../../src/domain/stores/matchesStore';
 
-// Simplified types for MVP
-interface Message {
-  id: string;
-  matchId: string;
-  senderId: string;
-  content: string;
-  createdAt: string;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-// Simplified stores for MVP
-const useAuthStore = () => {
-  // Mock implementation for MVP
-  return {
-    user: { id: 'user-1', name: 'Test User', email: 'test@example.com' } as User,
-    tokens: { accessToken: 'mock-token' }
-  };
-};
-
-const useChatStore = () => {
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
-  
-  return {
-    messages,
-    addMessage: (matchId: string, message: Message) => {
-      setMessages(prev => ({
-        ...prev,
-        [matchId]: [...(prev[matchId] || []), message]
-      }));
-    },
-    setMessages: (matchId: string, newMessages: Message[]) => {
-      setMessages(prev => ({
-        ...prev,
-        [matchId]: newMessages
-      }));
-    },
-    setSending: (sending: boolean) => {
-      // Mock implementation
-    }
-  };
-};
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 export default function ChatScreen() {
   const params = useLocalSearchParams<{
@@ -77,35 +39,101 @@ export default function ChatScreen() {
   }, [params.name]);
 
   const { tokens, user } = useAuthStore();
-  const { messages, addMessage, setMessages, setSending } = useChatStore();
+  const {
+    messages,
+    setMessages,
+    addMessage,
+    setLoading,
+    setError,
+    clearError,
+    isLoading,
+    isSending,
+    setSending,
+  } = useChatStore();
+  const updateMatch = useMatchesStore((state) => state.updateMatch);
 
   const [message, setMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
+  const flatListRef = useRef<FlatList<Message>>(null);
 
-  const matchMessages = matchId ? messages[matchId] || [] : [];
+  const apiClient = useMemo(() => new ApiClient(API_URL), []);
+  const chatApi = useMemo(() => new ChatApi(apiClient), [apiClient]);
+  const isInitialLoad = useRef(true);
 
-  const loadMessages = useCallback(async () => {
-    if (!tokens?.accessToken || !matchId) return;
-
-    try {
-      // Mock implementation for MVP
-      const mockMessages: Message[] = [
-        {
-          id: '1',
-          matchId: matchId,
-          senderId: 'other-user',
-          content: 'Hello! How are you?',
-          createdAt: new Date().toISOString()
-        }
-      ];
-      setMessages(matchId, mockMessages);
-    } catch {
-      // Ignore polling errors to avoid noisy alerts
-    }
-  }, [matchId, setMessages, tokens?.accessToken]);
+  const matchMessages = useMemo(
+    () => (matchId ? messages[matchId] || [] : []),
+    [matchId, messages],
+  );
 
   useEffect(() => {
-    if (!matchId) return;
+    isInitialLoad.current = true;
+  }, [matchId]);
+
+  useEffect(() => {
+    if (matchMessages.length > 0) {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [matchMessages.length]);
+
+  const loadMessages = useCallback(async () => {
+    if (!tokens?.accessToken || !matchId) {
+      return;
+    }
+
+    if (isInitialLoad.current) {
+      setLoading(true);
+    }
+
+    try {
+      clearError();
+      const result = await chatApi.getMessages(matchId, 50, undefined, tokens.accessToken);
+      if (!result.success) {
+        const messageText = result.error.message || 'Could not load messages.';
+        setError(messageText);
+        if (isInitialLoad.current) {
+          Alert.alert('Error', messageText);
+        }
+        return;
+      }
+
+      const validation = MessageSchema.array().safeParse(result.data.messages);
+      if (!validation.success) {
+        setError('Invalid messages received from server.');
+        console.warn('Invalid messages payload', validation.error);
+        if (isInitialLoad.current) {
+          Alert.alert('Error', 'Received invalid messages data.');
+        }
+        return;
+      }
+
+      const orderedMessages = [...validation.data].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+      setMessages(matchId, orderedMessages);
+
+      if (orderedMessages.length > 0) {
+        const latestMessage = orderedMessages[orderedMessages.length - 1];
+        updateMatch(matchId, { lastMessage: latestMessage, unreadCount: 0 });
+      } else {
+        updateMatch(matchId, { lastMessage: undefined, unreadCount: 0 });
+      }
+    } catch (error) {
+      console.error('Failed to load chat messages', error);
+      setError('Network error. Please try again.');
+      if (isInitialLoad.current) {
+        Alert.alert('Error', 'Network error. Please try again.');
+      }
+    } finally {
+      if (isInitialLoad.current) {
+        setLoading(false);
+        isInitialLoad.current = false;
+      }
+    }
+  }, [chatApi, clearError, matchId, setError, setLoading, setMessages, tokens?.accessToken, updateMatch]);
+
+  useEffect(() => {
+    if (!matchId) {
+      return;
+    }
 
     loadMessages();
     const interval = setInterval(loadMessages, 5000);
@@ -113,32 +141,58 @@ export default function ChatScreen() {
   }, [loadMessages, matchId]);
 
   const handleSendMessage = useCallback(async () => {
-    if (!message.trim() || !tokens?.accessToken || !matchId || isSending) return;
-
     const messageContent = message.trim();
-    setMessage('');
-    setIsSending(true);
+    if (!messageContent || !tokens?.accessToken || !matchId || isSending) {
+      return;
+    }
+
     setSending(true);
+    clearError();
 
     try {
-      // Mock implementation for MVP
-      const newMessage: Message = {
-        id: Date.now().toString(),
+      const result = await chatApi.sendMessage(
         matchId,
-        senderId: user?.id || 'current-user',
-        content: messageContent,
-        createdAt: new Date().toISOString()
-      };
-      
-      addMessage(matchId, newMessage);
+        { content: messageContent },
+        tokens.accessToken,
+      );
+
+      if (!result.success) {
+        const messageText = result.error.message || 'Could not send your message.';
+        setError(messageText);
+        Alert.alert('Error', messageText);
+        return;
+      }
+
+      const validation = MessageSchema.safeParse(result.data.message);
+      if (!validation.success) {
+        Alert.alert('Error', 'Received invalid message data.');
+        console.warn('Invalid message payload received from server', validation.error);
+        return;
+      }
+
+      addMessage(matchId, validation.data);
+      updateMatch(matchId, { lastMessage: validation.data, unreadCount: 0 });
+      setMessage('');
     } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
-      setMessage(messageContent);
+      console.error('Failed to send message', error);
+      const fallbackMessage = 'Network error. Please try again.';
+      setError(fallbackMessage);
+      Alert.alert('Error', fallbackMessage);
     } finally {
-      setIsSending(false);
       setSending(false);
     }
-  }, [addMessage, isSending, matchId, message, setSending, tokens?.accessToken, user?.id]);
+  }, [
+    addMessage,
+    chatApi,
+    clearError,
+    isSending,
+    matchId,
+    message,
+    setError,
+    setSending,
+    tokens?.accessToken,
+    updateMatch,
+  ]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwn = item.senderId === user?.id;
@@ -179,11 +233,26 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <FlatList
+          ref={flatListRef}
           data={matchMessages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           style={styles.messagesList}
-          inverted
+          contentContainerStyle={
+            matchMessages.length === 0 ? styles.emptyListContainer : styles.messagesContent
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyStateContainer}>
+              {isLoading ? (
+                <>
+                  <ActivityIndicator size="small" color="#e91e63" />
+                  <Text style={styles.emptyStateText}>Loading messages...</Text>
+                </>
+              ) : (
+                <Text style={styles.emptyStateText}>Start the conversation!</Text>
+              )}
+            </View>
+          }
         />
 
         <View style={styles.inputContainer}>
@@ -191,7 +260,7 @@ export default function ChatScreen() {
             style={styles.textInput}
             value={message}
             onChangeText={setMessage}
-            placeholder="Type a message222..."
+            placeholder="Type a message..."
             multiline
             maxLength={1000}
           />
@@ -216,6 +285,26 @@ const styles = StyleSheet.create({
   messagesList: {
     flex: 1,
     paddingHorizontal: 16,
+  },
+  messagesContent: {
+    paddingVertical: 16,
+    paddingBottom: 24,
+  },
+  emptyListContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
   messageContainer: {
     marginVertical: 4,

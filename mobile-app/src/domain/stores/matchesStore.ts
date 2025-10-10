@@ -27,6 +27,14 @@ interface MatchesActions {
   reset: () => void;
 }
 
+const lastInteractionAt = (match: MatchWithUser) => {
+  const reference = match.lastMessage?.createdAt ?? match.createdAt;
+  return new Date(reference).getTime();
+};
+
+const sortMatches = (matches: MatchWithUser[]) =>
+  [...matches].sort((a, b) => lastInteractionAt(b) - lastInteractionAt(a));
+
 export const useMatchesStore = create<MatchesState & MatchesActions>((set, get) => ({
   // State
   matches: [],
@@ -34,21 +42,25 @@ export const useMatchesStore = create<MatchesState & MatchesActions>((set, get) 
   error: null,
 
   // Actions
-  setMatches: (matches) => set({ matches }),
+  setMatches: (matches) => set({ matches: sortMatches(matches) }),
   addMatch: (match) => set((state) => {
     const exists = state.matches.some((existing) => existing.id === match.id);
 
+    const updatedMatches = exists
+      ? state.matches.map((existing) =>
+          existing.id === match.id ? { ...existing, ...match } : existing,
+        )
+      : [...state.matches, match];
+
     return {
-      matches: exists
-        ? state.matches.map((existing) =>
-            existing.id === match.id ? { ...existing, ...match } : existing,
-          )
-        : [...state.matches, match],
+      matches: sortMatches(updatedMatches),
     };
   }),
   updateMatch: (matchId, updates) => set((state) => ({
-    matches: state.matches.map(match => 
-      match.id === matchId ? { ...match, ...updates } : match
+    matches: sortMatches(
+      state.matches.map(match =>
+        match.id === matchId ? { ...match, ...updates } : match
+      )
     )
   })),
   setLoading: (isLoading) => set({ isLoading }),
