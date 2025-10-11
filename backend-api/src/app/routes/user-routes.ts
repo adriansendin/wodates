@@ -29,6 +29,7 @@ export async function userRoutes(fastify: FastifyInstance) {
             properties: {
               id: { type: 'string', format: 'uuid' },
               name: { type: 'string' },
+              email: { type: 'string', format: 'email' },
               birthDate: { type: ['string', 'null'], format: 'date' },
               gender: { type: ['string', 'null'], enum: genderEnum },
               looking_for: { type: ['string', 'null'], enum: lookingForEnum },

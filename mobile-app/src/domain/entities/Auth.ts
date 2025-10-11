@@ -10,7 +10,7 @@ export const LoginSchema = z.object({
 export const RegisterSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  name: z.string().min(1).max(100),
+  name: z.string().min(1).max(100), // Se almacena como display_name en auth.users.raw_user_meta_data
   birthDate: z.string().datetime(),
   gender: GenderSchema.optional(),
   location: z.string().optional(),

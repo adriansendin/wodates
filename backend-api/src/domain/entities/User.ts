@@ -12,8 +12,9 @@ export const GenderSchema = z.enum(GENDER_VALUES);
 
 export const UserSchema = z.object({
   id: z.string().uuid(),
-  email: z.string().email(),
-  name: z.string().min(1).max(100),
+  // MIGRACIÓN COMPLETADA: email y name vienen de auth.users, no de public.users
+  email: z.string().email(), // Viene de auth.users.email
+  name: z.string().min(1).max(100), // Viene de auth.users.raw_user_meta_data.display_name
   birthDate: z.string().datetime(),
   gender: GenderSchema,
   bio: z.string().max(500).optional(),
@@ -30,6 +31,8 @@ export const UserSchema = z.object({
 
 export const CreateUserSchema = UserSchema.omit({
   id: true,
+  email: true, // email is managed by auth.users
+  name: true, // name is managed by auth.users (raw_user_meta_data.display_name)
   createdAt: true,
   updatedAt: true,
 });

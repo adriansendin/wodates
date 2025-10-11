@@ -20,8 +20,12 @@ type SupabaseAuthConfig = {
 };
 
 /**
- * Minimal Supabase-backed auth service. Uses the service role key to talk to
- * the Admin API so we can validate whether a user exists and create new ones.
+ * SupabaseAuthService - Gestión de autenticación
+ * 
+ * IMPORTANTE: Este servicio almacena el nombre del usuario en:
+ * auth.users.raw_user_meta_data.display_name (NO en public.users)
+ * 
+ * Uses the service role key to talk to the Admin API.
  */
 export class SupabaseAuthService {
   private readonly adminClient: SupabaseClient;
@@ -49,15 +53,17 @@ export class SupabaseAuthService {
 
   async registerUser(registerRequest: RegisterRequest): Promise<AuthUser> {
     try {
-      // Step 1: Create user in Supabase Auth
+      // Create user in Supabase Auth with display_name in raw_user_meta_data
       const { data, error } = await this.adminClient.auth.admin.createUser({
         email: registerRequest.email,
         password: registerRequest.password,
         email_confirm: true,
         user_metadata: {
-          name: registerRequest.name,
+          display_name: registerRequest.name, // IMPORTANTE: Almacenamos el nombre aquí, no en public.users
           birthDate: registerRequest.birthDate,
           gender: registerRequest.gender,
+          location: registerRequest.location,
+          lookingFor: registerRequest.lookingFor,
         },
       });
 
@@ -74,7 +80,7 @@ export class SupabaseAuthService {
         throw new InternalError('Supabase did not return a user after creation');
       }
 
-      // Step 2: Create user profile in public.users table
+      // Step 2: Create user profile in public.users table (without name and email)
       await this.createUserProfile(user.id, registerRequest);
 
       return this.mapUser(user);
@@ -89,12 +95,12 @@ export class SupabaseAuthService {
 
   private async createUserProfile(userId: string, registerRequest: RegisterRequest): Promise<void> {
     try {
+      // Create profile in public.users without name and email (those are in auth.users)
       const { error } = await this.adminClient
         .from('users')
         .insert({
           id: userId,
-          email: registerRequest.email,
-          name: registerRequest.name,
+          // email and name are no longer stored in public.users
           birthDate: registerRequest.birthDate,
           gender: registerRequest.gender || null,
           city: registerRequest.location || null,
@@ -158,15 +164,16 @@ export class SupabaseAuthService {
 
   private mapUser(user: User): AuthUser {
     const metadata = user.user_metadata as Record<string, unknown> | null;
-    const name =
-      metadata && typeof metadata.name === 'string'
-        ? metadata.name
+    // Get display_name from raw_user_meta_data (this is where we store user names)
+    const displayName =
+      metadata && typeof metadata.display_name === 'string'
+        ? metadata.display_name
         : undefined;
 
     return {
       id: user.id,
       email: user.email ?? '',
-      name: name ?? user.email ?? 'User',
+      name: displayName ?? user.email ?? 'User',
     };
   }
 

@@ -13,8 +13,7 @@ type SupabaseConfig = {
 
 type UserProfileRow = {
   id: string;
-  email: string | null;
-  name: string | null;
+  // email and name are no longer in public.users, they come from auth.users
   birthDate: string | null;
   gender: Gender | null;
   looking_for: LookingForValue | null;
@@ -27,7 +26,8 @@ type UserProfileRow = {
 
 export type UserProfile = {
   id: string;
-  name: string;
+  name: string; // Retrieved from auth.users.raw_user_meta_data.display_name
+  email: string; // Retrieved from auth.users.email
   birthDate: string | null;
   gender: Gender | null;
   looking_for: LookingForValue | null;
@@ -50,8 +50,14 @@ export type UpdateUserProfileInput = {
 };
 
 /**
- * Service responsible for interacting with the Supabase `users` table.
- * It returns a curated profile payload without exposing sensitive columns.
+ * SupabaseUserService - Gestión de perfiles de usuario
+ * 
+ * ARQUITECTURA DE DATOS DESPUÉS DE MIGRACIÓN:
+ * - public.users: bio, preferences, dates, city, etc. (datos del perfil)
+ * - auth.users.email: email del usuario
+ * - auth.users.raw_user_meta_data.display_name: nombre del usuario
+ * 
+ * IMPORTANTE: Solo el backend con SERVICE_ROLE_KEY puede acceder a auth.users
  */
 export class SupabaseUserService {
   private readonly client: SupabaseClient;
@@ -69,8 +75,13 @@ export class SupabaseUserService {
 
   async getProfile(userId: string): Promise<UserProfile> {
     try {
+      // Get profile data from public.users
       const profile = await this.ensureProfileRow(userId);
-      return this.mapRow(profile);
+      
+      // Get name and email from auth.users
+      const authUser = await this.getAuthUser(userId);
+      
+      return this.mapRow(profile, authUser);
     } catch (error) {
       if (error instanceof DomainError) {
         throw error;
@@ -115,7 +126,9 @@ export class SupabaseUserService {
       }
 
       if (Object.keys(updatePayload).length === 0) {
-        return this.mapRow(profile);
+        // Get auth user data even if no profile updates
+        const authUser = await this.getAuthUser(userId);
+        return this.mapRow(profile, authUser);
       }
 
       const { data, error } = await this.client
@@ -123,7 +136,7 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
+          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
         )
         .single();
 
@@ -143,7 +156,10 @@ export class SupabaseUserService {
         throw new InternalError('Supabase did not return updated profile');
       }
 
-      return this.mapRow(data as UserProfileRow);
+      // Get name and email from auth.users
+      const authUser = await this.getAuthUser(userId);
+      
+      return this.mapRow(data as UserProfileRow, authUser);
     } catch (error) {
       if (error instanceof DomainError) {
         throw error;
@@ -165,7 +181,7 @@ export class SupabaseUserService {
       .from('users')
       .upsert(defaults, { onConflict: 'id' })
       .select(
-        'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
       )
       .single();
 
@@ -194,7 +210,7 @@ export class SupabaseUserService {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, email, name, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
       )
       .eq('id', userId)
       .maybeSingle();
@@ -227,13 +243,6 @@ export class SupabaseUserService {
     }
 
     const metadata = data?.user?.user_metadata as Record<string, unknown> | null;
-    const email = data?.user?.email ?? undefined;
-
-    if (!email) {
-      throw new InternalError('Supabase auth user is missing mandatory email');
-    }
-
-    const name = this.resolveName(metadata, email);
 
     let birthDate: string | null = null;
     if (metadata && typeof metadata.birthDate === 'string') {
@@ -259,8 +268,7 @@ export class SupabaseUserService {
 
     return {
       id: userId,
-      name,
-      email,
+      // name and email are no longer stored in public.users
       birthDate,
       gender,
       looking_for: null,
@@ -272,12 +280,51 @@ export class SupabaseUserService {
     };
   }
 
+  /**
+   * Obtiene name y email desde auth.users usando service role
+   * 
+   * @param userId - ID del usuario
+   * @returns {name, email} - name viene de raw_user_meta_data.display_name, email de auth.users.email
+   */
+  private async getAuthUser(userId: string): Promise<{ name: string; email: string }> {
+    const { data, error } = await this.client.auth.admin.getUserById(userId);
+    if (error) {
+      console.error('[SupabaseUserService] getAuthUser failed', {
+        userId,
+        error,
+      });
+      throw new InternalError(
+        `Unable to get auth user: ${this.formatSupabaseError(error)}`,
+        error,
+      );
+    }
+
+    const user = data?.user;
+    if (!user) {
+      throw new InternalError('Auth user not found');
+    }
+
+    const metadata = user.user_metadata as Record<string, unknown> | null;
+    const email = user.email ?? '';
+    
+    // Get display_name from raw_user_meta_data (this is where we store the user's name)
+    const displayName =
+      metadata && typeof metadata.display_name === 'string'
+        ? metadata.display_name.trim()
+        : '';
+
+    const name = displayName || email || 'User';
+
+    return { name, email };
+  }
+
   private resolveName(
     metadata: Record<string, unknown> | null,
     email: string | undefined,
   ): string {
-    if (metadata && typeof metadata.name === 'string') {
-      const trimmed = metadata.name.trim();
+    // Use display_name instead of name
+    if (metadata && typeof metadata.display_name === 'string') {
+      const trimmed = metadata.display_name.trim();
       if (trimmed) {
         return trimmed;
       }
@@ -293,10 +340,11 @@ export class SupabaseUserService {
     return 'User';
   }
 
-  private mapRow(row: UserProfileRow): UserProfile {
+  private mapRow(row: UserProfileRow, authUser: { name: string; email: string }): UserProfile {
     return {
       id: row.id,
-      name: row.name ?? 'User',
+      name: authUser.name, // From auth.users.raw_user_meta_data.display_name
+      email: authUser.email, // From auth.users.email
       birthDate: row.birthDate,
       gender: row.gender,
       looking_for: row.looking_for,
