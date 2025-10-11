@@ -1,10 +1,6 @@
 import { z } from 'zod';
 import { GenderSchema } from './Gender';
-
-export const LOOKING_FOR_OPTIONS = ['male', 'female', 'both'] as const;
-const LookingForSchema = z.enum(LOOKING_FOR_OPTIONS);
-
-export type LookingForOption = (typeof LOOKING_FOR_OPTIONS)[number];
+import { LookingForSchema } from './LookingFor';
 
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),

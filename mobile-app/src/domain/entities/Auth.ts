@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GenderSchema } from './Gender';
+import { LookingForSchema } from './LookingFor';
 
 export const LoginSchema = z.object({
   email: z.string().email(),
@@ -11,7 +12,9 @@ export const RegisterSchema = z.object({
   password: z.string().min(6),
   name: z.string().min(1).max(100),
   birthDate: z.string().datetime(),
-  gender: GenderSchema,
+  gender: GenderSchema.optional(),
+  location: z.string().optional(),
+  lookingFor: LookingForSchema.optional(),
 });
 
 export const AuthTokensSchema = z.object({

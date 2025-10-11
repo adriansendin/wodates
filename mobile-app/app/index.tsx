@@ -27,6 +27,12 @@ export default function Home() {
       Less swipe. More substance.
       </Text>
 
+      <Link href="/(auth)/register" asChild>
+        <TouchableOpacity style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>Crear una cuenta</Text>
+        </TouchableOpacity>
+      </Link>
+
       <Link href="/(auth)/login" asChild>
         <TouchableOpacity style={styles.button}>
           <Text style={styles.buttonText}>Iniciar Sesion</Text>
@@ -64,6 +70,21 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  secondaryButton: {
+    marginTop: 16,
+    backgroundColor: 'transparent',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e91e63',
+  },
+  secondaryButtonText: {
+    color: '#e91e63',
     fontSize: 16,
     fontWeight: 'bold',
     textTransform: 'uppercase',

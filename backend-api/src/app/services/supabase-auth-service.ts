@@ -49,6 +49,7 @@ export class SupabaseAuthService {
 
   async registerUser(registerRequest: RegisterRequest): Promise<AuthUser> {
     try {
+      // Step 1: Create user in Supabase Auth
       const { data, error } = await this.adminClient.auth.admin.createUser({
         email: registerRequest.email,
         password: registerRequest.password,
@@ -73,6 +74,9 @@ export class SupabaseAuthService {
         throw new InternalError('Supabase did not return a user after creation');
       }
 
+      // Step 2: Create user profile in public.users table
+      await this.createUserProfile(user.id, registerRequest);
+
       return this.mapUser(user);
     } catch (error) {
       if (error instanceof DomainError) {
@@ -80,6 +84,33 @@ export class SupabaseAuthService {
       }
 
       throw new InternalError('Unexpected error creating Supabase user', error);
+    }
+  }
+
+  private async createUserProfile(userId: string, registerRequest: RegisterRequest): Promise<void> {
+    try {
+      const { error } = await this.adminClient
+        .from('users')
+        .insert({
+          id: userId,
+          email: registerRequest.email,
+          name: registerRequest.name,
+          birthDate: registerRequest.birthDate,
+          gender: registerRequest.gender || null,
+          city: registerRequest.location || null,
+          looking_for: registerRequest.lookingFor || null,
+        });
+
+      if (error) {
+        console.error('[SupabaseAuthService] Failed to create user profile', error);
+        throw new InternalError('Failed to create user profile', error);
+      }
+    } catch (error) {
+      if (error instanceof DomainError) {
+        throw error;
+      }
+
+      throw new InternalError('Unexpected error creating user profile', error);
     }
   }
 

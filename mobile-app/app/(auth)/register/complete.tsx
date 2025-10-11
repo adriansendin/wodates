@@ -1,0 +1,245 @@
+import React, { useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
+import { useAuthStore } from '../../../src/domain/stores/authStore';
+import { ApiClient } from '../../../src/data/api/apiClient';
+import { AuthApi } from '../../../src/data/api/authApi';
+import { AuthTokens } from '../../../src/domain/entities/Auth';
+import { User, Gender } from '../../../src/domain/entities/User';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+
+const normalizeUser = (rawUser: Record<string, unknown>): User => {
+  const now = new Date().toISOString();
+
+  if (typeof rawUser?.id !== 'string' || typeof rawUser?.email !== 'string') {
+    throw new Error('User payload is missing required fields.');
+  }
+
+  const gender = (rawUser.gender ?? 'other') as Gender;
+
+  return {
+    id: rawUser.id,
+    email: rawUser.email,
+    name: typeof rawUser.name === 'string' ? rawUser.name : '',
+    birthDate: typeof rawUser.birthDate === 'string' ? rawUser.birthDate : now,
+    gender,
+    bio: typeof rawUser.bio === 'string' ? rawUser.bio : undefined,
+    photoUrl: typeof rawUser.photoUrl === 'string' ? rawUser.photoUrl : undefined,
+    location: rawUser.location as User['location'],
+    createdAt: typeof rawUser.createdAt === 'string' ? rawUser.createdAt : now,
+    updatedAt: typeof rawUser.updatedAt === 'string' ? rawUser.updatedAt : now,
+  };
+};
+
+export default function CompleteScreen() {
+  const router = useRouter();
+  const { data, resetRegistration } = useRegistrationStore();
+  const { login } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const apiClient = useMemo(() => new ApiClient(API_URL), []);
+  const authApi = useMemo(() => new AuthApi(apiClient), [apiClient]);
+
+  const handleComplete = async () => {
+    setIsLoading(true);
+
+    try {
+      // Preparar los datos para el registro
+      const registerData = {
+        email: data.email,
+        password: data.password,
+        name: data.name,
+        birthDate: data.birthDate?.toISOString() || new Date().toISOString(),
+        gender: data.gender || undefined,
+        location: data.location || undefined,
+        lookingFor: data.lookingFor || undefined,
+      };
+
+      console.log('[Register] Sending registration data:', registerData);
+
+      // Llamar a la API de registro
+      const result = await authApi.register(registerData);
+
+      if (!result.success) {
+        const message = result.error.message ?? 'Error al crear la cuenta. Inténtalo de nuevo.';
+        Alert.alert('Error de registro', message);
+        setIsLoading(false);
+        return;
+      }
+
+      const { user, token } = result.data;
+      const normalizedUser = normalizeUser(user as Record<string, unknown>);
+      const tokens: AuthTokens = {
+        accessToken: token,
+        refreshToken: token,
+        expiresIn: 7 * 24 * 60 * 60, // 7 días en segundos
+      };
+
+      // Guardar usuario en el store
+      login(normalizedUser, tokens);
+
+      // Limpiar el store de registro
+      resetRegistration();
+
+      // Redirigir al perfil
+      Alert.alert(
+        '¡Bienvenido!',
+        'Tu cuenta ha sido creada exitosamente',
+        [
+          {
+            text: 'Aceptar',
+            onPress: () => router.replace('/(app)/profile'),
+          },
+        ]
+      );
+    } catch (err) {
+      console.error('Registration error:', err);
+      Alert.alert('Error', 'Error de red. Inténtalo de nuevo.');
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.iconContainer}>
+          <Text style={styles.icon}>✓</Text>
+        </View>
+
+        <Text style={styles.title}>Perfil básico completado</Text>
+        <Text style={styles.subtitle}>
+          Ya tienes todo listo para empezar a conocer personas
+        </Text>
+
+        <View style={styles.summaryContainer}>
+          <Text style={styles.summaryTitle}>Resumen de tu perfil:</Text>
+          
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Nombre:</Text>
+            <Text style={styles.summaryValue}>{data.name}</Text>
+          </View>
+
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Email:</Text>
+            <Text style={styles.summaryValue}>{data.email}</Text>
+          </View>
+
+          {data.birthDate && (
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Fecha de nacimiento:</Text>
+              <Text style={styles.summaryValue}>
+                {data.birthDate.toLocaleDateString('es-ES')}
+              </Text>
+            </View>
+          )}
+
+          {data.location && (
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Ubicación:</Text>
+              <Text style={styles.summaryValue}>{data.location}</Text>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleComplete}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Aceptar</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F45C5C',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  icon: {
+    fontSize: 48,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#7F8C8D',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  summaryContainer: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 32,
+    gap: 12,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 8,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#7F8C8D',
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: '#2C3E50',
+    fontWeight: '500',
+  },
+  button: {
+    backgroundColor: '#F45C5C',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    width: '100%',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
+

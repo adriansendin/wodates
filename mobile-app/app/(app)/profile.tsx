@@ -16,8 +16,6 @@ import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { ProfileApi } from '../../src/data/api/profileApi';
 import {
-  LOOKING_FOR_OPTIONS,
-  LookingForOption,
   UpdateUserProfile,
   UserProfile,
 } from '../../src/domain/entities/UserProfile';
@@ -25,6 +23,10 @@ import {
   GENDER_OPTIONS,
   GenderOption,
 } from '../../src/domain/entities/Gender';
+import {
+  LOOKING_FOR_OPTIONS,
+  LookingForOption,
+} from '../../src/domain/entities/LookingFor';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 const AVATAR_PLACEHOLDER = 'https://via.placeholder.com/240x240.png?text=Profile';
