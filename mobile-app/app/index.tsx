@@ -24,12 +24,12 @@ export default function Home() {
     <View style={styles.container}>
       <Text style={styles.title}>Wodates</Text>
       <Text style={styles.subtitle}>
-        Conecta con personas que comparten tu pasion por el fitness(index.tsx).
+      Less swipe. More substance.
       </Text>
 
       <Link href="/(auth)/login" asChild>
         <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Iniciar Sesion2</Text>
+          <Text style={styles.buttonText}>Iniciar Sesion</Text>
         </TouchableOpacity>
       </Link>
     </View>

@@ -1,18 +1,14 @@
 {
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "module": "esnext",               // ✅ anula el "preserve" de Expo
     "allowJs": true,
     "esModuleInterop": true,
     "jsx": "react-native",
-    "lib": [
-      "DOM",
-      "ESNext"
-    ],
-    "module": "esnext",
+    "lib": ["DOM", "ESNext"],
     "moduleDetection": "force",
     "moduleResolution": "bundler",
-    "customConditions": [
-      "react-native"
-    ],
+    "customConditions": ["react-native"],
     "noEmit": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -20,23 +16,11 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@domain/*": [
-        "src/domain/*"
-      ],
-      "@data/*": [
-        "src/data/*"
-      ]
+      "@domain/*": ["src/domain/*"],
+      "@data/*": ["src/data/*"]
     },
-    "types": [
-      "jest"
-    ]
+    "types": ["jest"]
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules"
-  ],
-  "extends": "expo/tsconfig.base"
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
 }
