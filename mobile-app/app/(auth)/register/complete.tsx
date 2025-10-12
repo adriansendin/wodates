@@ -5,8 +5,10 @@ import { useRegistrationStore } from '../../../src/domain/stores/registrationSto
 import { useAuthStore } from '../../../src/domain/stores/authStore';
 import { ApiClient } from '../../../src/data/api/apiClient';
 import { AuthApi } from '../../../src/data/api/authApi';
+import { ProfileApi } from '../../../src/data/api/profileApi';
 import { AuthTokens } from '../../../src/domain/entities/Auth';
 import { User, Gender } from '../../../src/domain/entities/User';
+import { uploadAvatarToSupabase } from '../../../src/data/api/imageService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
@@ -41,6 +43,7 @@ export default function CompleteScreen() {
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const authApi = useMemo(() => new AuthApi(apiClient), [apiClient]);
+  const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
 
   const handleComplete = async () => {
     setIsLoading(true);
@@ -79,6 +82,40 @@ export default function CompleteScreen() {
 
       // Guardar usuario en el store
       login(normalizedUser, tokens);
+
+      // Actualizar perfil con preferencias adicionales
+      let avatarUrl: string | undefined = undefined;
+
+      // Si hay un avatar local, subirlo a Supabase
+      if (data.avatarUrl) {
+        console.log('[Register] Uploading avatar to Supabase...');
+        const uploadResult = await uploadAvatarToSupabase(data.avatarUrl, normalizedUser.id);
+
+        if (uploadResult.success && uploadResult.data) {
+          console.log('[Register] Avatar uploaded successfully');
+          avatarUrl = uploadResult.data;
+        } else {
+          console.warn('[Register] Failed to upload avatar:', uploadResult.error);
+        }
+      }
+
+      // Actualizar perfil con avatar y rango de edad
+      const profileUpdates: Record<string, any> = {
+        min_age: data.minAge,
+        max_age: data.maxAge,
+      };
+
+      if (avatarUrl) {
+        profileUpdates.avatarUrl = avatarUrl;
+      }
+
+      console.log('[Register] Updating profile with age range and avatar...');
+      const updateResult = await profileApi.updateProfile(profileUpdates, token);
+
+      if (!updateResult.success) {
+        console.warn('[Register] Failed to update profile:', updateResult.error);
+        // No mostramos error al usuario, se puede actualizar después
+      }
 
       // Limpiar el store de registro
       resetRegistration();
@@ -141,6 +178,11 @@ export default function CompleteScreen() {
               <Text style={styles.summaryValue}>{data.location}</Text>
             </View>
           )}
+
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Rango de edad buscado:</Text>
+            <Text style={styles.summaryValue}>{data.minAge} - {data.maxAge} años</Text>
+          </View>
         </View>
 
         <TouchableOpacity

@@ -1,5 +1,9 @@
 # Implementación del Flujo de Registro de 5 Pasos
 
+> **⚠️ DOCUMENTO DESACTUALIZADO**  
+> Este documento es histórico. El selector de fecha ha sido reemplazado por `BirthDatePicker`, un componente multiplataforma sin dependencias externas.  
+> La dependencia `@react-native-community/datetimepicker` ha sido eliminada.
+
 ## 📋 Resumen
 
 Se ha implementado un flujo completo de registro de usuarios en 5 pasos, siguiendo los principios de Clean Architecture y los estándares del proyecto Wodates.

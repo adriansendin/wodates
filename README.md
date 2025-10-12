@@ -46,6 +46,11 @@ Both projects follow Clean Architecture with Ports & Adapters:
 
 - Mock authentication with JWT
 - User profiles with preferences
+- **Avatar uploads** (NEW)
+  - Supabase Storage integration
+  - Automatic image compression (max 500KB)
+  - Camera and gallery support
+  - Integrated in registration flow
 - Swipeable feed with like/pass
 - Matches and text-only chat
 - Polling-based real-time updates
@@ -58,3 +63,14 @@ Both projects follow Clean Architecture with Ports & Adapters:
 - ESLint + Prettier
 - Vitest (backend) + Jest (mobile) testing
 - OpenAPI documentation
+
+## Recent Updates
+
+### Avatar Upload Feature (October 2025)
+Complete implementation of profile picture uploads with:
+- Step 6 added to registration flow
+- Profile screen avatar update
+- Automatic compression for large images
+- Supabase Storage integration
+
+See `/docs/AVATAR_UPLOAD_SETUP.md` for setup instructions and `CHANGELOG_AVATAR_FEATURE.md` for implementation details.

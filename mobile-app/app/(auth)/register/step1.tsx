@@ -52,7 +52,7 @@ export default function Step1Screen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <ProgressBar totalSteps={5} currentStep={1} />
+        <ProgressBar totalSteps={7} currentStep={1} />
 
         <View style={styles.content}>
           <Text style={styles.title}>¡Bienvenido/a!</Text>

@@ -20,7 +20,7 @@ export default function Step5Screen() {
   const handleNext = () => {
     updateData({ lookingFor });
     nextStep();
-    router.push('/(auth)/register/complete');
+    router.push('/(auth)/register/step6');
   };
 
   const handleBack = () => {
@@ -35,7 +35,7 @@ export default function Step5Screen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ProgressBar totalSteps={5} currentStep={5} />
+        <ProgressBar totalSteps={7} currentStep={5} />
 
         <View style={styles.content}>
           <Text style={styles.title}>¿A quién buscas?</Text>

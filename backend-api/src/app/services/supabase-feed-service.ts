@@ -18,7 +18,7 @@ type SupabaseConfig = {
 
 type FeedUserRow = {
   id: string;
-  name: string | null;
+  name: string; // Retrieved from auth.users.raw_user_meta_data.display_name
   birthDate: string | null;
   gender: string | null;
   bio: string | null;
@@ -68,7 +68,7 @@ export class SupabaseFeedService {
 
       let query = this.client
         .from('users')
-        .select('id, name, birthDate, gender, bio, avatar_url')
+        .select('id, birthDate, gender, bio, avatar_url') // Removed 'name' - comes from auth.users
         .neq('id', userId)
         .range(offset, offset + limit - 1);
 
@@ -95,7 +95,15 @@ export class SupabaseFeedService {
         (row) => !excludedIds.has(row.id),
       );
 
-      return filtered.map((row) => this.mapRowToCandidate(row));
+      // Fetch names from auth.users for all candidates in parallel
+      const candidatesWithNames = await Promise.all(
+        filtered.map(async (row) => {
+          const name = await this.fetchUserName(row.id);
+          return this.mapRowToCandidate({ ...row, name });
+        })
+      );
+
+      return candidatesWithNames;
     } catch (error) {
       if (error instanceof DomainError) {
         throw error;
@@ -188,6 +196,46 @@ export class SupabaseFeedService {
     return excluded;
   }
 
+  /**
+   * Obtiene el nombre del usuario desde auth.users.raw_user_meta_data.display_name
+   * 
+   * @param userId - ID del usuario
+   * @returns El nombre del usuario o un valor por defecto
+   */
+  private async fetchUserName(userId: string): Promise<string> {
+    try {
+      const { data, error } = await this.client.auth.admin.getUserById(userId);
+      
+      if (error || !data?.user) {
+        console.warn(`[SupabaseFeedService] Could not fetch name for user ${userId}`, error);
+        return 'Usuario';
+      }
+
+      const user = data.user;
+      const metadata = user.user_metadata as Record<string, unknown> | null;
+      
+      // Debug: Log metadata structure to understand what's available
+      console.log(`[SupabaseFeedService] User ${userId} metadata:`, JSON.stringify({
+        email: user.email,
+        user_metadata: metadata,
+        raw_user_meta_data: (user as any).raw_user_meta_data,
+      }, null, 2));
+      
+      const displayName =
+        metadata && typeof metadata.display_name === 'string'
+          ? metadata.display_name.trim()
+          : '';
+
+      const result = displayName || user.email || 'Usuario';
+      console.log(`[SupabaseFeedService] Resolved name for ${userId}: "${result}"`);
+      
+      return result;
+    } catch (error) {
+      console.warn(`[SupabaseFeedService] Error fetching name for user ${userId}`, error);
+      return 'Usuario';
+    }
+  }
+
   private mapRowToCandidate(row: FeedUserRow): FeedCandidate {
     const gender = this.normalizeGender(row.gender);
     const birthDate = this.normalizeDate(row.birthDate);
@@ -197,7 +245,7 @@ export class SupabaseFeedService {
 
     return {
       id: row.id,
-      name: row.name?.trim() || 'Usuario',
+      name: row.name, // Already fetched from auth.users
       bio,
       birthDate,
       age,

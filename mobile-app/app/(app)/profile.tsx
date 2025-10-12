@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   RefreshControl,
@@ -10,8 +11,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActionSheetIOS,
+  Platform,
 } from 'react-native';
-import { RangeSlider } from '../../src/components/RangeSlider';
+import { AgeRangePicker } from '../../src/components/AgeRangePicker';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { ProfileApi } from '../../src/data/api/profileApi';
@@ -27,6 +30,11 @@ import {
   LOOKING_FOR_OPTIONS,
   LookingForOption,
 } from '../../src/domain/entities/LookingFor';
+import {
+  pickImageFromGallery,
+  takePictureWithCamera,
+  uploadAvatarToSupabase,
+} from '../../src/data/api/imageService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 const AVATAR_PLACEHOLDER = 'https://via.placeholder.com/240x240.png?text=Profile';
@@ -35,7 +43,6 @@ type LookingForFormValue = LookingForOption | '';
 type GenderFormValue = GenderOption | '';
 
 type FormState = {
-  birthDate: string;
   gender: GenderFormValue;
   looking_for: LookingForFormValue;
   min_age: number;
@@ -86,7 +93,6 @@ const getGenderLabel = (value: GenderFormValue) =>
   value ? GENDER_LABELS[value] : 'Sin especificar';
 
 const emptyForm: FormState = {
-  birthDate: '',
   gender: '',
   looking_for: '',
   min_age: 18,
@@ -96,7 +102,6 @@ const emptyForm: FormState = {
 };
 
 const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
-  birthDate: nextProfile?.birthDate ?? '',
   gender: nextProfile?.gender ?? '',
   looking_for: nextProfile?.looking_for ?? '',
   min_age: nextProfile?.min_age ?? 18,
@@ -106,7 +111,6 @@ const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
 });
 
 const formFields: (keyof FormState)[] = [
-  'birthDate',
   'gender',
   'looking_for',
   'min_age',
@@ -116,6 +120,23 @@ const formFields: (keyof FormState)[] = [
 ];
 
 const isValidDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+const calculateAge = (birthDate: string): number => {
+  if (!birthDate || !isValidDate(birthDate)) {
+    return 0;
+  }
+  
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  
+  return age;
+};
 
 export default function ProfileScreen() {
   const { tokens, user } = useAuthStore();
@@ -127,6 +148,7 @@ export default function ProfileScreen() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [isGenderModalVisible, setIsGenderModalVisible] = useState(false);
   const [isLookingForModalVisible, setIsLookingForModalVisible] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const baselineForm = useMemo(() => (profile ? mapProfileToForm(profile) : emptyForm), [profile]);
   const isPristine = useMemo(() => {
     if (!profile) {
@@ -223,10 +245,22 @@ export default function ProfileScreen() {
     });
   };
 
-  const handleAgeRangeChange = (minAge: number, maxAge: number) => {
+  const handleMinAgeChange = (minAge: number) => {
     setForm((prev) => ({
       ...prev,
       min_age: minAge,
+    }));
+    setFormErrors((prev) => {
+      const next = { ...prev };
+      delete next.min_age;
+      delete next.max_age;
+      return next;
+    });
+  };
+
+  const handleMaxAgeChange = (maxAge: number) => {
+    setForm((prev) => ({
+      ...prev,
       max_age: maxAge,
     }));
     setFormErrors((prev) => {
@@ -235,6 +269,126 @@ export default function ProfileScreen() {
       delete next.max_age;
       return next;
     });
+  };
+
+  const handleSelectAvatar = () => {
+    if (Platform.OS === 'web') {
+      // For web, show options for file selection
+      Alert.alert(
+        'Seleccionar foto de perfil',
+        'Elige una foto desde tu computadora',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Seleccionar archivo', onPress: handlePickFromGallery },
+        ]
+      );
+      return;
+    }
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancelar', 'Tomar foto', 'Elegir de galería'],
+          cancelButtonIndex: 0,
+        },
+        async (buttonIndex) => {
+          if (buttonIndex === 1) {
+            await handleTakePhoto();
+          } else if (buttonIndex === 2) {
+            await handlePickFromGallery();
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Cambiar foto de perfil',
+        '¿De dónde quieres obtener tu foto?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Tomar foto', onPress: handleTakePhoto },
+          { text: 'Elegir de galería', onPress: handlePickFromGallery },
+        ]
+      );
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    const result = await takePictureWithCamera();
+    
+    if (!result.success) {
+      Alert.alert('Error', result.error.message);
+      return;
+    }
+
+    if (result.data) {
+      await uploadAndUpdateAvatar(result.data);
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    const result = await pickImageFromGallery();
+    
+    if (!result.success) {
+      Alert.alert('Error', result.error.message);
+      return;
+    }
+
+    if (result.data) {
+      await uploadAndUpdateAvatar(result.data);
+    }
+  };
+
+  const uploadAndUpdateAvatar = async (imageUri: string) => {
+    if (!tokens?.accessToken || !user?.id) {
+      Alert.alert('Error', 'Sesión no válida');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setFeedback({ type: 'info', message: 'Subiendo imagen...' });
+
+    try {
+      // Upload to Supabase
+      const uploadResult = await uploadAvatarToSupabase(imageUri, user.id);
+
+      if (!uploadResult.success) {
+        Alert.alert('Error', uploadResult.error.message);
+        setFeedback({ type: 'error', message: uploadResult.error.message });
+        setIsUploadingAvatar(false);
+        return;
+      }
+
+      // Update profile with new avatar URL
+      const updateResult = await profileApi.updateProfile(
+        { avatarUrl: uploadResult.data },
+        tokens.accessToken
+      );
+
+      if (updateResult.success) {
+        const updatedProfile = updateResult.data;
+        setProfile(updatedProfile);
+        setForm(mapProfileToForm(updatedProfile));
+        setFeedback({
+          type: 'success',
+          message: 'Foto de perfil actualizada correctamente.',
+        });
+      } else {
+        Alert.alert('Error', updateResult.error.message ?? 'No se pudo actualizar la foto de perfil.');
+        setFeedback({
+          type: 'error',
+          message: updateResult.error.message ?? 'No se pudo actualizar la foto de perfil.',
+        });
+      }
+    } catch (error) {
+      console.error('[Profile] uploadAndUpdateAvatar error', error);
+      Alert.alert('Error', 'Error al actualizar la foto de perfil.');
+      setFeedback({
+        type: 'error',
+        message: 'Error al actualizar la foto de perfil.',
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   const handleSave = async () => {
@@ -248,15 +402,10 @@ export default function ProfileScreen() {
 
     const nextErrors: Partial<Record<keyof FormState, string>> = {};
 
-    const trimmedBirthDate = form.birthDate.trim();
-    const birthDateValue = trimmedBirthDate ? trimmedBirthDate : null;
     const selectedGender = form.gender;
     const selectedLookingFor = form.looking_for;
     const trimmedBio = form.bio.trim();
     const trimmedCity = form.city.trim();
-    if (birthDateValue && !isValidDate(birthDateValue)) {
-      nextErrors.birthDate = 'Usa el formato YYYY-MM-DD.';
-    }
 
     const minAge = form.min_age;
     const maxAge = form.max_age;
@@ -309,7 +458,6 @@ export default function ProfileScreen() {
     setFormErrors({});
 
     const payload: UpdateUserProfile = {
-      birthDate: birthDateValue,
       gender: selectedGender ? selectedGender : null,
       looking_for: selectedLookingFor ? selectedLookingFor : null,
       min_age: minAge,
@@ -478,11 +626,36 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <View style={styles.avatarContainer}>
-          <Image
-            source={{ uri: avatarUri }}
-            style={styles.avatarImage}
-            resizeMode="cover"
-          />
+          <TouchableOpacity 
+            style={styles.avatarWrapper}
+            onPress={handleSelectAvatar}
+            disabled={isUploadingAvatar}
+          >
+            <Image
+              source={{ uri: avatarUri }}
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+            {isUploadingAvatar ? (
+              <View style={styles.avatarOverlay}>
+                <ActivityIndicator color="#fff" size="large" />
+              </View>
+            ) : (
+              <View style={styles.avatarOverlay}>
+                {Platform.OS === 'web' ? (
+                  <>
+                    <Text style={styles.avatarOverlayIcon}>📁</Text>
+                    <Text style={styles.avatarOverlayText}>Seleccionar archivo</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.avatarOverlayIcon}>📷</Text>
+                    <Text style={styles.avatarOverlayText}>Cambiar foto</Text>
+                  </>
+                )}
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
         <Text style={styles.sectionTitle}>Informacion basica</Text>
         <View style={styles.readonlyField}>
@@ -493,24 +666,12 @@ export default function ProfileScreen() {
           <Text style={styles.helperText}>Este campo no se puede editar desde la app.</Text>
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Fecha de nacimiento (YYYY-MM-DD)</Text>
-          <TextInput
-            style={[
-              styles.input,
-              formErrors.birthDate ? styles.inputError : null,
-            ]}
-            placeholder="1990-05-12"
-            value={form.birthDate}
-            onChangeText={handleChange('birthDate')}
-            keyboardType="numbers-and-punctuation"
-            autoCapitalize="none"
-          />
-          {formErrors.birthDate ? (
-            <Text style={styles.errorText}>{formErrors.birthDate}</Text>
-          ) : (
-            <Text style={styles.helperText}>Usa el formato 1990-05-12.</Text>
-          )}
+        <View style={styles.readonlyField}>
+          <Text style={styles.label}>Edad</Text>
+          <Text style={styles.valueText}>
+            {profile?.birthDate ? `${calculateAge(profile.birthDate)} años` : 'No especificada'}
+          </Text>
+          <Text style={styles.helperText}>Este campo no se puede editar desde la app.</Text>
         </View>
 
         <View style={styles.field}>
@@ -573,16 +734,11 @@ export default function ProfileScreen() {
 
         <View style={styles.field}>
           <Text style={styles.label}>Rango de edad que buscas</Text>
-          <RangeSlider
-            min={18}
-            max={99}
-            minValue={form.min_age}
-            maxValue={form.max_age}
-            onValueChange={handleAgeRangeChange}
-            step={1}
-            style={[
-              formErrors.min_age || formErrors.max_age ? styles.sliderError : null,
-            ]}
+          <AgeRangePicker
+            minAge={form.min_age}
+            maxAge={form.max_age}
+            onMinAgeChange={handleMinAgeChange}
+            onMaxAgeChange={handleMaxAgeChange}
           />
           {(formErrors.min_age || formErrors.max_age) && (
             <Text style={styles.errorText}>
@@ -590,7 +746,7 @@ export default function ProfileScreen() {
             </Text>
           )}
           <Text style={styles.helperText}>
-            Desliza las bolitas para seleccionar el rango de edad.
+            Selecciona el rango de edad que buscas en tu pareja ideal.
           </Text>
         </View>
 
@@ -707,11 +863,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  avatarImage: {
+  avatarWrapper: {
+    position: 'relative',
     width: 160,
     height: 160,
     borderRadius: 80,
+    overflow: 'hidden',
     backgroundColor: '#f0f0f0',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+  },
+  avatarOverlayIcon: {
+    fontSize: 32,
+  },
+  avatarOverlayText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 20,
@@ -876,9 +1057,6 @@ const styles = StyleSheet.create({
   helperText: {
     fontSize: 12,
     color: '#999',
-  },
-  sliderError: {
-    opacity: 0.7,
   },
 });
 

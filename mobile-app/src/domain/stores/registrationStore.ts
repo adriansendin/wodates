@@ -10,6 +10,9 @@ export interface RegistrationData {
   location: string;
   gender: GenderOption | '';
   lookingFor: LookingForOption | '';
+  minAge: number;
+  maxAge: number;
+  avatarUrl: string | null;
 }
 
 interface RegistrationState {
@@ -33,6 +36,9 @@ const initialData: RegistrationData = {
   location: '',
   gender: '',
   lookingFor: '',
+  minAge: 18,
+  maxAge: 99,
+  avatarUrl: null,
 };
 
 export const useRegistrationStore = create<RegistrationState & RegistrationActions>((set) => ({
@@ -44,7 +50,7 @@ export const useRegistrationStore = create<RegistrationState & RegistrationActio
   setCurrentStep: (step) => set({ currentStep: step }),
   
   nextStep: () => set((state) => ({ 
-    currentStep: Math.min(state.currentStep + 1, 5) 
+    currentStep: Math.min(state.currentStep + 1, 7) 
   })),
   
   previousStep: () => set((state) => ({ 

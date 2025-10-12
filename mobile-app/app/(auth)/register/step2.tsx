@@ -1,24 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { BirthDatePicker } from '../../../src/components/BirthDatePicker';
 
 export default function Step2Screen() {
   const router = useRouter();
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
   const [date, setDate] = useState<Date>(data.birthDate || new Date(2000, 0, 1));
-  const [show, setShow] = useState(false);
-
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
+  const [error, setError] = useState<string | null>(null);
 
   const calculateAge = (birthDate: Date): number => {
     const today = new Date();
@@ -32,21 +24,23 @@ export default function Step2Screen() {
     return age;
   };
 
-  const onChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShow(false);
-    }
-    
-    if (selectedDate) {
-      setDate(selectedDate);
-    }
+  const handleDateChange = (newDate: Date) => {
+    setDate(newDate);
+    setError(null);
+  };
+
+  const handleError = (errorMessage: string | null) => {
+    setError(errorMessage);
   };
 
   const handleNext = () => {
     const age = calculateAge(date);
     
-    if (age < 18) {
-      Alert.alert('Error', 'Debes tener al menos 18 años para registrarte');
+    if (age < 18 || age > 99) {
+      setError(age < 18 
+        ? 'Debes tener al menos 18 años para registrarte'
+        : 'La edad máxima permitida es 99 años'
+      );
       return;
     }
 
@@ -62,40 +56,32 @@ export default function Step2Screen() {
 
   return (
     <View style={styles.container}>
-      <ProgressBar totalSteps={5} currentStep={2} />
+      <ProgressBar totalSteps={7} currentStep={2} />
 
       <View style={styles.content}>
         <Text style={styles.title}>¿Cuándo naciste?</Text>
         <Text style={styles.subtitle}>Tu edad será visible en tu perfil</Text>
 
         <View style={styles.dateContainer}>
-          <TouchableOpacity 
-            style={styles.dateButton} 
-            onPress={() => setShow(true)}
-          >
-            <Text style={styles.dateText}>{formatDate(date)}</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.ageText}>
-            {calculateAge(date)} años
-          </Text>
+          <BirthDatePicker
+            value={date}
+            onChange={handleDateChange}
+            onError={handleError}
+          />
         </View>
 
-        {(show || Platform.OS === 'ios') && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={onChange}
-            maximumDate={new Date()}
-            minimumDate={new Date(1940, 0, 1)}
-            locale="es-ES"
-            style={styles.picker}
-          />
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
         )}
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={handleNext}>
+          <TouchableOpacity 
+            style={[styles.button, error && styles.buttonDisabled]} 
+            onPress={handleNext}
+            disabled={!!error}
+          >
             <Text style={styles.buttonText}>Continuar</Text>
           </TouchableOpacity>
 
@@ -132,32 +118,19 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   dateContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  dateButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    padding: 20,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 16,
+  errorContainer: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 24,
   },
-  dateText: {
-    fontSize: 18,
-    color: '#2C3E50',
-    fontWeight: '600',
-  },
-  ageText: {
-    fontSize: 16,
-    color: '#F45C5C',
-    fontWeight: '600',
-  },
-  picker: {
-    width: '100%',
-    marginBottom: 32,
+  errorText: {
+    fontSize: 14,
+    color: '#C62828',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   buttonContainer: {
     gap: 12,
@@ -167,6 +140,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: '#E0E0E0',
+    opacity: 0.6,
   },
   buttonText: {
     color: '#FFFFFF',

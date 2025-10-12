@@ -150,32 +150,37 @@ export class MatchOverviewService {
     return success(overviews);
   }
 
+  /**
+   * Obtiene los datos de autenticación (name, email) para múltiples usuarios desde auth.users
+   * Usa getUserById para obtener solo los usuarios necesarios de forma eficiente
+   * 
+   * @param userIds - Array de IDs de usuarios a obtener
+   * @returns Result con los datos de auth de los usuarios solicitados
+   */
   private async getAuthUsers(userIds: string[]): Promise<Result<AuthUserRow[], DomainError>> {
     try {
-      // Use admin client to access auth.users table
-      const { data, error } = await this.client.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000, // Adjust as needed
+      // Fetch each user individually in parallel using getUserById
+      const userPromises = userIds.map(async (userId) => {
+        const { data, error } = await this.client.auth.admin.getUserById(userId);
+        
+        if (error || !data?.user) {
+          console.warn(`[MatchOverviewService] Could not fetch auth user ${userId}`, error);
+          return null;
+        }
+
+        return {
+          id: data.user.id,
+          email: data.user.email ?? '',
+          raw_user_meta_data: data.user.user_metadata as Record<string, unknown> | null,
+        };
       });
 
-      if (error) {
-        return failure(
-          new InternalError(
-            `Failed to fetch auth users: ${this.formatSupabaseError(error)}`,
-          ),
-        );
-      }
+      const results = await Promise.all(userPromises);
+      
+      // Filter out null results (failed fetches)
+      const validUsers = results.filter((user): user is AuthUserRow => user !== null);
 
-      // Filter users by the requested IDs
-      const filteredUsers = data.users
-        .filter(user => userIds.includes(user.id))
-        .map(user => ({
-          id: user.id,
-          email: user.email ?? '',
-          raw_user_meta_data: user.user_metadata as Record<string, unknown> | null,
-        }));
-
-      return success(filteredUsers);
+      return success(validUsers);
     } catch (error) {
       return failure(
         new InternalError('Unexpected error fetching auth users', error),

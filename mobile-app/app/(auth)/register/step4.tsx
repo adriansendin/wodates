@@ -37,7 +37,7 @@ export default function Step4Screen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ProgressBar totalSteps={5} currentStep={4} />
+        <ProgressBar totalSteps={7} currentStep={4} />
 
         <View style={styles.content}>
           <Text style={styles.title}>¿Cuál es tu género?</Text>

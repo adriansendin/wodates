@@ -52,6 +52,12 @@ src/
 ## Features
 
 - **Authentication**: Login/register with JWT tokens
+- **User Profile**: View and edit your profile information
+- **Avatar Upload**: Upload profile pictures with automatic compression
+  - Take photo with camera or select from gallery
+  - Automatic compression for images > 500KB
+  - Integrated in registration flow (Step 6)
+  - Update anytime from profile screen
 - **Feed**: Swipeable user cards with like/pass functionality
 - **Matches**: View your matches and start conversations
 - **Chat**: Real-time messaging with polling
@@ -68,12 +74,14 @@ The app uses Zustand for state management with the following stores:
 
 ## API Integration
 
-The app communicates with the backend API through:
+The app communicates with the backend API and Supabase through:
 
 - `ApiClient`: Base HTTP client with error handling
 - `AuthApi`: Authentication endpoints
 - `FeedApi`: Feed and swiping endpoints
 - `ChatApi`: Messaging endpoints
+- `ProfileApi`: User profile management
+- `imageService`: Image upload and compression (Supabase Storage)
 
 ## Environment Variables
 
@@ -82,6 +90,18 @@ Copy `env.example` to `.env` and configure:
 ```bash
 cp env.example .env
 ```
+
+Required variables:
+```env
+# API Configuration
+EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1
+
+# Supabase Configuration (for avatar uploads)
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+**Note**: For avatar uploads to work, you need to configure Supabase Storage. See `/docs/AVATAR_UPLOAD_SETUP.md` for detailed instructions.
 
 ## Development
 
