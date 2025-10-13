@@ -14,10 +14,12 @@ import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeReposit
 import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
 import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepository';
 import { SupabaseMessageRepository } from '../data/repositories/SupabaseMessageRepository';
+import { SupabaseBlockedUserRepository } from '../data/repositories/SupabaseBlockedUserRepository';
 import { LikeUser } from '../domain/use-cases/feed/LikeUser';
 import { PassUser } from '../domain/use-cases/feed/PassUser';
 import { SendMessage } from '../domain/use-cases/chat/SendMessage';
 import { GetMessages } from '../domain/use-cases/chat/GetMessages';
+import { BlockUser } from '../domain/use-cases/chat/BlockUser';
 import { MatchOverviewService } from './services/match-overview-service';
 
 async function buildApp() {
@@ -74,15 +76,18 @@ async function buildApp() {
   const passRepository = new SupabasePassRepository();
   const matchRepository = new SupabaseMatchRepository();
   const messageRepository = new SupabaseMessageRepository();
+  const blockedUserRepository = new SupabaseBlockedUserRepository();
 
   // Initialize use cases
   const likeUser = new LikeUser(likeRepository, matchRepository);
   const passUser = new PassUser(passRepository);
   const sendMessage = new SendMessage(messageRepository, matchRepository);
   const getMessages = new GetMessages(messageRepository, matchRepository);
+  const blockUser = new BlockUser(blockedUserRepository, matchRepository);
   const matchOverviewService = new MatchOverviewService(
     matchRepository,
     messageRepository,
+    blockedUserRepository,
   );
 
   // Decorate fastify with use cases
@@ -90,6 +95,7 @@ async function buildApp() {
   fastify.decorate('passUser', passUser);
   fastify.decorate('sendMessage', sendMessage);
   fastify.decorate('getMessages', getMessages);
+  fastify.decorate('blockUser', blockUser);
   fastify.decorate('matchOverviewService', matchOverviewService);
 
   // Register routes

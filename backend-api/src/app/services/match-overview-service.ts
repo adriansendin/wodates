@@ -5,6 +5,7 @@ import { Result, failure, success } from '../../domain/Result';
 import { DomainError, InternalError } from '../../domain/errors/DomainError';
 import { MatchRepository } from '../../domain/repositories/MatchRepository';
 import { MessageRepository } from '../../domain/repositories/MessageRepository';
+import { BlockedUserRepository } from '../../domain/repositories/BlockedUserRepository';
 
 type SupabaseConfig = {
   url: string;
@@ -44,6 +45,7 @@ export class MatchOverviewService {
   constructor(
     private matchRepository: MatchRepository,
     private messageRepository: MessageRepository,
+    private blockedUserRepository: BlockedUserRepository,
     config?: Partial<SupabaseConfig>,
   ) {
     const resolved = this.resolveConfig(config);
@@ -66,9 +68,27 @@ export class MatchOverviewService {
       return success([]);
     }
 
+    // Filter out matches where there's a block relationship
+    const filteredMatches: Match[] = [];
+    for (const match of matches) {
+      const otherUserId =
+        match.userId1 === userId ? match.userId2 : match.userId1;
+      
+      // Check if there's any block between users (bidirectional)
+      const isBlockedResult = await this.blockedUserRepository.isBlocked(userId, otherUserId);
+      if (isBlockedResult.success && !isBlockedResult.data) {
+        // No block exists, include this match
+        filteredMatches.push(match);
+      }
+    }
+
+    if (filteredMatches.length === 0) {
+      return success([]);
+    }
+
     const otherUserIds = new Set<string>();
 
-    for (const match of matches) {
+    for (const match of filteredMatches) {
       const otherUserId =
         match.userId1 === userId ? match.userId2 : match.userId1;
       otherUserIds.add(otherUserId);
@@ -104,7 +124,7 @@ export class MatchOverviewService {
 
     const overviews: MatchOverview[] = [];
 
-    for (const match of matches) {
+    for (const match of filteredMatches) {
       const otherUserId =
         match.userId1 === userId ? match.userId2 : match.userId1;
       const otherUserRow = otherUserId

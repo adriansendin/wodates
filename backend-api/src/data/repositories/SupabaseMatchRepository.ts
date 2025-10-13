@@ -206,6 +206,58 @@ export class SupabaseMatchRepository implements MatchRepository {
     return success(Boolean(matchResult.data));
   }
 
+  async delete(matchId: string): Promise<Result<void, DomainError>> {
+    try {
+      // Delete chat participants first (due to foreign key constraints)
+      const { error: participantsError } = await this.client
+        .from('chat_participants')
+        .delete()
+        .eq('chat_id', matchId);
+
+      if (participantsError) {
+        return failure(
+          new InternalError(
+            `Failed to delete chat participants: ${this.formatSupabaseError(participantsError)}`,
+          ),
+        );
+      }
+
+      // Delete messages associated with the chat
+      const { error: messagesError } = await this.client
+        .from('messages')
+        .delete()
+        .eq('chat_id', matchId);
+
+      if (messagesError) {
+        return failure(
+          new InternalError(
+            `Failed to delete messages: ${this.formatSupabaseError(messagesError)}`,
+          ),
+        );
+      }
+
+      // Delete the chat itself
+      const { error: chatError } = await this.client
+        .from('chats')
+        .delete()
+        .eq('id', matchId);
+
+      if (chatError) {
+        return failure(
+          new InternalError(
+            `Failed to delete chat: ${this.formatSupabaseError(chatError)}`,
+          ),
+        );
+      }
+
+      return success(undefined);
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error deleting match', error),
+      );
+    }
+  }
+
   private async getMatchBetween(
     userId1: string,
     userId2: string,

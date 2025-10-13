@@ -201,3 +201,4 @@ Esto permite a los usuarios usar la app en web para navegación básica, pero ne
 **Última actualización**: Octubre 2025  
 **Versión**: 1.0.0
 
+

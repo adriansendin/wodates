@@ -10,10 +10,13 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
-import { Stack, useLocalSearchParams, Redirect } from 'expo-router';
+import { Stack, useLocalSearchParams, Redirect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { ChatApi } from '../../src/data/api/chatApi';
+import { BlockApi } from '../../src/data/api/blockApi';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { useChatStore } from '../../src/domain/stores/chatStore';
 import { Message, MessageSchema } from '../../src/domain/entities/Message';
@@ -26,6 +29,7 @@ export default function ChatScreen() {
     matchId?: string | string[];
     name?: string | string[];
     photoUrl?: string | string[];
+    otherUserId?: string | string[];
   }>();
 
   const matchId = useMemo(() => {
@@ -38,6 +42,12 @@ export default function ChatScreen() {
     return Array.isArray(params.name) ? params.name[0] : params.name;
   }, [params.name]);
 
+  const otherUserId = useMemo(() => {
+    if (!params.otherUserId) return undefined;
+    return Array.isArray(params.otherUserId) ? params.otherUserId[0] : params.otherUserId;
+  }, [params.otherUserId]);
+
+  const router = useRouter();
   const { tokens, user } = useAuthStore();
   const {
     messages,
@@ -50,13 +60,18 @@ export default function ChatScreen() {
     isSending,
     setSending,
   } = useChatStore();
-  const updateMatch = useMatchesStore((state) => state.updateMatch);
+  const { updateMatch, matches } = useMatchesStore();
 
   const [message, setMessage] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const flatListRef = useRef<FlatList<Message>>(null);
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const chatApi = useMemo(() => new ChatApi(apiClient), [apiClient]);
+  const blockApi = useMemo(() => new BlockApi(apiClient), [apiClient]);
   const isInitialLoad = useRef(true);
 
   const matchMessages = useMemo(
@@ -140,9 +155,37 @@ export default function ChatScreen() {
     return () => clearInterval(interval);
   }, [loadMessages, matchId]);
 
+  // Check if this match still exists (detect if blocked)
+  useEffect(() => {
+    if (!matchId || !matches) return;
+
+    const matchExists = matches.some((m) => m.id === matchId);
+    if (!matchExists && !isInitialLoad.current) {
+      // Match was removed (likely blocked)
+      setIsBlocked(true);
+    }
+  }, [matchId, matches]);
+
+  // Redirect if blocked
+  useEffect(() => {
+    if (isBlocked) {
+      Alert.alert(
+        'Chat no disponible',
+        'Este chat ya no está disponible.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/(app)/matches'),
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  }, [isBlocked, router]);
+
   const handleSendMessage = useCallback(async () => {
     const messageContent = message.trim();
-    if (!messageContent || !tokens?.accessToken || !matchId || isSending) {
+    if (!messageContent || !tokens?.accessToken || !matchId || isSending || isBlocked) {
       return;
     }
 
@@ -185,6 +228,7 @@ export default function ChatScreen() {
     addMessage,
     chatApi,
     clearError,
+    isBlocked,
     isSending,
     matchId,
     message,
@@ -193,6 +237,36 @@ export default function ChatScreen() {
     tokens?.accessToken,
     updateMatch,
   ]);
+
+  const handleBlockUser = useCallback(async () => {
+    if (!matchId || !otherUserId || !tokens?.accessToken) {
+      return;
+    }
+
+    setIsBlocking(true);
+    setShowBlockModal(false);
+
+    try {
+      const result = await blockApi.blockUser(
+        matchId,
+        { blockedUserId: otherUserId },
+        tokens.accessToken
+      );
+
+      if (!result.success) {
+        Alert.alert('Error', result.error.message || 'Could not block user.');
+        return;
+      }
+
+      // Navigate back to matches screen
+      router.replace('/(app)/matches');
+    } catch (error) {
+      console.error('Failed to block user', error);
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsBlocking(false);
+    }
+  }, [blockApi, matchId, otherUserId, router, tokens?.accessToken]);
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwn = item.senderId === user?.id;
@@ -220,12 +294,24 @@ export default function ChatScreen() {
     return <Redirect href="/(app)/matches" />;
   }
 
+  if (isBlocked) {
+    return <Redirect href="/(app)/matches" />;
+  }
+
   return (
     <>
       <Stack.Screen
         options={{
           title: otherUserName ?? 'Chat',
           headerShown: true,
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => setShowMenu(true)}
+              style={styles.menuButton}
+            >
+              <Ionicons name="ellipsis-vertical" size={24} color="#333" />
+            </TouchableOpacity>
+          ),
         }}
       />
       <KeyboardAvoidingView
@@ -257,22 +343,87 @@ export default function ChatScreen() {
 
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, isBlocked && styles.textInputDisabled]}
             value={message}
             onChangeText={setMessage}
-            placeholder="Type a message..."
+            placeholder={isBlocked ? 'Chat no disponible' : 'Type a message...'}
             multiline
             maxLength={1000}
+            editable={!isBlocked}
           />
           <TouchableOpacity
-            style={[styles.sendButton, (!message.trim() || isSending) && styles.sendButtonDisabled]}
+            style={[styles.sendButton, (!message.trim() || isSending || isBlocked) && styles.sendButtonDisabled]}
             onPress={handleSendMessage}
-            disabled={!message.trim() || isSending}
+            disabled={!message.trim() || isSending || isBlocked}
           >
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Context Menu Modal */}
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMenu(false)}
+        >
+          <View style={styles.menuContainer}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setShowMenu(false);
+                setShowBlockModal(true);
+              }}
+            >
+              <Ionicons name="ban" size={20} color="#e91e63" />
+              <Text style={styles.menuItemText}>Bloquear usuario</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Block Confirmation Modal */}
+      <Modal
+        visible={showBlockModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBlockModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Bloquear usuario</Text>
+            <Text style={styles.modalText}>
+              ¿Estás seguro de que quieres bloquear a {otherUserName}?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setShowBlockModal(false)}
+                disabled={isBlocking}
+              >
+                <Text style={styles.modalButtonTextCancel}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={handleBlockUser}
+                disabled={isBlocking}
+              >
+                {isBlocking ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalButtonTextConfirm}>Sí</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -357,6 +508,10 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     fontSize: 16,
   },
+  textInputDisabled: {
+    backgroundColor: '#f0f0f0',
+    color: '#999',
+  },
   sendButton: {
     backgroundColor: '#e91e63',
     borderRadius: 20,
@@ -370,5 +525,99 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  menuButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 60,
+    paddingRight: 16,
+  },
+  menuContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: '#e91e63',
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  modalButtonCancel: {
+    backgroundColor: '#f0f0f0',
+  },
+  modalButtonConfirm: {
+    backgroundColor: '#e91e63',
+  },
+  modalButtonTextCancel: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonTextConfirm: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

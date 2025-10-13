@@ -146,6 +146,7 @@ export default function MatchesScreen() {
         matchId: match.id,
         name: match.otherUser?.name ?? 'Chat',
         photoUrl: match.otherUser?.photoUrl ?? '',
+        otherUserId: match.otherUser?.id ?? '',
       },
     });
   };

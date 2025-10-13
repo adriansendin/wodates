@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { SendMessage } from '../../domain/use-cases/chat/SendMessage';
 import { GetMessages } from '../../domain/use-cases/chat/GetMessages';
+import { BlockUser } from '../../domain/use-cases/chat/BlockUser';
 import { DomainError } from '../../domain/errors/DomainError';
 import { z } from 'zod';
 
@@ -26,10 +27,15 @@ const GetMessagesQuerySchema = z.object({
   before: z.string().optional(),
 });
 
+const BlockUserSchema = z.object({
+  blockedUserId: z.string().uuid(),
+});
+
 export class ChatController {
   constructor(
     private sendMessageUseCase: SendMessage,
-    private getMessagesUseCase: GetMessages
+    private getMessagesUseCase: GetMessages,
+    private blockUserUseCase: BlockUser
   ) {}
 
   async sendMessage(request: FastifyRequest, reply: FastifyReply) {
@@ -68,6 +74,27 @@ export class ChatController {
             before,
             hasMore: result.data.length === limit,
           },
+        });
+      } else {
+        return this.handleError(reply, result.error);
+      }
+    } catch (error) {
+      return this.handleValidationError(reply, error);
+    }
+  }
+
+  async blockUser(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const userId = request.user!.id;
+      const { matchId } = request.params as { matchId: string };
+      const { blockedUserId } = BlockUserSchema.parse(request.body);
+      
+      const result = await this.blockUserUseCase.execute(userId, blockedUserId, matchId);
+      
+      if (result.success) {
+        return reply.status(201).send({
+          blocked: true,
+          blockedUser: result.data,
         });
       } else {
         return this.handleError(reply, result.error);

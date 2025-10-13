@@ -5,6 +5,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     sendMessage: any;
     getMessages: any;
+    blockUser: any;
     authMiddleware: any;
   }
 }
@@ -12,7 +13,8 @@ declare module 'fastify' {
 export async function chatRoutes(fastify: FastifyInstance) {
   const chatController = new ChatController(
     fastify.sendMessage,
-    fastify.getMessages
+    fastify.getMessages,
+    fastify.blockUser
   );
 
   fastify.get('/chats/:matchId/messages', {
@@ -103,4 +105,42 @@ export async function chatRoutes(fastify: FastifyInstance) {
     },
     preHandler: fastify.authMiddleware,
   }, chatController.sendMessage.bind(chatController));
+
+  fastify.post('/chats/:matchId/block', {
+    schema: {
+      description: 'Block a user and remove the match',
+      tags: ['chat'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          matchId: { type: 'string', format: 'uuid' },
+        },
+      },
+      body: {
+        type: 'object',
+        required: ['blockedUserId'],
+        properties: {
+          blockedUserId: { type: 'string', format: 'uuid' }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            blocked: { type: 'boolean' },
+            blockedUser: {
+              type: 'object',
+              properties: {
+                blockerId: { type: 'string' },
+                blockedId: { type: 'string' },
+                createdAt: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+    preHandler: fastify.authMiddleware,
+  }, chatController.blockUser.bind(chatController));
 }
