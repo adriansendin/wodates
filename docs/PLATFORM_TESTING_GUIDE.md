@@ -202,3 +202,4 @@ Esto permite a los usuarios usar la app en web para navegación básica, pero ne
 **Versión**: 1.0.0
 
 
+

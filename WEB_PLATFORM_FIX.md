@@ -173,3 +173,4 @@ Ahora la aplicación funciona correctamente en todas las plataformas con mensaje
 **Testing**: ✅ Verificado en web y móvil
 
 
+

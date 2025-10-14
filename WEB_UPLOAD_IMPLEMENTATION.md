@@ -168,3 +168,4 @@ La implementación fue **súper simple** como predijiste:
 **Testing**: ✅ Verificado en web y móvil
 
 
+

@@ -34,8 +34,8 @@ const normalizeUser = (rawUser: Record<string, unknown>): User => {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('test4@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const { login, setLoading, setError, isLoading, error } = useAuthStore();
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -116,7 +116,6 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        <Text style={styles.debugText}>API URL: {API_URL}</Text>
       </View>
     </View>
   );

@@ -29,3 +29,4 @@ export interface BlockedUserRepository {
   delete(blockerId: string, blockedId: string): Promise<Result<void, DomainError>>;
 }
 
+
