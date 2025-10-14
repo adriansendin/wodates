@@ -91,9 +91,13 @@ export default function CompleteScreen() {
         console.log('[Register] Uploading avatar to Supabase...');
         const uploadResult = await uploadAvatarToSupabase(data.avatarUrl, normalizedUser.id);
 
-        if (uploadResult.success && uploadResult.data) {
-          console.log('[Register] Avatar uploaded successfully');
-          avatarUrl = uploadResult.data;
+        if (uploadResult.success) {
+          if (uploadResult.data) {
+            console.log('[Register] Avatar uploaded successfully');
+            avatarUrl = uploadResult.data;
+          } else {
+            console.warn('[Register] Avatar upload returned without URL');
+          }
         } else {
           console.warn('[Register] Failed to upload avatar:', uploadResult.error);
         }
@@ -284,4 +288,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-

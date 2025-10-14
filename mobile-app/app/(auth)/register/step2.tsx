@@ -78,7 +78,7 @@ export default function Step2Screen() {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
-            style={[styles.button, error && styles.buttonDisabled]} 
+            style={[styles.button, !!error && styles.buttonDisabled]} 
             onPress={handleNext}
             disabled={!!error}
           >
@@ -159,4 +159,3 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-

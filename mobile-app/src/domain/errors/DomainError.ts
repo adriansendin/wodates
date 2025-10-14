@@ -47,3 +47,28 @@ export class UnexpectedError extends DomainError {
   readonly code = 'UNEXPECTED_ERROR';
   readonly statusCode = 520;
 }
+
+export class PermissionDeniedError extends DomainError {
+  readonly code = 'PERMISSION_DENIED';
+  readonly statusCode = 403;
+}
+
+export class ImagePickerError extends DomainError {
+  readonly code = 'IMAGE_PICKER_ERROR';
+  readonly statusCode = 400;
+}
+
+export class CameraError extends DomainError {
+  readonly code = 'CAMERA_ERROR';
+  readonly statusCode = 400;
+}
+
+export class UploadError extends DomainError {
+  readonly code = 'UPLOAD_ERROR';
+  readonly statusCode = 500;
+}
+
+export class InvalidUrlError extends DomainError {
+  readonly code = 'INVALID_URL';
+  readonly statusCode = 400;
+}

@@ -2,8 +2,15 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 import { getSupabaseClient } from './supabaseClient';
-import { Result } from '../../domain/Result';
-import { DomainError } from '../../domain/errors/DomainError';
+import { Result, success, failure } from '../../domain/Result';
+import {
+  DomainError,
+  PermissionDeniedError,
+  ImagePickerError,
+  CameraError,
+  UploadError,
+  InvalidUrlError,
+} from '../../domain/errors/DomainError';
 
 const MAX_IMAGE_SIZE_KB = 500;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024;
@@ -110,18 +117,17 @@ async function pickImageFromWeb(): Promise<string | null> {
 export async function pickImageFromGallery(): Promise<Result<string | null, DomainError>> {
   try {
     // Check if running on web
-    if (Platform.OS === 'web') {
-      const uri = await pickImageFromWeb();
-      return Result.ok(uri);
+  if (Platform.OS === 'web') {
+    const uri = await pickImageFromWeb();
+      return success(uri);
     }
 
     const hasPermission = await requestMediaLibraryPermissions();
     
     if (!hasPermission) {
-      return Result.fail({
-        code: 'PERMISSION_DENIED',
-        message: 'Se necesitan permisos para acceder a la galería de fotos.',
-      });
+      return failure(
+        new PermissionDeniedError('Se necesitan permisos para acceder a la galería de fotos.')
+      );
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -132,19 +138,18 @@ export async function pickImageFromGallery(): Promise<Result<string | null, Doma
     });
 
     if (result.canceled) {
-      return Result.ok(null);
+      return success(null);
     }
 
     const imageUri = result.assets[0].uri;
     const compressedUri = await compressImageIfNeeded(imageUri);
 
-    return Result.ok(compressedUri);
+    return success(compressedUri);
   } catch (error) {
     console.error('[ImageService] Error picking image from gallery:', error);
-    return Result.fail({
-      code: 'IMAGE_PICKER_ERROR',
-      message: 'Error al seleccionar la imagen. Inténtalo de nuevo.',
-    });
+    return failure(
+      new ImagePickerError('Error al seleccionar la imagen. Inténtalo de nuevo.', error)
+    );
   }
 }
 
@@ -158,16 +163,15 @@ export async function takePictureWithCamera(): Promise<Result<string | null, Dom
     if (Platform.OS === 'web') {
       // For web, we'll use the same file picker but with a different message
       const uri = await pickImageFromWeb();
-      return Result.ok(uri);
+      return success(uri);
     }
 
     const hasPermission = await requestCameraPermissions();
     
     if (!hasPermission) {
-      return Result.fail({
-        code: 'PERMISSION_DENIED',
-        message: 'Se necesitan permisos para acceder a la cámara.',
-      });
+      return failure(
+        new PermissionDeniedError('Se necesitan permisos para acceder a la cámara.')
+      );
     }
 
     const result = await ImagePicker.launchCameraAsync({
@@ -177,19 +181,18 @@ export async function takePictureWithCamera(): Promise<Result<string | null, Dom
     });
 
     if (result.canceled) {
-      return Result.ok(null);
+      return success(null);
     }
 
     const imageUri = result.assets[0].uri;
     const compressedUri = await compressImageIfNeeded(imageUri);
 
-    return Result.ok(compressedUri);
+    return success(compressedUri);
   } catch (error) {
     console.error('[ImageService] Error taking picture with camera:', error);
-    return Result.fail({
-      code: 'CAMERA_ERROR',
-      message: 'Error al tomar la foto. Inténtalo de nuevo.',
-    });
+    return failure(
+      new CameraError('Error al tomar la foto. Inténtalo de nuevo.', error)
+    );
   }
 }
 
@@ -228,10 +231,9 @@ export async function uploadAvatarToSupabase(
 
     if (error) {
       console.error('[ImageService] Error uploading to Supabase:', error);
-      return Result.fail({
-        code: 'UPLOAD_ERROR',
-        message: `Error al subir la imagen: ${error.message}`,
-      });
+      return failure(
+        new UploadError(`Error al subir la imagen: ${error.message}`, error)
+      );
     }
 
     // Get public URL
@@ -240,21 +242,19 @@ export async function uploadAvatarToSupabase(
       .getPublicUrl(filePath);
 
     if (!publicUrlData?.publicUrl) {
-      return Result.fail({
-        code: 'URL_ERROR',
-        message: 'No se pudo obtener la URL pública de la imagen.',
-      });
+      return failure(
+        new UploadError('No se pudo obtener la URL pública de la imagen.')
+      );
     }
 
     console.log(`[ImageService] Upload successful: ${publicUrlData.publicUrl}`);
 
-    return Result.ok(publicUrlData.publicUrl);
+    return success(publicUrlData.publicUrl);
   } catch (error) {
     console.error('[ImageService] Unexpected error uploading avatar:', error);
-    return Result.fail({
-      code: 'UPLOAD_ERROR',
-      message: 'Error inesperado al subir la imagen. Inténtalo de nuevo.',
-    });
+    return failure(
+      new UploadError('Error inesperado al subir la imagen. Inténtalo de nuevo.', error)
+    );
   }
 }
 
@@ -274,10 +274,9 @@ export async function deleteAvatarFromSupabase(
     const pathParts = url.pathname.split(`${AVATAR_BUCKET}/`);
     
     if (pathParts.length < 2) {
-      return Result.fail({
-        code: 'INVALID_URL',
-        message: 'URL de avatar inválida.',
-      });
+      return failure(
+        new InvalidUrlError('URL de avatar inválida.')
+      );
     }
 
     const filePath = pathParts[1];
@@ -290,20 +289,17 @@ export async function deleteAvatarFromSupabase(
 
     if (error) {
       console.error('[ImageService] Error deleting from Supabase:', error);
-      return Result.fail({
-        code: 'DELETE_ERROR',
-        message: `Error al eliminar la imagen: ${error.message}`,
-      });
+      return failure(
+        new UploadError(`Error al eliminar la imagen: ${error.message}`, error)
+      );
     }
 
     console.log(`[ImageService] Delete successful`);
-    return Result.ok(undefined);
+    return success(undefined);
   } catch (error) {
     console.error('[ImageService] Unexpected error deleting avatar:', error);
-    return Result.fail({
-      code: 'DELETE_ERROR',
-      message: 'Error inesperado al eliminar la imagen.',
-    });
+    return failure(
+      new UploadError('Error inesperado al eliminar la imagen.', error)
+    );
   }
 }
-
