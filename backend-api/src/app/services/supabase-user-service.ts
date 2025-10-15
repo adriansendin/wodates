@@ -318,27 +318,6 @@ export class SupabaseUserService {
     return { name, email };
   }
 
-  private resolveName(
-    metadata: Record<string, unknown> | null,
-    email: string | undefined,
-  ): string {
-    // Use display_name instead of name
-    if (metadata && typeof metadata.display_name === 'string') {
-      const trimmed = metadata.display_name.trim();
-      if (trimmed) {
-        return trimmed;
-      }
-    }
-
-    if (email && typeof email === 'string') {
-      const trimmedEmail = email.trim();
-      if (trimmedEmail) {
-        return trimmedEmail;
-      }
-    }
-
-    return 'User';
-  }
 
   private mapRow(row: UserProfileRow, authUser: { name: string; email: string }): UserProfile {
     return {
@@ -421,6 +400,146 @@ export class SupabaseUserService {
     }
 
     return typeof error === 'string' ? error : 'Unknown Supabase error';
+  }
+
+  /**
+   * Upload user avatar to Supabase Storage
+   * Uses SERVICE_ROLE_KEY for full access to storage
+   * Only deletes previous avatar AFTER successful upload
+   * 
+   * @param userId - The user ID
+   * @param buffer - Image file buffer
+   * @param mimeType - MIME type of the image (image/jpeg or image/png)
+   * @returns Public URL of the uploaded avatar
+   */
+  async uploadAvatar(
+    userId: string,
+    buffer: Buffer,
+    mimeType: string,
+  ): Promise<string> {
+    try {
+      const AVATAR_BUCKET = 'avatars';
+      
+      // Step 1: Generate unique filename: {userId}_{timestamp}.jpg
+      const timestamp = Date.now();
+      const extension = mimeType === 'image/png' ? 'png' : 'jpg';
+      const fileName = `${userId}_${timestamp}.${extension}`;
+      const filePath = `${userId}/${fileName}`;
+
+      console.log(`[SupabaseUserService] Uploading avatar: ${filePath}, Size: ${Math.round(buffer.length / 1024)}KB`);
+
+      // Step 2: Upload new avatar to Supabase Storage
+      const { error } = await this.client.storage
+        .from(AVATAR_BUCKET)
+        .upload(filePath, buffer, {
+          contentType: mimeType,
+          upsert: true, // Allow overwriting
+        });
+
+      if (error) {
+        console.error('[SupabaseUserService] Error uploading to Supabase Storage:', error);
+        throw new InternalError(
+          `Failed to upload avatar: ${this.formatSupabaseError(error)}`,
+          error,
+        );
+      }
+
+      // Step 3: Get public URL
+      const { data: publicUrlData } = this.client.storage
+        .from(AVATAR_BUCKET)
+        .getPublicUrl(filePath);
+
+      if (!publicUrlData?.publicUrl) {
+        throw new InternalError('Failed to get public URL for uploaded avatar');
+      }
+
+      const avatarUrl = publicUrlData.publicUrl;
+      console.log(`[SupabaseUserService] Upload successful: ${avatarUrl}`);
+
+      // Step 4: Update avatar_url in public.users table
+      const { error: updateError } = await this.client
+        .from('users')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('[SupabaseUserService] Error updating avatar_url in database:', updateError);
+        throw new InternalError(
+          `Failed to update user avatar: ${this.formatSupabaseError(updateError)}`,
+          updateError,
+        );
+      }
+
+      // Step 5: ONLY NOW delete previous avatars (after everything succeeded)
+      await this.deleteUserAvatars(userId, filePath); // Exclude the new file
+
+      return avatarUrl;
+    } catch (error) {
+      if (error instanceof DomainError) {
+        throw error;
+      }
+
+      throw new InternalError('Unexpected error uploading avatar', error);
+    }
+  }
+
+  /**
+   * Delete all avatar files for a specific user from Supabase Storage
+   * EXCEPT the newly uploaded file
+   * 
+   * @param userId - The user ID
+   * @param excludeFilePath - The file path to exclude from deletion (the new avatar)
+   */
+  private async deleteUserAvatars(userId: string, excludeFilePath: string): Promise<void> {
+    try {
+      const AVATAR_BUCKET = 'avatars';
+      
+      // List all files in the user's folder
+      const { data: files, error: listError } = await this.client.storage
+        .from(AVATAR_BUCKET)
+        .list(userId);
+
+      if (listError) {
+        console.warn(`[SupabaseUserService] Could not list files for user ${userId}:`, listError);
+        return; // Continue even if we can't list files
+      }
+
+      if (!files || files.length === 0) {
+        console.log(`[SupabaseUserService] No existing avatars found for user ${userId}`);
+        return;
+      }
+
+      // Filter out the newly uploaded file
+      const filesToDelete = files.filter(file => {
+        const filePath = `${userId}/${file.name}`;
+        return filePath !== excludeFilePath;
+      });
+
+      if (filesToDelete.length === 0) {
+        console.log(`[SupabaseUserService] No old avatars to delete for user ${userId}`);
+        return;
+      }
+
+      // Create array of file paths to delete
+      const filePaths = filesToDelete.map(file => `${userId}/${file.name}`);
+      
+      console.log(`[SupabaseUserService] Deleting ${filePaths.length} old avatar(s) for user ${userId}:`, filePaths);
+
+      // Delete old files
+      const { error: deleteError } = await this.client.storage
+        .from(AVATAR_BUCKET)
+        .remove(filePaths);
+
+      if (deleteError) {
+        console.warn(`[SupabaseUserService] Error deleting old avatars for user ${userId}:`, deleteError);
+        // Don't throw error - cleanup failure shouldn't break the upload
+      } else {
+        console.log(`[SupabaseUserService] Successfully deleted ${filePaths.length} old avatar(s) for user ${userId}`);
+      }
+    } catch (error) {
+      console.warn(`[SupabaseUserService] Unexpected error deleting old avatars for user ${userId}:`, error);
+      // Don't throw error - cleanup failure shouldn't break the upload
+    }
   }
 
   private normalizeGender(value: unknown): Gender | null {

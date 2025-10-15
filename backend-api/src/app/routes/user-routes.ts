@@ -86,4 +86,34 @@ export async function userRoutes(fastify: FastifyInstance) {
     },
     controller.updateProfile.bind(controller),
   );
+
+  fastify.post(
+    '/users/me/avatar',
+    {
+      schema: {
+        description: 'Upload user avatar image',
+        tags: ['users'],
+        security: [{ bearerAuth: [] }],
+        consumes: ['multipart/form-data'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              avatarUrl: { type: 'string', format: 'uri' },
+            },
+            required: ['avatarUrl'],
+          },
+          400: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    controller.uploadAvatar.bind(controller),
+  );
 }

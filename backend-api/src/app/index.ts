@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
+import multipart from '@fastify/multipart';
 import { registerCors } from './plugins/cors';
 import { registerRateLimit } from './plugins/rate-limit';
 import { registerSwagger } from './plugins/swagger';
@@ -44,6 +45,11 @@ async function buildApp() {
   await registerCors(fastify);
   await registerRateLimit(fastify);
   await registerSwagger(fastify);
+  await fastify.register(multipart, {
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB max file size
+    },
+  });
 
   // Configure schema validation
   fastify.addHook('preValidation', async (request) => {

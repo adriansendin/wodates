@@ -186,6 +186,61 @@ export class UsersController {
     }
   }
 
+  /**
+   * Upload user avatar to Supabase Storage
+   * Handles multipart/form-data with a single image file
+   */
+  async uploadAvatar(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const authUser = request.user;
+      if (!authUser) {
+        throw new UnauthorizedError('Missing authenticated user');
+      }
+
+      // Get file from multipart request
+      const data = await request.file();
+      
+      if (!data) {
+        return reply.status(400).send({
+          error: 'MISSING_FILE',
+          message: 'No file provided. Please upload an image.',
+        });
+      }
+
+      // Validate file type (only images)
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedMimeTypes.includes(data.mimetype)) {
+        return reply.status(400).send({
+          error: 'INVALID_FILE_TYPE',
+          message: 'Only JPEG and PNG images are allowed.',
+        });
+      }
+
+      // Validate file size (max 5MB - already enforced by multipart config)
+      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+      if (data.file.bytesRead > MAX_FILE_SIZE) {
+        return reply.status(400).send({
+          error: 'FILE_TOO_LARGE',
+          message: 'File size must be less than 5MB.',
+        });
+      }
+
+      // Convert stream to buffer
+      const buffer = await data.toBuffer();
+
+      // Upload to Supabase Storage
+      const avatarUrl = await this.userService.uploadAvatar(
+        authUser.id,
+        buffer,
+        data.mimetype,
+      );
+
+      return reply.send({ avatarUrl });
+    } catch (error) {
+      return this.handleError(reply, error);
+    }
+  }
+
   private handleError(reply: FastifyReply, error: unknown) {
     if (error instanceof DomainError) {
       return reply.status(error.statusCode).send({
