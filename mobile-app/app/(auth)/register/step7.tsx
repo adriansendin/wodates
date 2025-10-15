@@ -19,7 +19,7 @@ import { PlatformInfo } from '../../../src/components/PlatformInfo';
 import { 
   pickImageFromGallery, 
   takePictureWithCamera,
-  uploadAvatarToSupabase,
+  uploadAvatarToBackend,
 } from '../../../src/data/api/imageService';
 
 const PLACEHOLDER_AVATAR = 'https://via.placeholder.com/240x240.png?text=Tu+Foto';

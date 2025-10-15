@@ -1,7 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
-import { getSupabaseClient } from './supabaseClient';
+import axios from 'axios';
+import { useAuthStore } from '../../domain/stores/authStore';
 import { Result, success, failure } from '../../domain/Result';
 import {
   DomainError,
@@ -9,12 +10,12 @@ import {
   ImagePickerError,
   CameraError,
   UploadError,
-  InvalidUrlError,
 } from '../../domain/errors/DomainError';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 const MAX_IMAGE_SIZE_KB = 500;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024;
-const AVATAR_BUCKET = 'avatars';
 
 /**
  * Compresses an image if it exceeds the maximum size
@@ -112,6 +113,7 @@ async function pickImageFromWeb(): Promise<string | null> {
 
 /**
  * Picks an image from the device gallery
+ * Note: Only allows selecting a single image (no multiple selection)
  * @returns {Promise<Result<string, DomainError>>} Result with image URI or error
  */
 export async function pickImageFromGallery(): Promise<Result<string | null, DomainError>> {
@@ -131,8 +133,9 @@ export async function pickImageFromGallery(): Promise<Result<string | null, Doma
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      // mediaTypes: ['images'],
       allowsEditing: true,
+      allowsMultipleSelection: false,
       aspect: [1, 1],
       quality: 1,
     });
@@ -197,109 +200,65 @@ export async function takePictureWithCamera(): Promise<Result<string | null, Dom
 }
 
 /**
- * Uploads an image to Supabase Storage and returns the public URL
+ * Uploads an image to the backend API, which handles Supabase Storage upload
  * @param imageUri - The local URI of the image to upload
- * @param userId - The ID of the user uploading the image
  * @returns {Promise<Result<string, DomainError>>} Result with public URL or error
  */
-export async function uploadAvatarToSupabase(
+export async function uploadAvatarToBackend(
   imageUri: string,
-  userId: string
 ): Promise<Result<string, DomainError>> {
   try {
-    const supabase = getSupabaseClient();
+    console.log('[ImageService] Uploading avatar via backend:', imageUri);
 
-    // Convert image URI to blob
-    const response = await fetch(imageUri);
-    const blob = await response.blob();
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const fileExtension = 'jpg';
-    const fileName = `${userId}_${timestamp}.${fileExtension}`;
-    const filePath = `${userId}/${fileName}`;
-
-    console.log(`[ImageService] Uploading avatar: ${filePath}, Size: ${Math.round(blob.size / 1024)}KB`);
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(AVATAR_BUCKET)
-      .upload(filePath, blob, {
-        contentType: 'image/jpeg',
-        upsert: true,
-      });
-
-    if (error) {
-      console.error('[ImageService] Error uploading to Supabase:', error);
-      return failure(
-        new UploadError(`Error al subir la imagen: ${error.message}`, error)
-      );
+    // Get auth token from store
+    const tokens = useAuthStore.getState().tokens;
+    if (!tokens?.accessToken) {
+      return failure(new UploadError('No authentication token available'));
     }
 
-    // Get public URL
-    const { data: publicUrlData } = supabase.storage
-      .from(AVATAR_BUCKET)
-      .getPublicUrl(filePath);
+    // Create FormData with the image file
+    const formData = new FormData();
+    
+    // In React Native, we need to provide file info in a specific format
+    const filename = imageUri.split('/').pop() || 'avatar.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
 
-    if (!publicUrlData?.publicUrl) {
-      return failure(
-        new UploadError('No se pudo obtener la URL pública de la imagen.')
-      );
-    }
+    // @ts-ignore - FormData in React Native accepts this format
+    formData.append('file', {
+      uri: imageUri,
+      type: type,
+      name: filename,
+    });
 
-    console.log(`[ImageService] Upload successful: ${publicUrlData.publicUrl}`);
+    // Upload to backend API endpoint using axios directly
+    const response = await axios.post(
+      `${API_URL}/users/me/avatar`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${tokens.accessToken}`,
+        },
+      }
+    );
 
-    return success(publicUrlData.publicUrl);
-  } catch (error) {
+    const { avatarUrl } = response.data;
+    console.log('[ImageService] Upload successful:', avatarUrl);
+
+    return success(avatarUrl);
+  } catch (error: any) {
     console.error('[ImageService] Unexpected error uploading avatar:', error);
+    
+    // Handle axios error format
+    if (error.response) {
+      const message = error.response.data?.message || 'Error al subir la imagen.';
+      return failure(new UploadError(message, error));
+    }
+
     return failure(
       new UploadError('Error inesperado al subir la imagen. Inténtalo de nuevo.', error)
     );
   }
 }
 
-/**
- * Deletes an avatar from Supabase Storage
- * @param avatarUrl - The public URL of the avatar to delete
- * @returns {Promise<Result<void, DomainError>>} Result indicating success or error
- */
-export async function deleteAvatarFromSupabase(
-  avatarUrl: string
-): Promise<Result<void, DomainError>> {
-  try {
-    const supabase = getSupabaseClient();
-
-    // Extract file path from public URL
-    const url = new URL(avatarUrl);
-    const pathParts = url.pathname.split(`${AVATAR_BUCKET}/`);
-    
-    if (pathParts.length < 2) {
-      return failure(
-        new InvalidUrlError('URL de avatar inválida.')
-      );
-    }
-
-    const filePath = pathParts[1];
-
-    console.log(`[ImageService] Deleting avatar: ${filePath}`);
-
-    const { error } = await supabase.storage
-      .from(AVATAR_BUCKET)
-      .remove([filePath]);
-
-    if (error) {
-      console.error('[ImageService] Error deleting from Supabase:', error);
-      return failure(
-        new UploadError(`Error al eliminar la imagen: ${error.message}`, error)
-      );
-    }
-
-    console.log(`[ImageService] Delete successful`);
-    return success(undefined);
-  } catch (error) {
-    console.error('[ImageService] Unexpected error deleting avatar:', error);
-    return failure(
-      new UploadError('Error inesperado al eliminar la imagen.', error)
-    );
-  }
-}

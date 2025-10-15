@@ -33,7 +33,7 @@ import {
 import {
   pickImageFromGallery,
   takePictureWithCamera,
-  uploadAvatarToSupabase,
+  uploadAvatarToBackend,
 } from '../../src/data/api/imageService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
@@ -348,8 +348,8 @@ export default function ProfileScreen() {
     setFeedback({ type: 'info', message: 'Subiendo imagen...' });
 
     try {
-      // Upload to Supabase
-      const uploadResult = await uploadAvatarToSupabase(imageUri, user.id);
+      // Upload via backend
+      const uploadResult = await uploadAvatarToBackend(imageUri);
 
       if (!uploadResult.success) {
         Alert.alert('Error', uploadResult.error.message);

@@ -8,7 +8,7 @@ import { AuthApi } from '../../../src/data/api/authApi';
 import { ProfileApi } from '../../../src/data/api/profileApi';
 import { AuthTokens } from '../../../src/domain/entities/Auth';
 import { User, Gender } from '../../../src/domain/entities/User';
-import { uploadAvatarToSupabase } from '../../../src/data/api/imageService';
+import { uploadAvatarToBackend } from '../../../src/data/api/imageService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
@@ -88,8 +88,8 @@ export default function CompleteScreen() {
 
       // Si hay un avatar local, subirlo a Supabase
       if (data.avatarUrl) {
-        console.log('[Register] Uploading avatar to Supabase...');
-        const uploadResult = await uploadAvatarToSupabase(data.avatarUrl, normalizedUser.id);
+        console.log('[Register] Uploading avatar via backend...');
+        const uploadResult = await uploadAvatarToBackend(data.avatarUrl);
 
         if (uploadResult.success) {
           if (uploadResult.data) {
