@@ -182,7 +182,6 @@ export default function MatchesScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your Matches</Text>
       {matches.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No matches yet</Text>

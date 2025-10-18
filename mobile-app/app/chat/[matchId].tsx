@@ -337,6 +337,14 @@ export default function ChatScreen() {
         options={{
           title: otherUserName ?? 'Chat',
           headerShown: true,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{ marginLeft: 16, padding: 8 }}
+            >
+              <Ionicons name="arrow-back" size={24} color="#000000" />
+            </TouchableOpacity>
+          ),
           headerRight: () => (
             <TouchableOpacity
               onPress={() => setShowMenu(true)}

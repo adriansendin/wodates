@@ -85,8 +85,6 @@ export default function FeedScreen() {
   const apiClient = new ApiClient(API_URL);
   const feedApi = new FeedApi(apiClient);
 
-  const welcomeMessage = user?.name ? `Hola ${user.name}` : 'Hola';
-
   useEffect(() => {
     loadFeed();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -191,16 +189,9 @@ export default function FeedScreen() {
 
   const currentUser = users[currentIndex];
 
-  const renderWelcome = () => (
-    <View style={styles.welcomeContainer}>
-      <Text style={styles.welcomeText}>{welcomeMessage}</Text>
-    </View>
-  );
-
   if (isLoading && users.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        {renderWelcome()}
         <ActivityIndicator size="large" color="#e91e63" />
         <Text style={styles.loadingText}>Loading feed...</Text>
       </View>
@@ -210,7 +201,6 @@ export default function FeedScreen() {
   if (!currentUser) {
     return (
       <View style={styles.emptyContainer}>
-        {renderWelcome()}
         <Text style={styles.emptyText}>No more users to show</Text>
         <TouchableOpacity style={styles.refreshButton} onPress={loadFeed}>
           <Text style={styles.refreshButtonText}>Refresh</Text>
@@ -225,7 +215,6 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.container}>
-      {renderWelcome()}
 
       <View style={styles.card}>
         <Image source={{ uri: photoUrl }} style={styles.image} resizeMode="cover" />
