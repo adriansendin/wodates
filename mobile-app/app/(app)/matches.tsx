@@ -152,22 +152,43 @@ export default function MatchesScreen() {
   };
 
   const renderMatch = ({ item }: { item: MatchWithUser }) => (
-    <TouchableOpacity style={styles.matchItem} onPress={() => handleMatchPress(item)}>
-      <Image
-        source={{ uri: item.otherUser?.photoUrl || 'https://via.placeholder.com/60x60' }}
-        style={styles.avatar}
-      />
+    <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
+      <View style={styles.avatarContainer}>
+        <Image
+          source={{ uri: item.otherUser?.photoUrl || 'https://via.placeholder.com/80x80' }}
+          style={styles.avatar}
+        />
+        {item.unreadCount > 0 && (
+          <View style={styles.unreadIndicator} />
+        )}
+      </View>
       <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{item.otherUser?.name ?? 'Unknown user'}</Text>
-        <Text style={styles.lastMessage} numberOfLines={1}>
-          {item.lastMessage?.content || 'No messages yet'}
+        <View style={styles.nameContainer}>
+          <Text style={styles.matchName}>{item.otherUser?.name ?? 'Unknown user'}</Text>
+          {item.unreadCount > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadText}>{item.unreadCount}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.lastMessage} numberOfLines={2}>
+          {item.lastMessage?.content || 'Start a conversation...'}
+        </Text>
+        <Text style={styles.timestamp}>
+          {item.lastMessage?.createdAt 
+            ? new Date(item.lastMessage.createdAt).toLocaleDateString([], {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+            : new Date(item.createdAt).toLocaleDateString([], {
+                month: 'short',
+                day: 'numeric'
+              })
+          }
         </Text>
       </View>
-      {item.unreadCount > 0 && (
-        <View style={styles.unreadBadge}>
-          <Text style={styles.unreadText}>{item.unreadCount}</Text>
-        </View>
-      )}
     </TouchableOpacity>
   );
 
@@ -184,11 +205,28 @@ export default function MatchesScreen() {
     <View style={styles.container}>
       {matches.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No matches yet</Text>
-          <Text style={styles.emptySubtext}>Keep swiping to find your perfect match(matches)!</Text>
+          <View style={styles.emptyIconContainer}>
+            <Text style={styles.emptyIcon}>💕</Text>
+          </View>
+          <Text style={styles.emptyTitle}>No matches yet</Text>
+          <Text style={styles.emptySubtext}>
+            Keep swiping in Discover to find your perfect match!
+          </Text>
+          <TouchableOpacity 
+            style={styles.discoverButton}
+            onPress={() => router.push('/(app)/feed')}
+          >
+            <Text style={styles.discoverButtonText}>Start Discovering</Text>
+          </TouchableOpacity>
         </View>
       ) : (
-        <FlatList data={matches} renderItem={renderMatch} keyExtractor={(item) => item.id} />
+        <FlatList 
+          data={matches} 
+          renderItem={renderMatch} 
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </View>
   );
@@ -197,81 +235,158 @@ export default function MatchesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
     color: '#666',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    padding: 20,
-    color: '#333',
+  listContainer: {
+    paddingVertical: 8,
   },
+  
+  // Estado vacío mejorado
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 40,
   },
-  emptyText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 8,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  emptyIcon: {
+    fontSize: 32,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
     textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 16,
+    color: '#666',
     textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
   },
-  matchItem: {
+  discoverButton: {
+    backgroundColor: '#e91e63',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    shadowColor: '#e91e63',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  discoverButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  
+  // Tarjetas de matches rediseñadas
+  matchCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: 16,
+    marginVertical: 6,
     padding: 16,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  
+  // Contenedor del avatar mejorado
+  avatarContainer: {
+    position: 'relative',
     marginRight: 16,
   },
+  avatar: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+  },
+  unreadIndicator: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#e91e63',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  
+  // Información del match mejorada
   matchInfo: {
     flex: 1,
   },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
   matchName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
+    flex: 1,
   },
   lastMessage: {
     fontSize: 14,
     color: '#666',
+    lineHeight: 18,
+    marginBottom: 4,
   },
+  timestamp: {
+    fontSize: 12,
+    color: '#999',
+  },
+  
+  // Badge de mensajes no leídos
   unreadBadge: {
     backgroundColor: '#e91e63',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
   },
   unreadText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
   },
 });

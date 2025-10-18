@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useFeedStore } from '../../src/domain/stores/feedStore';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { FeedApi } from '../../src/data/api/feedApi';
@@ -47,14 +49,6 @@ const resolveAge = (candidate: { age?: number | null; birthDate?: string | null 
   return getAgeFromBirthDate(candidate.birthDate);
 };
 
-const resolveBio = (bio?: string | null) => {
-  if (!bio) {
-    return 'This user has not added a bio yet.';
-  }
-
-  const trimmed = bio.trim();
-  return trimmed || 'This user has not added a bio yet.';
-};
 
 const resolvePhotoUrl = (photoUrl?: string | null) => {
   if (typeof photoUrl === 'string') {
@@ -68,6 +62,7 @@ const resolvePhotoUrl = (photoUrl?: string | null) => {
 };
 
 export default function FeedScreen() {
+  const router = useRouter();
   const {
     users,
     currentIndex,
@@ -147,10 +142,23 @@ export default function FeedScreen() {
             },
             unreadCount: 0,
           });
+          
+          // Mostrar alerta y navegar al chat
+          Alert.alert("It's a Match!", 'You and this person liked each other!');
+          
+          // Navegar al chat con el nuevo match
+          router.push({
+            pathname: '/chat/[matchId]',
+            params: {
+              matchId: match.id,
+              name: currentUser.name,
+              photoUrl: currentUser.photoUrl ?? '',
+              otherUserId: currentUser.id,
+            },
+          });
         } else {
           console.warn('Invalid match payload received', validation.error);
         }
-        Alert.alert("It's a Match!", 'You and this person liked each other!');
       }
       nextUser();
     } catch (error) {
@@ -210,32 +218,41 @@ export default function FeedScreen() {
   }
 
   const age = resolveAge(currentUser);
-  const bio = resolveBio(currentUser.bio);
   const photoUrl = resolvePhotoUrl(currentUser.photoUrl);
 
   return (
     <View style={styles.container}>
-
-      <View style={styles.card}>
-        <Image source={{ uri: photoUrl }} style={styles.image} resizeMode="cover" />
-        <View style={styles.overlay}>
-          <Text style={styles.name}>
-            {currentUser.name}
-            {typeof age === 'number' ? `, ${age}` : ''}
+      {/* Imagen a pantalla completa */}
+      <Image source={{ uri: photoUrl }} style={styles.fullScreenImage} resizeMode="cover" />
+      
+      {/* Gradiente inferior para mejor legibilidad */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+        locations={[0, 0.5, 1]}
+        style={styles.gradientOverlay}
+      />
+      
+      {/* Overlay con información */}
+      <View style={styles.infoOverlay}>
+        <Text style={styles.name}>
+          {currentUser.name}
+          {typeof age === 'number' ? `, ${age}` : ''}
+        </Text>
+        {(currentUser as any).location?.city && (
+          <Text style={styles.location} numberOfLines={1}>
+            📍 {(currentUser as any).location.city}
           </Text>
-          <Text style={styles.bio} numberOfLines={3}>
-            {bio}
-          </Text>
-        </View>
+        )}
       </View>
 
+      {/* Botones de acción */}
       <View style={styles.actions}>
         <TouchableOpacity
           style={[styles.actionButton, styles.passButton]}
           onPress={handlePass}
           disabled={isPassing}
         >
-          <Ionicons name="close" size={28} color="#fff" />
+          <Ionicons name="close" size={32} color="#fff" />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -243,7 +260,7 @@ export default function FeedScreen() {
           onPress={handleLike}
           disabled={isLiking}
         >
-          <Ionicons name="heart" size={28} color="#fff" />
+          <Ionicons name="heart" size={32} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>
@@ -253,7 +270,7 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000', // Fondo negro para mejor contraste
   },
   loadingContainer: {
     flex: 1,
@@ -290,66 +307,86 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  card: {
-    flex: 1,
-    margin: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  image: {
+  // Imagen a pantalla completa
+  fullScreenImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
   },
-  overlay: {
+  
+  // Gradiente suave
+  gradientOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 20,
+    height: 200,
+  },
+  
+  // Overlay con información
+  infoOverlay: {
+    position: 'absolute',
+    bottom: 120,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   name: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 8,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  bio: {
-    fontSize: 16,
+  
+  location: {
+    fontSize: 14,
     color: '#fff',
-    lineHeight: 22,
+    lineHeight: 18,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    opacity: 0.9,
   },
+  // Botones de acción
   actions: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    paddingVertical: 20,
-    gap: 40,
+    gap: 60,
   },
+  
   actionButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
+  
   passButton: {
-    backgroundColor: '#ff6b6b',
+    backgroundColor: '#ff4757',
   },
+  
   likeButton: {
-    backgroundColor: '#4ecdc4',
+    backgroundColor: '#2ed573',
   },
   welcomeContainer: {
     paddingHorizontal: 20,
