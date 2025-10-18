@@ -26,6 +26,49 @@ import { useMatchesStore } from '../../src/domain/stores/matchesStore';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
+// Función para formatear la fecha según las especificaciones
+const formatDateSeparator = (date: Date): string => {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  // Resetear las horas para comparar solo fechas
+  const messageDate = new Date(date);
+  messageDate.setHours(0, 0, 0, 0);
+  const todayDate = new Date(today);
+  todayDate.setHours(0, 0, 0, 0);
+  const yesterdayDate = new Date(yesterday);
+  yesterdayDate.setHours(0, 0, 0, 0);
+  
+  if (messageDate.getTime() === todayDate.getTime()) {
+    return 'Hoy';
+  }
+  
+  if (messageDate.getTime() === yesterdayDate.getTime()) {
+    return 'Ayer';
+  }
+  
+  // Para fechas anteriores: "Mie, 20 Ago"
+  const dayNames = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
+                     'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  
+  const dayName = dayNames[date.getDay()];
+  const day = date.getDate();
+  const monthName = monthNames[date.getMonth()];
+  
+  return `${dayName}, ${day} ${monthName}`;
+};
+
+// Función para verificar si dos fechas son del mismo día
+const isSameDay = (date1: Date, date2: Date): boolean => {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  d1.setHours(0, 0, 0, 0);
+  d2.setHours(0, 0, 0, 0);
+  return d1.getTime() === d2.getTime();
+};
+
 export default function ChatScreen() {
   const params = useLocalSearchParams<{
     matchId?: string | string[];
@@ -301,19 +344,33 @@ export default function ChatScreen() {
     }
   }, [blockApi, matchId, otherUserId, router, tokens?.accessToken]);
 
-  const renderMessage = ({ item }: { item: Message }) => {
+  const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isOwn = item.senderId === user?.id;
+    const messageDate = new Date(item.createdAt);
+    
+    // Verificar si necesitamos mostrar un separador de fecha
+    const shouldShowDateSeparator = index === 0 || 
+      !isSameDay(messageDate, new Date(matchMessages[index - 1].createdAt));
 
     return (
-      <View style={[styles.messageContainer, isOwn && styles.ownMessageContainer]}>
-        <View style={[styles.messageBubble, isOwn && styles.ownMessageBubble]}>
-          <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>{item.content}</Text>
-          <Text style={[styles.messageTime, isOwn && styles.ownMessageTime]}>
-            {new Date(item.createdAt).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Text>
+      <View>
+        {shouldShowDateSeparator && (
+          <View style={styles.dateSeparatorContainer}>
+            <Text style={styles.dateSeparatorText}>
+              {formatDateSeparator(messageDate)}
+            </Text>
+          </View>
+        )}
+        <View style={[styles.messageContainer, isOwn && styles.ownMessageContainer]}>
+          <View style={[styles.messageBubble, isOwn && styles.ownMessageBubble]}>
+            <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>{item.content}</Text>
+            <Text style={[styles.messageTime, isOwn && styles.ownMessageTime]}>
+              {new Date(item.createdAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -365,7 +422,7 @@ export default function ChatScreen() {
             <FlatList
               ref={flatListRef}
               data={matchMessages}
-              renderItem={renderMessage}
+              renderItem={({ item, index }) => renderMessage({ item, index })}
               keyExtractor={(item) => item.id}
               style={styles.messagesList}
               contentContainerStyle={
@@ -696,5 +753,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  dateSeparatorContainer: {
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  dateSeparatorText: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
 });
