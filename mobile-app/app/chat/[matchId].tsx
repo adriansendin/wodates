@@ -11,7 +11,9 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Keyboard,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, Redirect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ApiClient } from '../../src/data/api/apiClient';
@@ -67,6 +69,7 @@ export default function ChatScreen() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const flatListRef = useRef<FlatList<Message>>(null);
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -83,11 +86,41 @@ export default function ChatScreen() {
     isInitialLoad.current = true;
   }, [matchId]);
 
+  // Scroll to end when messages change
   useEffect(() => {
     if (matchMessages.length > 0) {
-      flatListRef.current?.scrollToEnd({ animated: true });
+      // Use setTimeout to ensure the layout has been updated
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
   }, [matchMessages.length]);
+
+  // Handle keyboard show/hide events
+  useEffect(() => {
+    const keyboardWillShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        // Scroll to bottom when keyboard appears
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+
+    const keyboardWillHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShowListener.remove();
+      keyboardWillHideListener.remove();
+    };
+  }, []);
 
   const loadMessages = useCallback(async () => {
     if (!tokens?.accessToken || !matchId) {
@@ -314,52 +347,78 @@ export default function ChatScreen() {
           ),
         }}
       />
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <FlatList
-          ref={flatListRef}
-          data={matchMessages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          style={styles.messagesList}
-          contentContainerStyle={
-            matchMessages.length === 0 ? styles.emptyListContainer : styles.messagesContent
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyStateContainer}>
-              {isLoading ? (
-                <>
-                  <ActivityIndicator size="small" color="#e91e63" />
-                  <Text style={styles.emptyStateText}>Loading messages...</Text>
-                </>
-              ) : (
-                <Text style={styles.emptyStateText}>Start the conversation!</Text>
-              )}
-            </View>
-          }
-        />
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+          <View style={styles.chatContent}>
+            <FlatList
+              ref={flatListRef}
+              data={matchMessages}
+              renderItem={renderMessage}
+              keyExtractor={(item) => item.id}
+              style={styles.messagesList}
+              contentContainerStyle={
+                matchMessages.length === 0 ? styles.emptyListContainer : styles.messagesContent
+              }
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+                autoscrollToTopThreshold: 10,
+              }}
+              onContentSizeChange={() => {
+                // Auto-scroll to bottom when content size changes
+                if (matchMessages.length > 0) {
+                  flatListRef.current?.scrollToEnd({ animated: true });
+                }
+              }}
+              ListEmptyComponent={
+                <View style={styles.emptyStateContainer}>
+                  {isLoading ? (
+                    <>
+                      <ActivityIndicator size="small" color="#e91e63" />
+                      <Text style={styles.emptyStateText}>Loading messages...</Text>
+                    </>
+                  ) : (
+                    <Text style={styles.emptyStateText}>Start the conversation!</Text>
+                  )}
+                </View>
+              }
+            />
+          </View>
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.textInput, isBlocked && styles.textInputDisabled]}
-            value={message}
-            onChangeText={setMessage}
-            placeholder={isBlocked ? 'Chat no disponible' : 'Type a message...'}
-            multiline
-            maxLength={1000}
-            editable={!isBlocked}
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, (!message.trim() || isSending || isBlocked) && styles.sendButtonDisabled]}
-            onPress={handleSendMessage}
-            disabled={!message.trim() || isSending || isBlocked}
-          >
-            <Text style={styles.sendButtonText}>Send</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+          <View style={[
+            styles.inputContainer,
+            Platform.OS === 'android' && { marginBottom: keyboardHeight > 0 ? keyboardHeight : 0 }
+          ]}>
+            <TextInput
+              style={[styles.textInput, isBlocked && styles.textInputDisabled]}
+              value={message}
+              onChangeText={setMessage}
+              placeholder={isBlocked ? 'Chat no disponible' : 'Type a message...'}
+              multiline
+              maxLength={1000}
+              editable={!isBlocked}
+              onFocus={() => {
+                // Scroll to bottom when input is focused
+                setTimeout(() => {
+                  flatListRef.current?.scrollToEnd({ animated: true });
+                }, 300);
+              }}
+            />
+            <TouchableOpacity
+              style={[styles.sendButton, (!message.trim() || isSending || isBlocked) && styles.sendButtonDisabled]}
+              onPress={handleSendMessage}
+              disabled={!message.trim() || isSending || isBlocked}
+            >
+              <Text style={styles.sendButtonText}>Send</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
       {/* Context Menu Modal */}
       <Modal
@@ -429,9 +488,16 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  chatContent: {
+    flex: 1,
   },
   messagesList: {
     flex: 1,
@@ -439,7 +505,8 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     paddingVertical: 16,
-    paddingBottom: 24,
+    paddingBottom: 8,
+    flexGrow: 1,
   },
   emptyListContainer: {
     flexGrow: 1,
@@ -492,10 +559,12 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',
+    minHeight: 60,
   },
   textInput: {
     flex: 1,

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
@@ -47,7 +48,6 @@ export default function LoginScreen() {
     }
 
     console.log('[Login] handleLogin pressed');
-    Alert.alert('Login', 'Iniciando sesión...');
 
     setLoading(true);
     setError(null);
@@ -73,7 +73,6 @@ export default function LoginScreen() {
       };
 
       login(normalizedUser, tokens);
-      Alert.alert('Login', 'Inicio de sesión correcto, redirigiendo al feed.');
       router.replace('/(app)/feed');
     } catch (err) {
       console.error('Login error', err);
@@ -86,49 +85,80 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>WODATES</Text>
-      <Text style={styles.subtitle}>Find your perfect match</Text>
-
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-
-        <TouchableOpacity
-          style={[styles.button, isLoading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={isLoading}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          bounces={false}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.buttonText}>{isLoading ? 'Entrando...' : 'Login'}</Text>
-        </TouchableOpacity>
+          <View style={styles.innerContent}>
+            <Text style={styles.title}>WODATES</Text>
+            <Text style={styles.subtitle}>Find your perfect match</Text>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        
-      </View>
-    </View>
+            <View style={styles.form}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                returnKeyType="next"
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
+              />
+
+              <TouchableOpacity
+                style={[styles.button, isLoading && styles.buttonDisabled]}
+                onPress={handleLogin}
+                disabled={isLoading}
+              >
+                <Text style={styles.buttonText}>{isLoading ? 'Entrando...' : 'Login'}</Text>
+              </TouchableOpacity>
+
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+              
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#fff',
-    padding: 20,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: Platform.OS === 'android' ? 100 : 40,
+  },
+  innerContent: {
+    alignItems: 'center',
   },
   title: {
     fontSize: 32,
