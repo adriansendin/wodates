@@ -214,20 +214,12 @@ export class SupabaseFeedService {
       const user = data.user;
       const metadata = user.user_metadata as Record<string, unknown> | null;
       
-      // Debug: Log metadata structure to understand what's available
-      console.log(`[SupabaseFeedService] User ${userId} metadata:`, JSON.stringify({
-        email: user.email,
-        user_metadata: metadata,
-        raw_user_meta_data: (user as any).raw_user_meta_data,
-      }, null, 2));
-      
       const displayName =
         metadata && typeof metadata.display_name === 'string'
           ? metadata.display_name.trim()
           : '';
 
       const result = displayName || user.email || 'Usuario';
-      console.log(`[SupabaseFeedService] Resolved name for ${userId}: "${result}"`);
       
       return result;
     } catch (error) {
