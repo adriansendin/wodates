@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Modal,
   Keyboard,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, Redirect, useRouter } from 'expo-router';
@@ -91,6 +92,11 @@ export default function ChatScreen() {
     if (!params.otherUserId) return undefined;
     return Array.isArray(params.otherUserId) ? params.otherUserId[0] : params.otherUserId;
   }, [params.otherUserId]);
+
+  const photoUrl = useMemo(() => {
+    if (!params.photoUrl) return undefined;
+    return Array.isArray(params.photoUrl) ? params.photoUrl[0] : params.photoUrl;
+  }, [params.photoUrl]);
 
   const router = useRouter();
   const { tokens, user } = useAuthStore();
@@ -344,6 +350,16 @@ export default function ChatScreen() {
     }
   }, [blockApi, matchId, otherUserId, router, tokens?.accessToken]);
 
+  const handleAvatarPress = useCallback(() => {
+    router.push({
+      pathname: '/chat/avatar-view',
+      params: {
+        photoUrl: photoUrl ?? '',
+        name: otherUserName ?? 'User',
+      },
+    });
+  }, [photoUrl, otherUserName, router]);
+
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isOwn = item.senderId === user?.id;
     const messageDate = new Date(item.createdAt);
@@ -392,7 +408,7 @@ export default function ChatScreen() {
     <>
       <Stack.Screen
         options={{
-          title: otherUserName ?? 'Chat',
+          title: '',
           headerShown: true,
           headerLeft: () => (
             <TouchableOpacity
@@ -400,6 +416,21 @@ export default function ChatScreen() {
               style={{ marginLeft: 16, padding: 8 }}
             >
               <Ionicons name="arrow-back" size={24} color="#000000" />
+            </TouchableOpacity>
+          ),
+          headerTitle: () => (
+            <TouchableOpacity
+              style={styles.headerTitleContainer}
+              onPress={handleAvatarPress}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={{ uri: photoUrl || 'https://via.placeholder.com/40x40' }}
+                style={styles.headerAvatar}
+              />
+              <Text style={styles.headerTitleText} numberOfLines={1}>
+                {otherUserName ?? 'Chat'}
+              </Text>
             </TouchableOpacity>
           ),
           headerRight: () => (
@@ -766,5 +797,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  headerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#e91e63',
+    backgroundColor: '#f0f0f0',
+  },
+  headerTitleText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    maxWidth: 180,
   },
 });
