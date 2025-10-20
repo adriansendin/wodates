@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+// Only used on native platforms (ios/android)
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
 
 interface AgeRangePickerProps {
   minAge: number;
@@ -22,7 +24,7 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
   disabled = false,
   style,
 }) => {
-  // Generar array de edades disponibles
+  // Generar array de edades disponibles (web)
   const ageOptions = useMemo(() => {
     const options: number[] = [];
     for (let i = MIN_AGE; i <= MAX_AGE; i++) {
@@ -31,12 +33,11 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
     return options;
   }, []);
 
-  // Filtrar opciones de edad mínima basándose en edad máxima seleccionada
+  // Filtrar opciones para web
   const minAgeOptions = useMemo(() => {
     return ageOptions.filter((age) => age <= maxAge);
   }, [ageOptions, maxAge]);
 
-  // Filtrar opciones de edad máxima basándose en edad mínima seleccionada
   const maxAgeOptions = useMemo(() => {
     return ageOptions.filter((age) => age >= minAge);
   }, [ageOptions, minAge]);
@@ -53,6 +54,38 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
     }
   };
 
+  // Uso de slider nativo para iOS/Android
+  if (Platform.OS !== 'web') {
+    return (
+      <View style={[styles.container, style]}>
+        <Text style={styles.pickerLabel}>Rango de edad</Text>
+        <View style={styles.sliderContainer}>
+          <MultiSlider
+            values={[minAge, maxAge]}
+            min={MIN_AGE}
+            max={MAX_AGE}
+            step={1}
+            enabledOne={!disabled}
+            enabledTwo={!disabled}
+            allowOverlap={false}
+            snapped
+            onValuesChange={(values) => {
+              if (disabled) return;
+              const [min, max] = values as [number, number];
+              onMinAgeChange(min);
+              onMaxAgeChange(max);
+            }}
+          />
+        </View>
+
+        <View style={styles.rangeDisplay}>
+          <Text style={styles.rangeText}>Rango: {minAge} – {maxAge} años</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Web: mantener pickers actuales
   return (
     <View style={[styles.container, style]}>
       <View style={styles.pickersContainer}>
@@ -154,6 +187,10 @@ const styles = StyleSheet.create({
         height: 50,
       },
     }),
+  },
+  sliderContainer: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
   pickerItem: {
     fontSize: 16,
