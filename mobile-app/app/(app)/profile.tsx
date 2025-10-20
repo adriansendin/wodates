@@ -628,20 +628,16 @@ export default function ProfileScreen() {
             helperText="Toca el botón para cambiar la foto"
           />
         </View>
-        <Text style={styles.sectionTitle}>Informacion basica</Text>
-        <View style={styles.readonlyField}>
-          <Text style={styles.label}>Nombre</Text>
-          <Text style={styles.valueText}>
+        
+        {/* Mostrar nombre y edad de forma natural */}
+        <View style={styles.nameAgeContainer}>
+          <Text style={styles.nameAgeText}>
             {profile?.name ?? user?.name ?? 'Usuario'}
+            {profile?.birthDate && `, ${calculateAge(profile.birthDate)}`}
           </Text>
         </View>
-
-        <View style={styles.readonlyField}>
-          <Text style={styles.label}>Edad</Text>
-          <Text style={styles.valueText}>
-            {profile?.birthDate ? `${calculateAge(profile.birthDate)} años` : 'No especificada'}
-          </Text>
-        </View>
+        
+        <Text style={styles.sectionTitle}>Informacion basica</Text>
 
         <View style={styles.field}>
           <Text style={styles.label}>Genero</Text>
@@ -664,11 +660,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           {formErrors.gender ? (
             <Text style={styles.errorText}>{formErrors.gender}</Text>
-          ) : (
-            <Text style={styles.helperText}>
-              Escoge la opcion que mejor te describa.
-            </Text>
-          )}
+          ) : null}
         </View>
 
         <View style={styles.field}>
@@ -1019,6 +1011,16 @@ const styles = StyleSheet.create({
   helperText: {
     fontSize: 12,
     color: '#999',
+  },
+  nameAgeContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  nameAgeText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#222',
+    textAlign: 'center',
   },
 });
 
