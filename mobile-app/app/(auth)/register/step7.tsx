@@ -5,7 +5,6 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ScrollView, 
-  Image, 
   ActivityIndicator,
   Alert,
   ActionSheetIOS,
@@ -21,8 +20,9 @@ import {
   takePictureWithCamera,
   uploadAvatarToBackend,
 } from '../../../src/data/api/imageService';
+import { AvatarPicker } from '../../../src/components/AvatarPicker';
 
-const PLACEHOLDER_AVATAR = 'https://via.placeholder.com/240x240.png?text=Tu+Foto';
+// Removed external placeholder; AvatarPicker shows empty background when no uri
 
 export default function Step7Screen() {
   const router = useRouter();
@@ -144,40 +144,15 @@ export default function Step7Screen() {
           />
 
           <View style={styles.avatarContainer}>
-            <TouchableOpacity 
-              style={styles.avatarWrapper}
-              onPress={handleSelectImage}
+            <AvatarPicker
+              uri={avatarUri}
+              size={200}
               disabled={isUploading}
-            >
-              <Image
-                source={{ uri: avatarUri || PLACEHOLDER_AVATAR }}
-                style={styles.avatarImage}
-                resizeMode="cover"
-              />
-              <View style={styles.avatarOverlay}>
-                {isUploading ? (
-                  <ActivityIndicator color="#fff" size="large" />
-                ) : (
-                  <>
-                    {Platform.OS === 'web' ? (
-                      <>
-                        <Text style={styles.avatarOverlayIcon}>📁</Text>
-                        <Text style={styles.avatarOverlayText}>
-                          {avatarUri ? 'Cambiar archivo' : 'Seleccionar archivo'}
-                        </Text>
-                      </>
-                    ) : (
-                      <>
-                        <Text style={styles.avatarOverlayIcon}>📷</Text>
-                        <Text style={styles.avatarOverlayText}>
-                          {avatarUri ? 'Cambiar foto' : 'Añadir foto'}
-                        </Text>
-                      </>
-                    )}
-                  </>
-                )}
-              </View>
-            </TouchableOpacity>
+              onChange={(localUri) => {
+                setAvatarUri(localUri);
+              }}
+              helperText={avatarUri ? 'Toca el botón para cambiar la foto' : 'Añade tu foto de perfil (opcional)'}
+            />
           </View>
 
           {avatarUri && (

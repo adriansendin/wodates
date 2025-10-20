@@ -14,6 +14,7 @@ import {
   ActionSheetIOS,
   Platform,
 } from 'react-native';
+import { AvatarPicker } from '../../src/components/AvatarPicker';
 import { AgeRangePicker } from '../../src/components/AgeRangePicker';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
@@ -161,7 +162,7 @@ export default function ProfileScreen() {
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
   const avatarUri = useMemo(
-    () => profile?.avatarUrl ?? AVATAR_PLACEHOLDER,
+    () => profile?.avatarUrl ?? null,
     [profile?.avatarUrl],
   );
 
@@ -626,36 +627,16 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <View style={styles.avatarContainer}>
-          <TouchableOpacity 
-            style={styles.avatarWrapper}
-            onPress={handleSelectAvatar}
+          <AvatarPicker
+            uri={avatarUri}
+            size={160}
             disabled={isUploadingAvatar}
-          >
-            <Image
-              source={{ uri: avatarUri }}
-              style={styles.avatarImage}
-              resizeMode="cover"
-            />
-            {isUploadingAvatar ? (
-              <View style={styles.avatarOverlay}>
-                <ActivityIndicator color="#fff" size="large" />
-              </View>
-            ) : (
-              <View style={styles.avatarOverlay}>
-                {Platform.OS === 'web' ? (
-                  <>
-                    <Text style={styles.avatarOverlayIcon}>📁</Text>
-                    <Text style={styles.avatarOverlayText}>Seleccionar archivo</Text>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.avatarOverlayIcon}>📷</Text>
-                    <Text style={styles.avatarOverlayText}>Cambiar foto</Text>
-                  </>
-                )}
-              </View>
-            )}
-          </TouchableOpacity>
+            onChange={async (localUri) => {
+              if (!localUri) return;
+              await uploadAndUpdateAvatar(localUri);
+            }}
+            helperText="Toca el botón para cambiar la foto"
+          />
         </View>
         <Text style={styles.sectionTitle}>Informacion basica</Text>
         <View style={styles.readonlyField}>
