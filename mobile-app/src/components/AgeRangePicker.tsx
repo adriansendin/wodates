@@ -58,7 +58,6 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
   if (Platform.OS !== 'web') {
     return (
       <View style={[styles.container, style]}>
-        <Text style={styles.pickerLabel}>Rango de edad</Text>
         <View style={styles.sliderContainer}>
           <MultiSlider
             values={[minAge, maxAge]}
@@ -74,6 +73,29 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
               const [min, max] = values as [number, number];
               onMinAgeChange(min);
               onMaxAgeChange(max);
+            }}
+            selectedStyle={{
+              backgroundColor: '#e91e63', // Color coral de wodates
+            }}
+            unselectedStyle={{
+              backgroundColor: '#e0e0e0', // Gris claro para la parte no seleccionada
+            }}
+            markerStyle={{
+              backgroundColor: '#e91e63', // Color coral de wodates
+              height: 24,
+              width: 24,
+              borderRadius: 12,
+              borderWidth: 2,
+              borderColor: '#fff',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+              elevation: 5,
+            }}
+            trackStyle={{
+              height: 4,
+              borderRadius: 2,
             }}
           />
         </View>

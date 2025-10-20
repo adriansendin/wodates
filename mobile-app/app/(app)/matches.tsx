@@ -70,8 +70,8 @@ export default function MatchesScreen() {
       }
       const normalizeGender = (
         g?: string | null
-      ): "male" | "female" | "non_binary" | "other" | "prefer_not_to_say" | undefined => {
-        const allowed = ["male", "female", "non_binary", "other", "prefer_not_to_say"] as const;
+      ): "male" | "female" | "non_binary" | undefined => {
+        const allowed = ["male", "female", "non_binary"] as const;
         if (g && allowed.includes(g as any)) {
           return g as typeof allowed[number];
         }

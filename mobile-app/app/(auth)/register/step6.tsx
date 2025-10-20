@@ -30,9 +30,6 @@ export default function Step6Screen() {
 
         <View style={styles.content}>
           <Text style={styles.title}>¿Qué rango de edad buscas?</Text>
-          <Text style={styles.subtitle}>
-            Esto nos ayudará a mostrarte personas compatibles con tus preferencias
-          </Text>
 
           <View style={styles.pickerContainer}>
             <AgeRangePicker
@@ -42,10 +39,6 @@ export default function Step6Screen() {
               onMaxAgeChange={setMaxAge}
             />
           </View>
-
-          <Text style={styles.hint}>
-            💡 Selecciona el rango de edad de las personas que te gustaría conocer
-          </Text>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.button} onPress={handleNext}>

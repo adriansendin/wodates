@@ -135,9 +135,6 @@ export default function Step7Screen() {
 
         <View style={styles.content}>
           <Text style={styles.title}>Añade tu foto de perfil</Text>
-          <Text style={styles.subtitle}>
-            Sube una foto para que otros puedan verte. Este paso es opcional.
-          </Text>
 
           <PlatformInfo 
             message="Puedes seleccionar una foto desde tu computadora. También puedes omitir este paso y añadir tu foto más tarde."

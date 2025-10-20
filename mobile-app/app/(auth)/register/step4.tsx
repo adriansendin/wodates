@@ -9,15 +9,13 @@ const GENDER_LABELS: Record<GenderOption, string> = {
   male: 'Hombre',
   female: 'Mujer',
   non_binary: 'No binario',
-  other: 'Otro',
-  prefer_not_to_say: 'Prefiero no decirlo',
 };
 
 export default function Step4Screen() {
   const router = useRouter();
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
-  const [gender, setGender] = useState<GenderOption | ''>(data.gender);
+  const [gender, setGender] = useState<GenderOption | ''>(data.gender || 'male');
 
   const handleNext = () => {
     updateData({ gender });
@@ -41,29 +39,8 @@ export default function Step4Screen() {
 
         <View style={styles.content}>
           <Text style={styles.title}>¿Cuál es tu género?</Text>
-          <Text style={styles.subtitle}>
-            Esta información ayudará a personalizar tu experiencia
-          </Text>
 
           <View style={styles.optionsContainer}>
-            <TouchableOpacity
-              style={[
-                styles.option,
-                gender === '' && styles.optionSelected,
-              ]}
-              onPress={() => selectGender('')}
-            >
-              <View style={styles.radio}>
-                {gender === '' && <View style={styles.radioInner} />}
-              </View>
-              <Text style={[
-                styles.optionText,
-                gender === '' && styles.optionTextSelected,
-              ]}>
-                Sin especificar
-              </Text>
-            </TouchableOpacity>
-
             {GENDER_OPTIONS.map((option) => (
               <TouchableOpacity
                 key={option}

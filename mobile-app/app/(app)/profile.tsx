@@ -63,39 +63,33 @@ const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
   both: 'Ambos',
 };
 
-const LOOKING_FOR_CHOICES: Array<{ value: LookingForFormValue; label: string }> = [
-  { value: '', label: 'Sin preferencia' },
-  ...LOOKING_FOR_OPTIONS.map((value) => ({
+const LOOKING_FOR_CHOICES: Array<{ value: LookingForFormValue; label: string }> = 
+  LOOKING_FOR_OPTIONS.map((value) => ({
     value,
     label: LOOKING_FOR_LABELS[value],
-  })),
-];
+  }));
 
 const getLookingForLabel = (value: LookingForFormValue) =>
-  value ? LOOKING_FOR_LABELS[value] : 'Sin preferencia';
+  value ? LOOKING_FOR_LABELS[value] : 'Seleccionar';
 
 const GENDER_LABELS: Record<GenderOption, string> = {
   male: 'Hombre',
   female: 'Mujer',
   non_binary: 'No binario',
-  other: 'Otro',
-  prefer_not_to_say: 'Prefiero no decirlo',
 };
 
-const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> = [
-  { value: '', label: 'Sin especificar' },
-  ...GENDER_OPTIONS.map((value) => ({
+const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> = 
+  GENDER_OPTIONS.map((value) => ({
     value,
     label: GENDER_LABELS[value],
-  })),
-];
+  }));
 
 const getGenderLabel = (value: GenderFormValue) =>
-  value ? GENDER_LABELS[value] : 'Sin especificar';
+  value ? GENDER_LABELS[value] : 'Seleccionar';
 
 const emptyForm: FormState = {
-  gender: '',
-  looking_for: '',
+  gender: 'male',
+  looking_for: 'both',
   min_age: 18,
   max_age: 99,
   bio: '',
@@ -103,8 +97,8 @@ const emptyForm: FormState = {
 };
 
 const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
-  gender: nextProfile?.gender ?? '',
-  looking_for: nextProfile?.looking_for ?? '',
+  gender: nextProfile?.gender ?? 'male',
+  looking_for: nextProfile?.looking_for ?? 'both',
   min_age: nextProfile?.min_age ?? 18,
   max_age: nextProfile?.max_age ?? 99,
   bio: nextProfile?.bio ?? '',
@@ -519,12 +513,10 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Selecciona tu genero</Text>
             {GENDER_CHOICES.map((option) => {
-              const isActive =
-                form.gender === option.value ||
-                (!form.gender && option.value === '');
+              const isActive = form.gender === option.value;
               return (
                 <TouchableOpacity
-                  key={option.value || 'unspecified'}
+                  key={option.value}
                   style={[
                     styles.modalOption,
                     isActive ? styles.modalOptionActive : null,
@@ -564,12 +556,10 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Selecciona a quien buscas</Text>
             {LOOKING_FOR_CHOICES.map((option) => {
-              const isActive =
-                form.looking_for === option.value ||
-                (!form.looking_for && option.value === '');
+              const isActive = form.looking_for === option.value;
               return (
                 <TouchableOpacity
-                  key={option.value || 'none'}
+                  key={option.value}
                   style={[
                     styles.modalOption,
                     isActive ? styles.modalOptionActive : null,
@@ -644,7 +634,6 @@ export default function ProfileScreen() {
           <Text style={styles.valueText}>
             {profile?.name ?? user?.name ?? 'Usuario'}
           </Text>
-          <Text style={styles.helperText}>Este campo no se puede editar desde la app.</Text>
         </View>
 
         <View style={styles.readonlyField}>
@@ -652,7 +641,6 @@ export default function ProfileScreen() {
           <Text style={styles.valueText}>
             {profile?.birthDate ? `${calculateAge(profile.birthDate)} años` : 'No especificada'}
           </Text>
-          <Text style={styles.helperText}>Este campo no se puede editar desde la app.</Text>
         </View>
 
         <View style={styles.field}>
@@ -706,11 +694,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           {formErrors.looking_for ? (
             <Text style={styles.errorText}>{formErrors.looking_for}</Text>
-          ) : (
-            <Text style={styles.helperText}>
-              Selecciona a quien quieres conocer.
-            </Text>
-          )}
+          ) : null}
         </View>
 
         <View style={styles.field}>
@@ -726,9 +710,6 @@ export default function ProfileScreen() {
               {formErrors.min_age || formErrors.max_age}
             </Text>
           )}
-          <Text style={styles.helperText}>
-            Selecciona el rango de edad que buscas en tu pareja ideal.
-          </Text>
         </View>
 
         <View style={styles.field}>

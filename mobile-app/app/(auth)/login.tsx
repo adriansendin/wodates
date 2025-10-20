@@ -17,7 +17,7 @@ const normalizeUser = (rawUser: Record<string, unknown>): User => {
     throw new Error('User payload is missing required fields.');
   }
 
-  const gender = (rawUser.gender ?? 'other') as Gender;
+  const gender = (rawUser.gender ?? 'male') as Gender;
 
   return {
     id: rawUser.id,

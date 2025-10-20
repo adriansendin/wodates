@@ -15,7 +15,7 @@ export default function Step5Screen() {
   const router = useRouter();
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
-  const [lookingFor, setLookingFor] = useState<LookingForOption | ''>(data.lookingFor);
+  const [lookingFor, setLookingFor] = useState<LookingForOption | ''>(data.lookingFor || 'both');
 
   const handleNext = () => {
     updateData({ lookingFor });
@@ -39,29 +39,9 @@ export default function Step5Screen() {
 
         <View style={styles.content}>
           <Text style={styles.title}>¿A quién buscas?</Text>
-          <Text style={styles.subtitle}>
-            Esto nos ayudará a mostrarte personas compatibles
-          </Text>
+
 
           <View style={styles.optionsContainer}>
-            <TouchableOpacity
-              style={[
-                styles.option,
-                lookingFor === '' && styles.optionSelected,
-              ]}
-              onPress={() => selectLookingFor('')}
-            >
-              <View style={styles.radio}>
-                {lookingFor === '' && <View style={styles.radioInner} />}
-              </View>
-              <Text style={[
-                styles.optionText,
-                lookingFor === '' && styles.optionTextSelected,
-              ]}>
-                Sin preferencia
-              </Text>
-            </TouchableOpacity>
-
             {LOOKING_FOR_OPTIONS.map((option) => (
               <TouchableOpacity
                 key={option}

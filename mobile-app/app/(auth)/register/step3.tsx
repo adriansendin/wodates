@@ -35,10 +35,6 @@ export default function Step3Screen() {
 
         <View style={styles.content}>
           <Text style={styles.title}>¿Dónde vives?</Text>
-          <Text style={styles.subtitle}>
-            Esto nos ayudará a mostrarte personas cercanas{'\n'}
-            (Opcional)
-          </Text>
 
           <View style={styles.form}>
             <TextInput
@@ -50,10 +46,7 @@ export default function Step3Screen() {
               returnKeyType="done"
               onSubmitEditing={handleNext}
             />
-            
-            <Text style={styles.hint}>
-              💡 Por ahora solo necesitamos el nombre de tu ciudad
-            </Text>
+
           </View>
 
           <View style={styles.buttonContainer}>
