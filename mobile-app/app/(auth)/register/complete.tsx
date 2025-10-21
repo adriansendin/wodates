@@ -57,6 +57,7 @@ export default function CompleteScreen() {
         birthDate: data.birthDate?.toISOString() || new Date().toISOString(),
         gender: data.gender || undefined,
         location: data.location || undefined,
+        country: data.country || 'Spain', // Default to Spain
         lookingFor: data.lookingFor || undefined,
       };
 
@@ -150,9 +151,6 @@ export default function CompleteScreen() {
         </View>
 
         <Text style={styles.title}>Perfil básico completado</Text>
-        <Text style={styles.subtitle}>
-          Ya tienes todo listo para empezar a conocer personas
-        </Text>
 
         <View style={styles.summaryContainer}>
           <Text style={styles.summaryTitle}>Resumen de tu perfil:</Text>

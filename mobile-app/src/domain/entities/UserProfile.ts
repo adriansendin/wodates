@@ -13,6 +13,7 @@ export const UserProfileSchema = z.object({
   bio: z.string().nullable(),
   city: z.string().nullable(),
   avatarUrl: z.string().url().nullable(),
+  show_in_feed: z.boolean().nullable(),
 });
 
 export const UpdateUserProfileSchema = z.object({
@@ -24,6 +25,7 @@ export const UpdateUserProfileSchema = z.object({
   bio: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   avatarUrl: z.string().url().nullable().optional(),
+  show_in_feed: z.boolean().nullable().optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;

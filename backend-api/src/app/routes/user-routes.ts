@@ -37,6 +37,7 @@ export async function userRoutes(fastify: FastifyInstance) {
               max_age: { type: ['number', 'null'] },
               bio: { type: ['string', 'null'] },
               city: { type: ['string', 'null'] },
+              show_in_feed: { type: ['boolean', 'null'] },
             },
           },
         },
@@ -63,6 +64,7 @@ export async function userRoutes(fastify: FastifyInstance) {
             max_age: { type: ['number', 'null'] },
             bio: { type: ['string', 'null'] },
             city: { type: ['string', 'null'] },
+            show_in_feed: { type: ['boolean', 'null'] },
           },
         },
         response: {
@@ -78,6 +80,7 @@ export async function userRoutes(fastify: FastifyInstance) {
               max_age: { type: ['number', 'null'] },
               bio: { type: ['string', 'null'] },
               city: { type: ['string', 'null'] },
+              show_in_feed: { type: ['boolean', 'null'] },
             },
           },
         },

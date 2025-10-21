@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
+
+const CITY_OPTIONS = [
+  { value: 'Madrid', label: 'Madrid' },
+  { value: 'Barcelona', label: 'Barcelona' },
+];
 
 export default function Step3Screen() {
   const router = useRouter();
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
-  const [location, setLocation] = useState(data.location);
+  const [selectedCity, setSelectedCity] = useState(data.location || '');
 
   const handleNext = () => {
-    // Location es opcional, puede continuar sin especificar
-    updateData({ location: location.trim() });
+    // Save selected city and set country to Spain automatically
+    updateData({ 
+      location: selectedCity,
+      country: 'Spain' // This will be used in the backend
+    });
     nextStep();
     router.push('/(auth)/register/step4');
   };
@@ -37,16 +45,23 @@ export default function Step3Screen() {
           <Text style={styles.title}>¿Dónde vives?</Text>
 
           <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="Ej: Madrid, España"
-              value={location}
-              onChangeText={setLocation}
-              autoCapitalize="words"
-              returnKeyType="done"
-              onSubmitEditing={handleNext}
-            />
-
+            {CITY_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.optionButton,
+                  selectedCity === option.value && styles.optionButtonSelected
+                ]}
+                onPress={() => setSelectedCity(option.value)}
+              >
+                <Text style={[
+                  styles.optionText,
+                  selectedCity === option.value && styles.optionTextSelected
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           <View style={styles.buttonContainer}>
@@ -94,14 +109,27 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: 32,
   },
-  input: {
+  optionButton: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 12,
     padding: 16,
-    fontSize: 16,
     backgroundColor: '#FFFFFF',
-    marginBottom: 16,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  optionButtonSelected: {
+    borderColor: '#F45C5C',
+    backgroundColor: '#FEF5F5',
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#2C3E50',
+    fontWeight: '500',
+  },
+  optionTextSelected: {
+    color: '#F45C5C',
+    fontWeight: 'bold',
   },
   hint: {
     fontSize: 14,

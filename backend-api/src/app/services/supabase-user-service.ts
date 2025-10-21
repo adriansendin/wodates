@@ -22,6 +22,7 @@ type UserProfileRow = {
   bio: string | null;
   city: string | null;
   avatar_url: string | null;
+  show_in_feed: boolean | null;
 };
 
 export type UserProfile = {
@@ -36,6 +37,7 @@ export type UserProfile = {
   bio: string | null;
   city: string | null;
   avatarUrl: string | null;
+  show_in_feed: boolean | null;
 };
 
 export type UpdateUserProfileInput = {
@@ -47,6 +49,7 @@ export type UpdateUserProfileInput = {
   bio?: string | null;
   city?: string | null;
   avatarUrl?: string | null;
+  show_in_feed?: boolean | null;
 };
 
 /**
@@ -124,6 +127,9 @@ export class SupabaseUserService {
       if ('avatarUrl' in input) {
         updatePayload.avatar_url = this.sanitizeAvatarUrl(input.avatarUrl);
       }
+      if ('show_in_feed' in input) {
+        updatePayload.show_in_feed = input.show_in_feed ?? null;
+      }
 
       if (Object.keys(updatePayload).length === 0) {
         // Get auth user data even if no profile updates
@@ -136,7 +142,7 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
+          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_in_feed',
         )
         .single();
 
@@ -181,7 +187,7 @@ export class SupabaseUserService {
       .from('users')
       .upsert(defaults, { onConflict: 'id' })
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_in_feed',
       )
       .single();
 
@@ -210,7 +216,7 @@ export class SupabaseUserService {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url',
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_in_feed',
       )
       .eq('id', userId)
       .maybeSingle();
@@ -277,6 +283,7 @@ export class SupabaseUserService {
       bio,
       city,
       avatar_url: avatarUrl,
+      show_in_feed: true, // Default to true as per database schema
     };
   }
 
@@ -332,6 +339,7 @@ export class SupabaseUserService {
       bio: row.bio,
       city: row.city,
       avatarUrl: this.sanitizeAvatarUrl(row.avatar_url),
+      show_in_feed: row.show_in_feed,
     };
   }
 

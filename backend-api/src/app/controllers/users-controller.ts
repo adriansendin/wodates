@@ -105,6 +105,7 @@ const UpdateProfileSchema = z
     bio: nullableText(500).optional(),
     city: nullableString(100).optional(),
     avatarUrl: nullableString(500).optional(),
+    show_in_feed: z.boolean().optional(),
   })
   .refine(
     (data) => {
@@ -174,6 +175,9 @@ export class UsersController {
       }
       if ('avatarUrl' in payload) {
         updateInput.avatarUrl = payload.avatarUrl ?? null;
+      }
+      if ('show_in_feed' in payload) {
+        updateInput.show_in_feed = payload.show_in_feed ?? null;
       }
 
       const profile = await this.userService.updateProfile(

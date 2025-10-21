@@ -8,6 +8,7 @@ export interface RegistrationData {
   password: string;
   birthDate: Date | null;
   location: string;
+  country: string;
   gender: GenderOption | '';
   lookingFor: LookingForOption | '';
   minAge: number;
@@ -34,6 +35,7 @@ const initialData: RegistrationData = {
   password: '',
   birthDate: null,
   location: '',
+  country: '',
   gender: '',
   lookingFor: '',
   minAge: 18,

@@ -63,6 +63,7 @@ export class SupabaseAuthService {
           birthDate: registerRequest.birthDate,
           gender: registerRequest.gender,
           location: registerRequest.location,
+          country: registerRequest.country,
           lookingFor: registerRequest.lookingFor,
         },
       });
@@ -104,6 +105,7 @@ export class SupabaseAuthService {
           birthDate: registerRequest.birthDate,
           gender: registerRequest.gender || null,
           city: registerRequest.location || null,
+          country: registerRequest.country || 'Spain', // Default to Spain
           looking_for: registerRequest.lookingFor || null,
         });
 

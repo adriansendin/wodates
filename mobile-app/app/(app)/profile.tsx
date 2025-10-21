@@ -50,6 +50,7 @@ type FormState = {
   max_age: number;
   bio: string;
   city: string;
+  show_in_feed: boolean;
 };
 
 type Feedback = {
@@ -94,6 +95,7 @@ const emptyForm: FormState = {
   max_age: 99,
   bio: '',
   city: '',
+  show_in_feed: true,
 };
 
 const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
@@ -103,16 +105,9 @@ const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
   max_age: nextProfile?.max_age ?? 99,
   bio: nextProfile?.bio ?? '',
   city: nextProfile?.city ?? '',
+  show_in_feed: nextProfile?.show_in_feed ?? true,
 });
 
-const formFields: (keyof FormState)[] = [
-  'gender',
-  'looking_for',
-  'min_age',
-  'max_age',
-  'bio',
-  'city',
-];
 
 const isValidDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
@@ -138,20 +133,12 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [isGenderModalVisible, setIsGenderModalVisible] = useState(false);
   const [isLookingForModalVisible, setIsLookingForModalVisible] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const baselineForm = useMemo(() => (profile ? mapProfileToForm(profile) : emptyForm), [profile]);
-  const isPristine = useMemo(() => {
-    if (!profile) {
-      return false;
-    }
-    return formFields.every((field) => baselineForm[field] === form[field]);
-  }, [baselineForm, form, profile]);
-  const isSaveDisabled = isSaving || isPristine || isLoading;
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
@@ -223,6 +210,8 @@ export default function ProfileScreen() {
       delete next.gender;
       return next;
     });
+    // Auto-save gender change
+    autoSave('gender', value);
   };
 
   const handleSelectLookingFor = (value: LookingForFormValue) => {
@@ -238,6 +227,8 @@ export default function ProfileScreen() {
       delete next.looking_for;
       return next;
     });
+    // Auto-save looking_for change
+    autoSave('looking_for', value);
   };
 
   const handleMinAgeChange = (minAge: number) => {
@@ -251,6 +242,8 @@ export default function ProfileScreen() {
       delete next.max_age;
       return next;
     });
+    // Auto-save min_age change
+    autoSave('min_age', minAge);
   };
 
   const handleMaxAgeChange = (maxAge: number) => {
@@ -264,6 +257,18 @@ export default function ProfileScreen() {
       delete next.max_age;
       return next;
     });
+    // Auto-save max_age change
+    autoSave('max_age', maxAge);
+  };
+
+  const handleShowInFeedToggle = () => {
+    const newValue = !form.show_in_feed;
+    setForm((prev) => ({
+      ...prev,
+      show_in_feed: newValue,
+    }));
+    // Auto-save show_in_feed change
+    autoSave('show_in_feed', newValue);
   };
 
   const handleSelectAvatar = () => {
@@ -333,6 +338,53 @@ export default function ProfileScreen() {
     }
   };
 
+  const autoSave = useCallback(async (field: keyof FormState, value: any) => {
+    if (!tokens?.accessToken || isAutoSaving) {
+      return;
+    }
+
+    setIsAutoSaving(true);
+    
+    try {
+      const payload: UpdateUserProfile = {};
+      
+      // Map form field to API field
+      switch (field) {
+        case 'gender':
+          payload.gender = value || null;
+          break;
+        case 'looking_for':
+          payload.looking_for = value || null;
+          break;
+        case 'min_age':
+          payload.min_age = value;
+          break;
+        case 'max_age':
+          payload.max_age = value;
+          break;
+        case 'show_in_feed':
+          payload.show_in_feed = value;
+          break;
+        default:
+          return; // Don't auto-save other fields
+      }
+
+      const result = await profileApi.updateProfile(payload, tokens.accessToken);
+      
+      if (result.success) {
+        const updatedProfile = result.data;
+        setProfile(updatedProfile);
+        // Don't update form state to avoid conflicts with user input
+      } else {
+        console.error('[Profile] autoSave failed', result.error);
+      }
+    } catch (error) {
+      console.error('[Profile] autoSave error', error);
+    } finally {
+      setIsAutoSaving(false);
+    }
+  }, [profileApi, tokens?.accessToken, isAutoSaving]);
+
   const uploadAndUpdateAvatar = async (imageUri: string) => {
     if (!tokens?.accessToken || !user?.id) {
       Alert.alert('Error', 'Sesión no válida');
@@ -386,110 +438,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSave = async () => {
-    if (!tokens?.accessToken) {
-      setFeedback({
-        type: 'error',
-        message: 'Sesion expirada. Vuelve a iniciar sesion para guardar los cambios.',
-      });
-      return;
-    }
-
-    const nextErrors: Partial<Record<keyof FormState, string>> = {};
-
-    const selectedGender = form.gender;
-    const selectedLookingFor = form.looking_for;
-    const trimmedBio = form.bio.trim();
-    const trimmedCity = form.city.trim();
-
-    const minAge = form.min_age;
-    const maxAge = form.max_age;
-
-    if (minAge < 18 || minAge > 99) {
-      nextErrors.min_age = 'La edad minima debe estar entre 18 y 99 años.';
-    }
-
-    if (maxAge < 18 || maxAge > 99) {
-      nextErrors.max_age = 'La edad maxima debe estar entre 18 y 99 años.';
-    }
-
-    if (
-      nextErrors.min_age === undefined &&
-      nextErrors.max_age === undefined &&
-      minAge > maxAge
-    ) {
-      nextErrors.min_age = 'La edad minima no puede ser mayor que la maxima.';
-      nextErrors.max_age = 'La edad maxima debe ser mayor o igual a la minima.';
-    }
-
-    if (selectedGender && !GENDER_OPTIONS.includes(selectedGender)) {
-      nextErrors.gender = 'Selecciona una opcion valida.';
-    }
-
-    if (
-      selectedLookingFor &&
-      !LOOKING_FOR_OPTIONS.includes(selectedLookingFor)
-    ) {
-      nextErrors.looking_for = 'Selecciona una opcion valida.';
-    }
-
-    if (trimmedBio.length > 500) {
-      nextErrors.bio = 'La biografia no puede superar 500 caracteres.';
-    }
-
-    if (trimmedCity && trimmedCity.length > 100) {
-      nextErrors.city = 'La ciudad no puede superar 100 caracteres.';
-    }
-
-    if (Object.keys(nextErrors).length > 0) {
-      setFormErrors(nextErrors);
-      setFeedback({
-        type: 'error',
-        message: 'Revisa los campos resaltados antes de guardar.',
-      });
-      return;
-    }
-
-    setFormErrors({});
-
-    const payload: UpdateUserProfile = {
-      gender: selectedGender ? selectedGender : null,
-      looking_for: selectedLookingFor ? selectedLookingFor : null,
-      min_age: minAge,
-      max_age: maxAge,
-      bio: trimmedBio ? trimmedBio : null,
-      city: trimmedCity ? trimmedCity : null,
-    };
-
-    setIsSaving(true);
-    setFeedback(null);
-    try {
-      const result = await profileApi.updateProfile(payload, tokens.accessToken);
-      if (result.success) {
-        const updated = result.data;
-        setProfile(updated);
-        setForm(mapProfileToForm(updated));
-        setFormErrors({});
-        setFeedback({
-          type: 'success',
-          message: 'Perfil actualizado correctamente.',
-        });
-      } else {
-        setFeedback({
-          type: 'error',
-          message: result.error.message ?? 'No se pudo actualizar el perfil.',
-        });
-      }
-    } catch (error) {
-      console.error('[Profile] handleSave error', error);
-      setFeedback({
-        type: 'error',
-        message: 'No se pudo actualizar el perfil. Intentalo de nuevo.',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   if (!tokens?.accessToken) {
     return (
@@ -635,9 +583,14 @@ export default function ProfileScreen() {
             {profile?.name ?? user?.name ?? 'Usuario'}
             {profile?.birthDate && `, ${calculateAge(profile.birthDate)}`}
           </Text>
+          {form.city && (
+            <View style={styles.locationContainer}>
+              <Text style={styles.locationText}>📍 {form.city}</Text>
+            </View>
+          )}
         </View>
         
-        <Text style={styles.sectionTitle}>Informacion basica</Text>
+        <Text style={styles.sectionTitle}>Información básica</Text>
 
         <View style={styles.field}>
           <Text style={styles.label}>Genero</Text>
@@ -710,52 +663,46 @@ export default function ProfileScreen() {
             style={[
               styles.input,
               styles.multiline,
+              styles.inputDisabled,
               formErrors.bio ? styles.inputError : null,
             ]}
-            placeholder="Cuentanos algo sobre ti"
+            placeholder="Tu perfil crecerá a medida que conectes con otras personas."
             value={form.bio}
             onChangeText={handleChange('bio')}
             multiline
             numberOfLines={4}
+            editable={false}
+            maxLength={300}
           />
-          {formErrors.bio ? (
-            <Text style={styles.errorText}>{formErrors.bio}</Text>
-          ) : (
-            <Text style={styles.helperText}>Puedes escribir hasta 500 caracteres.</Text>
-          )}
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Ciudad</Text>
-          <TextInput
-            style={[
-              styles.input,
-              formErrors.city ? styles.inputError : null,
-            ]}
-            placeholder="Barcelona"
-            value={form.city}
-            onChangeText={handleChange('city')}
-            autoCapitalize="words"
-          />
-          {formErrors.city ? (
-            <Text style={styles.errorText}>{formErrors.city}</Text>
-          ) : null}
+          <View style={styles.toggleContainer}>
+            <Text style={styles.toggleLabel}>Mostrar mi descripción a otras personas</Text>
+            <TouchableOpacity
+              style={[
+                styles.toggle,
+                form.show_in_feed ? styles.toggleActive : styles.toggleInactive,
+              ]}
+              onPress={handleShowInFeedToggle}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.toggleThumb,
+                  form.show_in_feed ? styles.toggleThumbActive : styles.toggleThumbInactive,
+                ]}
+              />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.toggleHelperText}>
+            Si lo desactivas, tu bio no será visible para otros usuarios.
+          </Text>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.button,
-            isSaveDisabled ? styles.buttonDisabled : null,
-          ]}
-          onPress={handleSave}
-          disabled={isSaveDisabled}
-        >
-          {isSaving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Guardar cambios</Text>
-          )}
-        </TouchableOpacity>
+        <Text style={styles.autoSaveMessage}>
+          Los cambios se guardan automáticamente.
+        </Text>
       </View>
 
       {isLoading && (
@@ -892,6 +839,11 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: '#d32f2f',
   },
+  inputDisabled: {
+    backgroundColor: '#f5f5f5',
+    color: '#666',
+    borderColor: '#ddd',
+  },
   multiline: {
     minHeight: 100,
     textAlignVertical: 'top',
@@ -1021,6 +973,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#222',
     textAlign: 'center',
+  },
+  locationContainer: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  locationText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#222',
+    flex: 1,
+  },
+  toggleHelperText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  toggle: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleActive: {
+    backgroundColor: '#e91e63',
+  },
+  toggleInactive: {
+    backgroundColor: '#ddd',
+  },
+  toggleThumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
+  toggleThumbInactive: {
+    alignSelf: 'flex-start',
+  },
+  autoSaveMessage: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 24,
+    fontStyle: 'italic',
   },
 });
 

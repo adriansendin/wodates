@@ -14,6 +14,7 @@ export const RegisterSchema = z.object({
   birthDate: z.string().datetime(),
   gender: z.enum(GENDER_VALUES).optional(),
   location: z.string().optional(),
+  country: z.string().optional(),
   lookingFor: z.enum(LOOKING_FOR_VALUES).optional(),
 });
 
