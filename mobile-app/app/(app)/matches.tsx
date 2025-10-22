@@ -155,7 +155,7 @@ export default function MatchesScreen() {
     <TouchableOpacity style={styles.matchCard} onPress={() => handleMatchPress(item)}>
       <View style={styles.avatarContainer}>
         <Image
-          source={{ uri: item.otherUser?.photoUrl || 'https://via.placeholder.com/80x80' }}
+          source={item.otherUser?.photoUrl ? { uri: item.otherUser.photoUrl } : require('../../assets/placeholder.png')}
           style={styles.avatar}
         />
         {item.unreadCount > 0 && (

@@ -19,7 +19,7 @@ import { useMatchesStore } from '../../src/domain/stores/matchesStore';
 import { MatchSchema } from '../../src/domain/entities/Match';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
-const FALLBACK_PHOTO = 'https://via.placeholder.com/300x400';
+const FALLBACK_PHOTO = require('../../assets/placeholder.png');
 
 const getAgeFromBirthDate = (birthDate?: string | null) => {
   if (!birthDate) {
@@ -236,13 +236,13 @@ export default function FeedScreen() {
       <View style={styles.infoOverlay}>
         <Text style={styles.name}>
           {currentUser.name}
-          {typeof age === 'number' ? `, ${age}` : ''}
+          {typeof age === 'number' ? `, ${age}` : null}
         </Text>
-        {(currentUser as any).location?.city && (
+        {(currentUser as any).location?.city ? (
           <Text style={styles.location} numberOfLines={1}>
-            📍 {(currentUser as any).location.city}
+            {`📍 ${(currentUser as any).location.city}`}
           </Text>
-        )}
+        ) : null}
       </View>
 
       {/* Botones de acción */}

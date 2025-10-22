@@ -425,7 +425,7 @@ export default function ChatScreen() {
               activeOpacity={0.7}
             >
               <Image
-                source={{ uri: photoUrl || 'https://via.placeholder.com/40x40' }}
+                source={photoUrl ? { uri: photoUrl } : require('../../assets/placeholder.png')}
                 style={styles.headerAvatar}
               />
               <Text style={styles.headerTitleText} numberOfLines={1}>

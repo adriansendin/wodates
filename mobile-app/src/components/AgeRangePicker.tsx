@@ -101,7 +101,7 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
         </View>
 
         <View style={styles.rangeDisplay}>
-          <Text style={styles.rangeText}>Rango: {minAge} – {maxAge} años</Text>
+          <Text style={styles.rangeText}>{`Rango: ${minAge} - ${maxAge} años`}</Text>
         </View>
       </View>
     );
@@ -151,7 +151,7 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
       {/* Mostrar el rango actual */}
       <View style={styles.rangeDisplay}>
         <Text style={styles.rangeText}>
-          Rango: {minAge} – {maxAge} años
+          {`Rango: ${minAge} - ${maxAge} años`}
         </Text>
       </View>
     </View>

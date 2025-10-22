@@ -38,7 +38,7 @@ import {
 } from '../../src/data/api/imageService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
-const AVATAR_PLACEHOLDER = 'https://via.placeholder.com/240x240.png?text=Profile';
+const AVATAR_PLACEHOLDER = require('../../assets/placeholder.png');
 
 type LookingForFormValue = LookingForOption | '';
 type GenderFormValue = GenderOption | '';
@@ -581,13 +581,13 @@ export default function ProfileScreen() {
         <View style={styles.nameAgeContainer}>
           <Text style={styles.nameAgeText}>
             {profile?.name ?? user?.name ?? 'Usuario'}
-            {profile?.birthDate && `, ${calculateAge(profile.birthDate)}`}
+            {profile?.birthDate && calculateAge(profile.birthDate) > 0 ? `, ${calculateAge(profile.birthDate)}` : null}
           </Text>
-          {form.city && (
+          {form.city ? (
             <View style={styles.locationContainer}>
-              <Text style={styles.locationText}>📍 {form.city}</Text>
+              <Text style={styles.locationText}>{`📍 ${form.city}`}</Text>
             </View>
-          )}
+          ) : null}
         </View>
         
         <Text style={styles.sectionTitle}>Información básica</Text>
@@ -652,7 +652,7 @@ export default function ProfileScreen() {
           />
           {(formErrors.min_age || formErrors.max_age) && (
             <Text style={styles.errorText}>
-              {formErrors.min_age || formErrors.max_age}
+              {formErrors.min_age ? formErrors.min_age : formErrors.max_age}
             </Text>
           )}
         </View>

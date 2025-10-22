@@ -56,7 +56,7 @@ export default function AvatarViewScreen() {
             </View>
           )}
           <Image
-            source={{ uri: photoUrl || 'https://via.placeholder.com/800x800' }}
+            source={photoUrl ? { uri: photoUrl } : require('../../assets/placeholder.png')}
             style={styles.image}
             resizeMode="contain"
             onLoadStart={() => setLoading(true)}
