@@ -1,7 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyPluginAsync, FastifyPluginOptions } from 'fastify';
 import { AuthController } from '../controllers/auth-controller';
 import { SupabaseAuthService } from '../services/supabase-auth-service';
 import { GENDER_VALUES } from '../../domain/entities/User';
+import { AuthService } from '../services/auth-service';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -9,8 +10,15 @@ declare module 'fastify' {
   }
 }
 
-export async function authRoutes(fastify: FastifyInstance) {
-  const authService = new SupabaseAuthService();
+type AuthRoutesOptions = FastifyPluginOptions & {
+  authService?: AuthService;
+};
+
+export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
+  fastify: FastifyInstance,
+  options: AuthRoutesOptions,
+) => {
+  const authService = options?.authService ?? new SupabaseAuthService();
   const authController = new AuthController(authService);
 
   fastify.post('/register', {
@@ -111,4 +119,4 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
     preHandler: fastify.authMiddleware,
   }, authController.logout.bind(authController));
-}
+};

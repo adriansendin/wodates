@@ -1,11 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { RegisterSchema, LoginSchema } from '../../domain/entities/Auth';
 import { DomainError } from '../../domain/errors/DomainError';
-import { SupabaseAuthService } from '../services/supabase-auth-service';
 import { ZodError } from 'zod';
+import { AuthService } from '../services/auth-service';
 
 export class AuthController {
-  constructor(private readonly authService: SupabaseAuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   async register(request: FastifyRequest, reply: FastifyReply) {
     try {

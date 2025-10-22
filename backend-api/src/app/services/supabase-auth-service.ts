@@ -1,17 +1,12 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-import { RegisterRequest } from '../../domain/entities/Auth';
 import {
   ConflictError,
   DomainError,
   InternalError,
   UnauthorizedError,
 } from '../../domain/errors/DomainError';
-
-type AuthUser = {
-  id: string;
-  email: string;
-  name: string;
-};
+import { AuthService, AuthUser } from './auth-service';
+import { RegisterRequest } from '../../domain/entities/Auth';
 
 type SupabaseAuthConfig = {
   url: string;
@@ -27,7 +22,7 @@ type SupabaseAuthConfig = {
  * 
  * Uses the service role key to talk to the Admin API.
  */
-export class SupabaseAuthService {
+export class SupabaseAuthService implements AuthService {
   private readonly adminClient: SupabaseClient;
   private readonly anonClient?: SupabaseClient;
 
