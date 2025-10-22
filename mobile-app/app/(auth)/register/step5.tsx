@@ -65,7 +65,7 @@ export default function Step5Screen() {
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.button} onPress={handleNext}>
+            <TouchableOpacity testID="continuar-step5-button" style={styles.button} onPress={handleNext}>
               <Text style={styles.buttonText}>Continuar</Text>
             </TouchableOpacity>
 

@@ -39,6 +39,20 @@ npm test
 npm run test:watch
 ```
 
+### End-to-end testing (web)
+```bash
+# Start the Expo web bundle
+npm run web
+
+# In a second terminal, launch Cypress
+npx cypress open --e2e          # interactive
+# or run headless
+npx cypress run --e2e --browser chrome
+```
+
+The E2E suite stubs backend requests that target `http://localhost:3000/api/v1`.
+Update `EXPO_PUBLIC_API_URL` if your local API runs elsewhere.
+
 ## Architecture
 
 ```

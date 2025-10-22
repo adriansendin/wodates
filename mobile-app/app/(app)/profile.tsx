@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -182,6 +182,15 @@ export default function ProfileScreen() {
     loadProfile();
   }, [loadProfile]);
 
+  // Cleanup timeout al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (ageRangeTimeoutRef.current) {
+        clearTimeout(ageRangeTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleChange = (field: keyof FormState) => (value: string) => {
     setForm((prev) => ({
       ...prev,
@@ -231,24 +240,14 @@ export default function ProfileScreen() {
     autoSave('looking_for', value);
   };
 
-  const handleMinAgeChange = (minAge: number) => {
+  // Ref para rastrear el último auto-save de rango de edad
+  const ageRangeTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+  const handleAgeRangeChange = (minAge: number, maxAge: number) => {
+    // Actualizar ambos valores juntos en el formulario
     setForm((prev) => ({
       ...prev,
       min_age: minAge,
-    }));
-    setFormErrors((prev) => {
-      const next = { ...prev };
-      delete next.min_age;
-      delete next.max_age;
-      return next;
-    });
-    // Auto-save min_age change
-    autoSave('min_age', minAge);
-  };
-
-  const handleMaxAgeChange = (maxAge: number) => {
-    setForm((prev) => ({
-      ...prev,
       max_age: maxAge,
     }));
     setFormErrors((prev) => {
@@ -257,9 +256,74 @@ export default function ProfileScreen() {
       delete next.max_age;
       return next;
     });
-    // Auto-save max_age change
-    autoSave('max_age', maxAge);
+    // Auto-save con ambos valores correctos
+    autoSaveAgeRange(minAge, maxAge);
   };
+
+  // Función especializada para guardar el rango de edad atómicamente
+  const autoSaveAgeRange = useCallback((minAge: number, maxAge: number) => {
+    // Limpiar timeout anterior si existe
+    if (ageRangeTimeoutRef.current) {
+      clearTimeout(ageRangeTimeoutRef.current);
+    }
+
+    // Debounce: esperar 800ms antes de guardar
+    ageRangeTimeoutRef.current = setTimeout(async () => {
+      if (!tokens?.accessToken || isAutoSaving) {
+        return;
+      }
+
+      // Validación
+      if (minAge > maxAge) {
+        console.warn('[Profile] Invalid age range: min > max', { minAge, maxAge });
+        return;
+      }
+
+      setIsAutoSaving(true);
+      
+      try {
+        const payload: UpdateUserProfile = {
+          min_age: minAge,
+          max_age: maxAge,
+        };
+
+        console.log('[Profile] Auto-saving age range:', payload);
+
+        const result = await profileApi.updateProfile(payload, tokens.accessToken);
+        
+        if (result.success) {
+          const updatedProfile = result.data;
+          setProfile(updatedProfile);
+          
+          // Actualizar el formulario con los valores confirmados de la BD
+          setForm(prev => ({
+            ...prev,
+            min_age: updatedProfile.min_age ?? 18,
+            max_age: updatedProfile.max_age ?? 99,
+          }));
+
+          console.log('[Profile] Age range saved successfully:', {
+            min_age: updatedProfile.min_age,
+            max_age: updatedProfile.max_age,
+          });
+        } else {
+          console.error('[Profile] autoSaveAgeRange failed', result.error);
+          setFeedback({
+            type: 'error',
+            message: 'No se pudo guardar el rango de edad. Inténtalo de nuevo.',
+          });
+        }
+      } catch (error) {
+        console.error('[Profile] autoSaveAgeRange error', error);
+        setFeedback({
+          type: 'error',
+          message: 'Error al guardar el rango de edad.',
+        });
+      } finally {
+        setIsAutoSaving(false);
+      }
+    }, 800);
+  }, [profileApi, tokens?.accessToken, isAutoSaving]);
 
   const handleShowInFeedToggle = () => {
     const newValue = !form.show_in_feed;
@@ -369,17 +433,31 @@ export default function ProfileScreen() {
           return; // Don't auto-save other fields
       }
 
+      console.log(`[Profile] Auto-saving ${field}:`, value);
+
       const result = await profileApi.updateProfile(payload, tokens.accessToken);
       
       if (result.success) {
         const updatedProfile = result.data;
         setProfile(updatedProfile);
-        // Don't update form state to avoid conflicts with user input
+        
+        // Actualizar el formulario con los valores confirmados de la BD
+        setForm(mapProfileToForm(updatedProfile));
+        
+        console.log(`[Profile] ${field} saved successfully`);
       } else {
         console.error('[Profile] autoSave failed', result.error);
+        setFeedback({
+          type: 'error',
+          message: 'No se pudo guardar el cambio. Inténtalo de nuevo.',
+        });
       }
     } catch (error) {
       console.error('[Profile] autoSave error', error);
+      setFeedback({
+        type: 'error',
+        message: 'Error al guardar el cambio.',
+      });
     } finally {
       setIsAutoSaving(false);
     }
@@ -647,8 +725,7 @@ export default function ProfileScreen() {
           <AgeRangePicker
             minAge={form.min_age}
             maxAge={form.max_age}
-            onMinAgeChange={handleMinAgeChange}
-            onMaxAgeChange={handleMaxAgeChange}
+            onRangeChange={handleAgeRangeChange}
           />
           {(formErrors.min_age || formErrors.max_age) && (
             <Text style={styles.errorText}>

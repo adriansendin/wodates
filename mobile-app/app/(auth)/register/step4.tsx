@@ -64,7 +64,7 @@ export default function Step4Screen() {
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.button} onPress={handleNext}>
+            <TouchableOpacity testID="continuar-step4-button" style={styles.button} onPress={handleNext}>
               <Text style={styles.buttonText}>Continuar</Text>
             </TouchableOpacity>
 

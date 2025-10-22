@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 // Only used on native platforms (ios/android)
@@ -7,8 +7,7 @@ import MultiSlider from '@ptomasroos/react-native-multi-slider';
 interface AgeRangePickerProps {
   minAge: number;
   maxAge: number;
-  onMinAgeChange: (age: number) => void;
-  onMaxAgeChange: (age: number) => void;
+  onRangeChange: (min: number, max: number) => void;
   disabled?: boolean;
   style?: any;
 }
@@ -19,11 +18,20 @@ const MAX_AGE = 99;
 export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
   minAge,
   maxAge,
-  onMinAgeChange,
-  onMaxAgeChange,
+  onRangeChange,
   disabled = false,
   style,
 }) => {
+  // Estado local para el slider (móvil) - permite interacción fluida
+  const [localMinAge, setLocalMinAge] = useState(minAge);
+  const [localMaxAge, setLocalMaxAge] = useState(maxAge);
+
+  // Sincronizar estado local cuando cambian las props (desde la BD)
+  useEffect(() => {
+    setLocalMinAge(minAge);
+    setLocalMaxAge(maxAge);
+  }, [minAge, maxAge]);
+
   // Generar array de edades disponibles (web)
   const ageOptions = useMemo(() => {
     const options: number[] = [];
@@ -44,13 +52,13 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
 
   const handleMinAgeChange = (value: number) => {
     if (!disabled) {
-      onMinAgeChange(value);
+      onRangeChange(value, maxAge);
     }
   };
 
   const handleMaxAgeChange = (value: number) => {
     if (!disabled) {
-      onMaxAgeChange(value);
+      onRangeChange(minAge, value);
     }
   };
 
@@ -60,7 +68,7 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
       <View style={[styles.container, style]}>
         <View style={styles.sliderContainer}>
           <MultiSlider
-            values={[minAge, maxAge]}
+            values={[localMinAge, localMaxAge]}
             min={MIN_AGE}
             max={MAX_AGE}
             step={1}
@@ -71,8 +79,15 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
             onValuesChange={(values) => {
               if (disabled) return;
               const [min, max] = values as [number, number];
-              onMinAgeChange(min);
-              onMaxAgeChange(max);
+              // Actualizar estado local inmediatamente para UI fluida
+              setLocalMinAge(min);
+              setLocalMaxAge(max);
+            }}
+            onValuesChangeFinish={(values) => {
+              if (disabled) return;
+              const [min, max] = values as [number, number];
+              // Notificar al padre con ambos valores juntos
+              onRangeChange(min, max);
             }}
             selectedStyle={{
               backgroundColor: '#e91e63', // Color coral de wodates
@@ -101,7 +116,7 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
         </View>
 
         <View style={styles.rangeDisplay}>
-          <Text style={styles.rangeText}>{`Rango: ${minAge} - ${maxAge} años`}</Text>
+          <Text style={styles.rangeText}>{`Rango: ${localMinAge} - ${localMaxAge} años`}</Text>
         </View>
       </View>
     );

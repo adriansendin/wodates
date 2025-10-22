@@ -65,7 +65,7 @@ export default function Step3Screen() {
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.button} onPress={handleNext}>
+            <TouchableOpacity testID="continuar-step3-button" style={styles.button} onPress={handleNext}>
               <Text style={styles.buttonText}>Continuar</Text>
             </TouchableOpacity>
 

@@ -78,6 +78,7 @@ export default function Step2Screen() {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
+            testID="continuar-step2-button"
             style={[styles.button, !!error && styles.buttonDisabled]} 
             onPress={handleNext}
             disabled={!!error}
@@ -85,7 +86,7 @@ export default function Step2Screen() {
             <Text style={styles.buttonText}>Continuar</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <TouchableOpacity testID="volver-step2-button" style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>Volver</Text>
           </TouchableOpacity>
         </View>

@@ -12,6 +12,11 @@ export default function Step6Screen() {
   const [minAge, setMinAge] = useState(data.minAge);
   const [maxAge, setMaxAge] = useState(data.maxAge);
 
+  const handleAgeRangeChange = (min: number, max: number) => {
+    setMinAge(min);
+    setMaxAge(max);
+  };
+
   const handleNext = () => {
     updateData({ minAge, maxAge });
     nextStep();
@@ -35,13 +40,12 @@ export default function Step6Screen() {
             <AgeRangePicker
               minAge={minAge}
               maxAge={maxAge}
-              onMinAgeChange={setMinAge}
-              onMaxAgeChange={setMaxAge}
+              onRangeChange={handleAgeRangeChange}
             />
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.button} onPress={handleNext}>
+            <TouchableOpacity testID="continuar-step6-button" style={styles.button} onPress={handleNext}>
               <Text style={styles.buttonText}>Continuar</Text>
             </TouchableOpacity>
 

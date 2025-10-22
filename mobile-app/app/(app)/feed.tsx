@@ -5,7 +5,6 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +16,7 @@ import { FeedApi } from '../../src/data/api/feedApi';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { useMatchesStore } from '../../src/domain/stores/matchesStore';
 import { MatchSchema } from '../../src/domain/entities/Match';
+import { showAlert } from '../../src/utils/showAlert';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 const FALLBACK_PHOTO = require('../../assets/placeholder.png');
@@ -97,11 +97,11 @@ export default function FeedScreen() {
         setUsers(result.data.users);
       } else {
         setError(result.error.message);
-        Alert.alert('Error', result.error.message);
+        showAlert('Error', result.error.message);
       }
     } catch (error) {
       setError('Network error');
-      Alert.alert('Error', 'Network error. Please try again.');
+      showAlert('Error', 'Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,7 @@ export default function FeedScreen() {
     try {
       const result = await feedApi.likeUser(currentUser.id, tokens.accessToken);
       if (!result.success) {
-        Alert.alert('Error', result.error.message);
+        showAlert('Error', result.error.message);
         return;
       }
 
@@ -144,7 +144,7 @@ export default function FeedScreen() {
           });
           
           // Mostrar alerta y navegar al chat
-          Alert.alert("It's a Match!", 'You and this person liked each other!');
+          showAlert("It's a Match!", 'You and this person liked each other!');
           
           // Navegar al chat con el nuevo match
           router.push({
@@ -162,7 +162,7 @@ export default function FeedScreen() {
       }
       nextUser();
     } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
+      showAlert('Error', 'Network error. Please try again.');
     } finally {
       setIsLiking(false);
     }
@@ -183,13 +183,13 @@ export default function FeedScreen() {
     try {
       const result = await feedApi.passUser(currentUser.id, tokens.accessToken);
       if (!result.success) {
-        Alert.alert('Error', result.error.message);
+        showAlert('Error', result.error.message);
         return;
       }
 
       nextUser();
     } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
+      showAlert('Error', 'Network error. Please try again.');
     } finally {
       setIsPassing(false);
     }
@@ -251,6 +251,9 @@ export default function FeedScreen() {
           style={[styles.actionButton, styles.passButton]}
           onPress={handlePass}
           disabled={isPassing}
+          accessibilityRole="button"
+          accessibilityLabel="Ignorar perfil"
+          accessibilityHint="Descarta este perfil sugerido"
         >
           <Ionicons name="close" size={32} color="#fff" />
         </TouchableOpacity>
@@ -259,6 +262,9 @@ export default function FeedScreen() {
           style={[styles.actionButton, styles.likeButton]}
           onPress={handleLike}
           disabled={isLiking}
+          accessibilityRole="button"
+          accessibilityLabel="Dar like al perfil"
+          accessibilityHint="Indica que te interesa esta persona"
         >
           <Ionicons name="heart" size={32} color="#fff" />
         </TouchableOpacity>
