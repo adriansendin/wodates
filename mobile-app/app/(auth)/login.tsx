@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/domain/stores/authStore';
@@ -86,11 +86,11 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
@@ -99,8 +99,20 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.innerContent}>
-            <Text style={styles.title}>WODATES</Text>
-            <Text style={styles.subtitle}>Find your perfect match</Text>
+            {/* Logo completo: icono + palabra Wodates */}
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('../../assets/icon.png')} 
+                style={styles.logoIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.logoText}>Wodates</Text>
+            </View>
+
+            {/* Tagline */}
+            <Text style={styles.tagline}>
+              Less swipe. More Connection.
+            </Text>
 
             <View style={styles.form}>
               <TextInput
@@ -124,11 +136,11 @@ export default function LoginScreen() {
               />
 
               <TouchableOpacity
-                style={[styles.button, isLoading && styles.buttonDisabled]}
+                style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
                 onPress={handleLogin}
                 disabled={isLoading}
               >
-                <Text style={styles.buttonText}>{isLoading ? 'Entrando...' : 'Login'}</Text>
+                <Text style={styles.primaryButtonText}>{isLoading ? 'Entrando...' : 'Iniciar sesión'}</Text>
               </TouchableOpacity>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -144,69 +156,87 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 32,
     paddingTop: 40,
     paddingBottom: Platform.OS === 'android' ? 100 : 40,
   },
   innerContent: {
     alignItems: 'center',
+    gap: 40,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#e91e63',
+  logoContainer: {
+    alignItems: 'center',
+    gap: 16,
   },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 40,
-    color: '#666',
+  logoIcon: {
+    width: 80,
+    height: 80,
+  },
+  logoText: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#F45C5C',
+    letterSpacing: -0.5,
+  },
+  tagline: {
+    fontSize: 18,
+    color: '#6B6B6B',
+    textAlign: 'center',
+    fontWeight: '400',
+    lineHeight: 24,
   },
   form: {
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 280,
     gap: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 16,
+    borderColor: '#E0E0E0',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#FFFFFF',
+    color: '#333333',
   },
-  button: {
-    backgroundColor: '#e91e63',
-    borderRadius: 8,
-    padding: 16,
+  primaryButton: {
+    backgroundColor: '#F45C5C',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
     alignItems: 'center',
+    shadowColor: '#F45C5C',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   buttonDisabled: {
     opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   errorText: {
     marginTop: 8,
     color: '#ff4d4d',
     textAlign: 'center',
-  },
-  debugText: {
-    marginTop: 12,
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
+    fontSize: 14,
   },
 });

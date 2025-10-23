@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 
 // Simplified auth store for MVP
 const useAuthStore = () => {
@@ -21,24 +22,44 @@ export default function Home() {
   }, [user, router]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Wodates</Text>
-      <Text style={styles.subtitle}>
-      Less swipe. More substance.
-      </Text>
+    <>
+      <Stack.Screen 
+        options={{ 
+          headerShown: false 
+        }} 
+      />
+      <View style={styles.container}>
+        {/* Logo completo: icono + palabra Wodates */}
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../assets/icon.png')} 
+            style={styles.logoIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.logoText}>Wodates</Text>
+        </View>
 
-      <Link href="/(auth)/register" asChild>
-        <TouchableOpacity style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>Crear una cuenta</Text>
-        </TouchableOpacity>
-      </Link>
+        {/* Tagline */}
+        <Text style={styles.tagline}>
+          Less swipe. More Connection.
+        </Text>
 
-      <Link href="/(auth)/login" asChild>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Iniciar Sesion</Text>
-        </TouchableOpacity>
-      </Link>
-    </View>
+        {/* Botones principales */}
+        <View style={styles.buttonsContainer}>
+          <Link href="/(auth)/register" asChild>
+            <TouchableOpacity style={styles.primaryButton}>
+              <Text style={styles.primaryButtonText}>Crear una cuenta</Text>
+            </TouchableOpacity>
+          </Link>
+
+          <Link href="/(auth)/login" asChild>
+            <TouchableOpacity style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>Iniciar sesión</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
+      </View>
+    </>
   );
 }
 
@@ -47,46 +68,70 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#f8f9fa',
+    padding: 32,
+    backgroundColor: '#ffffff',
+    gap: 40,
+  },
+  logoContainer: {
+    alignItems: 'center',
     gap: 16,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#2c3e50',
+  logoIcon: {
+    width: 80,
+    height: 80,
   },
-  subtitle: {
+  logoText: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#F45C5C',
+    letterSpacing: -0.5,
+  },
+  tagline: {
     fontSize: 18,
-    color: '#7f8c8d',
+    color: '#6B6B6B',
     textAlign: 'center',
+    fontWeight: '400',
+    lineHeight: 24,
   },
-  button: {
-    marginTop: 16,
-    backgroundColor: '#e91e63',
-    paddingVertical: 14,
+  buttonsContainer: {
+    width: '100%',
+    gap: 16,
+    maxWidth: 280,
+  },
+  primaryButton: {
+    backgroundColor: '#F45C5C',
+    paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 12,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#F45C5C',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  buttonText: {
-    color: '#fff',
+  primaryButtonText: {
+    color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   secondaryButton: {
-    marginTop: 16,
     backgroundColor: 'transparent',
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#e91e63',
+    borderColor: '#F45C5C',
+    alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#e91e63',
+    color: '#F45C5C',
     fontSize: 16,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 });
