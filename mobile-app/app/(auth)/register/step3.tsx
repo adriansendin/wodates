@@ -5,15 +5,15 @@ import { useRegistrationStore } from '../../../src/domain/stores/registrationSto
 import { ProgressBar } from '../../../src/components/ProgressBar';
 
 const CITY_OPTIONS = [
-  { value: 'Madrid', label: 'Madrid' },
   { value: 'Barcelona', label: 'Barcelona' },
+  { value: 'Madrid', label: 'Madrid' },
 ];
 
 export default function Step3Screen() {
   const router = useRouter();
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
-  const [selectedCity, setSelectedCity] = useState(data.location || '');
+  const [selectedCity, setSelectedCity] = useState(data.location || 'Barcelona');
 
   const handleNext = () => {
     // Save selected city and set country to Spain automatically

@@ -63,6 +63,10 @@ export default function Step4Screen() {
             ))}
           </View>
 
+          <Text style={styles.infoText}>
+            Podrás cambiar esta preferencia más adelante.
+          </Text>
+
           <View style={styles.buttonContainer}>
             <TouchableOpacity testID="continuar-step4-button" style={styles.button} onPress={handleNext}>
               <Text style={styles.buttonText}>Continuar</Text>
@@ -169,6 +173,14 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#7F8C8D',
     fontSize: 14,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#95A5A6',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    lineHeight: 20,
   },
 });
 

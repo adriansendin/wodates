@@ -6,16 +6,16 @@ import { ProgressBar } from '../../../src/components/ProgressBar';
 import { LOOKING_FOR_OPTIONS, LookingForOption } from '../../../src/domain/entities/LookingFor';
 
 const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
+  both: 'Ambos',
   male: 'Hombres',
   female: 'Mujeres',
-  both: 'Ambos',
 };
 
 export default function Step5Screen() {
   const router = useRouter();
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
-  const [lookingFor, setLookingFor] = useState<LookingForOption | ''>(data.lookingFor || 'both');
+  const [lookingFor, setLookingFor] = useState<LookingForOption | ''>(data.lookingFor || '');
 
   const handleNext = () => {
     updateData({ lookingFor });
@@ -64,9 +64,24 @@ export default function Step5Screen() {
             ))}
           </View>
 
+          <Text style={styles.infoText}>
+            Podrás cambiar esta preferencia más adelante.
+          </Text>
+
           <View style={styles.buttonContainer}>
-            <TouchableOpacity testID="continuar-step5-button" style={styles.button} onPress={handleNext}>
-              <Text style={styles.buttonText}>Continuar</Text>
+            <TouchableOpacity 
+              testID="continuar-step5-button" 
+              style={[
+                styles.button,
+                !lookingFor && styles.buttonDisabled
+              ]} 
+              onPress={handleNext}
+              disabled={!lookingFor}
+            >
+              <Text style={[
+                styles.buttonText,
+                !lookingFor && styles.buttonTextDisabled
+              ]}>Continuar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -170,6 +185,20 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#7F8C8D',
     fontSize: 14,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#95A5A6',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: '#BDC3C7',
+  },
+  buttonTextDisabled: {
+    color: '#FFFFFF',
   },
 });
 

@@ -136,10 +136,6 @@ export default function Step7Screen() {
         <View style={styles.content}>
           <Text style={styles.title}>Añade tu foto de perfil</Text>
 
-          <PlatformInfo 
-            message="Puedes seleccionar una foto desde tu computadora. También puedes omitir este paso y añadir tu foto más tarde."
-          />
-
           <View style={styles.avatarContainer}>
             <AvatarPicker
               uri={avatarUri}
@@ -152,11 +148,9 @@ export default function Step7Screen() {
             />
           </View>
 
-          {avatarUri && (
-            <Text style={styles.helperText}>
-              Toca la imagen para cambiarla
-            </Text>
-          )}
+          <Text style={styles.infoText}>
+            Podrás cambiar esta preferencia más adelante.
+          </Text>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity 
@@ -297,6 +291,14 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#7F8C8D',
     fontSize: 14,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#95A5A6',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    lineHeight: 20,
   },
 });
 
