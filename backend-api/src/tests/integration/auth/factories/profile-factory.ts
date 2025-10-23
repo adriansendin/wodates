@@ -19,20 +19,12 @@ export class ProfileFactory {
     const month = Math.floor(Math.random() * 12);
     const day = Math.max(1, Math.floor(Math.random() * 28));
     const birthDate = new Date(Date.UTC(year, month, day)).toISOString();
-    const gender =
-      overrides.gender ?? GENDER_VALUES[Math.floor(Math.random() * GENDER_VALUES.length)];
-    const lookingFor =
-      overrides.lookingFor ??
-      LOOKING_FOR_VALUES[Math.floor(Math.random() * LOOKING_FOR_VALUES.length)];
-    const location =
-      overrides.location ?? cities[Math.floor(Math.random() * cities.length)];
-
     return {
       birthDate: overrides.birthDate ?? birthDate,
-      gender,
-      location,
+      gender: overrides.gender ?? 'male',
+      location: overrides.location ?? cities[Math.floor(Math.random() * cities.length)] ?? 'Madrid',
       country: overrides.country ?? 'Spain',
-      lookingFor,
+      lookingFor: overrides.lookingFor ?? 'female',
     };
   }
 }

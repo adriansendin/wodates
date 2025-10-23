@@ -26,7 +26,7 @@ export async function createTestApp<
   fastify.decorate('authMiddleware', authMiddleware);
 
   const authService =
-    options.authService ?? ((new InMemoryAuthService()) as TService);
+    options.authService ?? ((new InMemoryAuthService()) as unknown as TService);
 
   await fastify.register(authRoutes, {
     prefix: '/api/v1/auth',

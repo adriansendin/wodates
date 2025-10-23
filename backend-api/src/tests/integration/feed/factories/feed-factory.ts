@@ -49,8 +49,8 @@ export class FeedFactory {
       location: overrides.location ?? {
         latitude: 40.4168,
         longitude: -3.7038,
-        city: overrides.location?.city ?? 'Madrid',
-        country: overrides.location?.country ?? 'Spain',
+        city: (overrides as any).location?.city ?? 'Madrid',
+        country: (overrides as any).location?.country ?? 'Spain',
       },
       createdAt: overrides.createdAt ?? now,
       updatedAt: overrides.updatedAt ?? now,

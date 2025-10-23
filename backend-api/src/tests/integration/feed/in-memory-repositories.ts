@@ -6,7 +6,6 @@ import {
 } from '../../../domain/Result';
 import {
   DomainError,
-  InternalError,
   NotFoundError,
 } from '../../../domain/errors/DomainError';
 import {
@@ -95,6 +94,8 @@ export class InMemoryUserRepository implements UserRepository {
     const updated: User = {
       ...existing,
       ...data,
+      birthDate: data.birthDate ?? existing.birthDate,
+      gender: data.gender ?? existing.gender,
       updatedAt: new Date().toISOString(),
     };
 
@@ -181,6 +182,10 @@ export class InMemoryPreferencesRepository implements PreferencesRepository {
     const updated: Preferences = {
       ...existing,
       ...data,
+      ageMin: data.ageMin ?? existing.ageMin,
+      ageMax: data.ageMax ?? existing.ageMax,
+      genderFilter: data.genderFilter ?? existing.genderFilter,
+      maxDistance: data.maxDistance ?? existing.maxDistance,
       updatedAt: new Date().toISOString(),
     };
 
