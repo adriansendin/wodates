@@ -13,6 +13,8 @@ import {
   View,
   ActionSheetIOS,
   Platform,
+  Pressable,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { AvatarPicker } from '../../src/components/AvatarPicker';
 import { AgeRangePicker } from '../../src/components/AgeRangePicker';
@@ -139,6 +141,12 @@ export default function ProfileScreen() {
   const [isGenderModalVisible, setIsGenderModalVisible] = useState(false);
   const [isLookingForModalVisible, setIsLookingForModalVisible] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isContactModalVisible, setIsContactModalVisible] = useState(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [contactMessage, setContactMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [showValidationError, setShowValidationError] = useState(false);
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
@@ -516,6 +524,49 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleContactUs = () => {
+    setIsContactModalVisible(true);
+  };
+
+  const handleDeleteAccount = () => {
+    setIsDeleteModalVisible(true);
+  };
+
+  const handleContactSubmit = async () => {
+    if (contactMessage.length < 10) {
+      setShowValidationError(true);
+      setTimeout(() => setShowValidationError(false), 3000);
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    // Simular envío (500ms)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Mostrar mensaje de éxito (sin limpiar el texto)
+    setIsSubmitting(false);
+    setShowToast(true);
+    
+    // Cerrar modal después de 2 segundos (y limpiar texto al cerrar)
+    setTimeout(() => {
+      setShowToast(false);
+      setContactMessage(''); // Limpiar aquí, cuando el usuario ya no lo ve
+      setIsContactModalVisible(false);
+    }, 2000);
+  };
+
+  const handleDeleteConfirm = () => {
+    // TODO: Implement account deletion
+    console.log('Account deletion confirmed');
+    setIsDeleteModalVisible(false);
+    setFeedback({
+      type: 'info',
+      message: 'Funcionalidad de eliminación de cuenta en desarrollo.',
+    });
+  };
+
+
 
   if (!tokens?.accessToken) {
     return (
@@ -780,6 +831,23 @@ export default function ProfileScreen() {
         <Text style={styles.autoSaveMessage}>
           Los cambios se guardan automáticamente.
         </Text>
+
+        {/* Contact and Delete options */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleContactUs}
+          >
+            <Text style={styles.actionButtonText}>Contacta con nosotros</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={handleDeleteAccount}
+          >
+            <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Borrar cuenta</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isLoading && (
@@ -789,6 +857,114 @@ export default function ProfileScreen() {
         </View>
       )}
         </ScrollView>
+
+      {/* Contact us modal */}
+      <Modal
+        visible={isContactModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsContactModalVisible(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setIsContactModalVisible(false)}
+          >
+            <Pressable style={styles.contactModalContent}>
+              <Text style={styles.contactModalTitle}>¿En qué podemos ayudarte?</Text>
+              
+              <View style={styles.textInputContainer}>
+                <TextInput
+                  style={styles.contactTextInput}
+                  placeholder="Escribe tu mensaje aquí..."
+                  value={contactMessage}
+                  onChangeText={setContactMessage}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  maxLength={300}
+                />
+                <Text style={styles.characterCounter}>
+                  {contactMessage.length} / 300
+                </Text>
+                {showValidationError && (
+                  <Text style={styles.validationError}>
+                    El mensaje debe tener al menos 10 caracteres
+                  </Text>
+                )}
+              </View>
+              
+              {showToast && (
+                <Text style={styles.successMessage}>
+                  Tu mensaje ha sido enviado correctamente.
+                </Text>
+              )}
+              
+              <View style={styles.contactButtonContainer}>
+                <TouchableOpacity
+                  style={styles.contactCancelButton}
+                  onPress={() => setIsContactModalVisible(false)}
+                >
+                  <Text style={styles.contactCancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.contactSubmitButton,
+                    contactMessage.length < 10 || isSubmitting ? styles.contactSubmitButtonDisabled : null
+                  ]}
+                  onPress={handleContactSubmit}
+                  disabled={contactMessage.length < 10 || isSubmitting}
+                >
+                  <Text style={[
+                    styles.contactSubmitButtonText,
+                    contactMessage.length < 10 || isSubmitting ? styles.contactSubmitButtonTextDisabled : null
+                  ]}>
+                    {isSubmitting ? 'Enviando...' : 'Enviar'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+
+      {/* Delete account modal */}
+      <Modal
+        visible={isDeleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsDeleteModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setIsDeleteModalVisible(false)}
+        >
+          <Pressable style={styles.deleteModalContent}>
+            <Text style={styles.deleteModalTitle}>¿Seguro que quieres eliminar tu cuenta?</Text>
+            <Text style={styles.deleteModalSubtext}>
+              Esta acción no se puede deshacer. Perderás tu perfil, tus matches y tus mensajes.
+            </Text>
+            <View style={styles.deleteButtonContainer}>
+              <TouchableOpacity
+                style={styles.deleteCancelButton}
+                onPress={() => setIsDeleteModalVisible(false)}
+              >
+                <Text style={styles.deleteCancelButtonText}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteConfirmButton}
+                onPress={handleDeleteConfirm}
+              >
+                <Text style={styles.deleteConfirmButtonText}>Sí</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -1113,6 +1289,233 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 24,
     fontStyle: 'italic',
+  },
+  // Action buttons styles
+  actionButtonsContainer: {
+    marginTop: 24,
+    gap: 12,
+  },
+  actionButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  deleteButton: {
+    backgroundColor: '#fff5f5',
+    borderColor: '#F45C5C',
+  },
+  deleteButtonText: {
+    color: '#F45C5C',
+  },
+  // Contact modal styles
+  contactModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 20,
+    maxWidth: 400,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  contactModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#222',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  textInputContainer: {
+    position: 'relative',
+    marginBottom: 24,
+  },
+  contactTextInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    minHeight: 120,
+    textAlignVertical: 'top',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  characterCounter: {
+    position: 'absolute',
+    bottom: 8,
+    right: 12,
+    fontSize: 14,
+    color: '#999',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  validationError: {
+    fontSize: 12,
+    color: '#F45C5C',
+    marginTop: 8,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  contactButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  contactCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#F2F2F2',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  contactCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  contactSubmitButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#F45C5C',
+    alignItems: 'center',
+    shadowColor: '#F45C5C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  contactSubmitButtonDisabled: {
+    backgroundColor: '#E0E0E0',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  contactSubmitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  contactSubmitButtonTextDisabled: {
+    color: '#999',
+  },
+  successMessage: {
+    fontSize: 16,
+    color: '#2e7d32',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontWeight: '500',
+  },
+  // Toast styles
+  toastContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: 100,
+    zIndex: 9999,
+  },
+  toast: {
+    backgroundColor: '#F45C5C',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    shadowColor: '#F45C5C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Delete modal styles
+  deleteModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 20,
+    maxWidth: 400,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#222',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  deleteModalSubtext: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  deleteButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deleteCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: '#F2F2F2',
+    alignItems: 'center',
+  },
+  deleteCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  deleteConfirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: '#F45C5C',
+    alignItems: 'center',
+  },
+  deleteConfirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
 

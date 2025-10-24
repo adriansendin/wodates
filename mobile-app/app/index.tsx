@@ -40,9 +40,10 @@ export default function Home() {
         </View>
 
         {/* Tagline */}
-        <Text style={styles.tagline}>
-          Less swipe. More Connection.
-        </Text>
+        <View style={styles.sloganBlock}>
+                <Text style={styles.tagline}>Relaciones serias</Text>
+                <Text style={styles.tagline}>Menos swipe. Más conexiones.</Text>
+        </View>
 
         {/* Botones principales */}
         <View style={styles.buttonsContainer}>
@@ -134,4 +135,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
+  sloganBlock: {
+    alignItems: 'center',
+    gap: 2, // reduce o aumenta según prefieras
+    marginTop: -10, // opcional: ajusta verticalmente si queda muy separado del logo
+  },  
 });

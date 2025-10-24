@@ -110,9 +110,11 @@ export default function LoginScreen() {
             </View>
 
             {/* Tagline */}
-            <Text style={styles.tagline}>
-              Less swipe. More Connection.
-            </Text>
+            <View style={styles.sloganBlock}>
+            <Text style={styles.tagline}>Relaciones serias</Text>
+            <Text style={styles.tagline}>Menos swipe. Más conexiones.</Text>
+            </View>
+
 
             <View style={styles.form}>
               <TextInput
@@ -239,4 +241,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
   },
+  sloganBlock: {
+    alignItems: 'center',
+    gap: 2, // reduce o aumenta según prefieras
+    marginTop: -10, // opcional: ajusta verticalmente si queda muy separado del logo
+  },  
 });
