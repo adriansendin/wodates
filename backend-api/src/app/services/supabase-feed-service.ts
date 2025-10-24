@@ -91,19 +91,23 @@ export class SupabaseFeedService {
         return [];
       }
 
-      const filtered = data.filter(
-        (row) => !excludedIds.has(row.id),
-      );
+      const filtered = data.filter((row) => !excludedIds.has(row.id));
 
-      // Fetch names from auth.users for all candidates in parallel
+      // Fetch identity info from auth.users for all candidates in parallel
       const candidatesWithNames = await Promise.all(
         filtered.map(async (row) => {
-          const name = await this.fetchUserName(row.id);
-          return this.mapRowToCandidate({ ...row, name });
-        })
+          const identity = await this.fetchUserIdentity(row.id);
+          if (!identity || identity.deletedAt) {
+            return null;
+          }
+
+          return this.mapRowToCandidate({ ...row, name: identity.name });
+        }),
       );
 
-      return candidatesWithNames;
+      return candidatesWithNames.filter(
+        (candidate): candidate is FeedCandidate => candidate !== null,
+      );
     } catch (error) {
       if (error instanceof DomainError) {
         throw error;
@@ -202,13 +206,15 @@ export class SupabaseFeedService {
    * @param userId - ID del usuario
    * @returns El nombre del usuario o un valor por defecto
    */
-  private async fetchUserName(userId: string): Promise<string> {
+  private async fetchUserIdentity(
+    userId: string,
+  ): Promise<{ name: string; deletedAt: string | null } | null> {
     try {
       const { data, error } = await this.client.auth.admin.getUserById(userId);
       
       if (error || !data?.user) {
         console.warn(`[SupabaseFeedService] Could not fetch name for user ${userId}`, error);
-        return 'Usuario';
+        return null;
       }
 
       const user = data.user;
@@ -220,11 +226,16 @@ export class SupabaseFeedService {
           : '';
 
       const result = displayName || user.email || 'Usuario';
-      
-      return result;
+      const deletedAt =
+        (user as unknown as { deleted_at?: string | null })?.deleted_at ?? null;
+
+      return {
+        name: result,
+        deletedAt,
+      };
     } catch (error) {
       console.warn(`[SupabaseFeedService] Error fetching name for user ${userId}`, error);
-      return 'Usuario';
+      return null;
     }
   }
 

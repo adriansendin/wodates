@@ -38,12 +38,24 @@ export class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
-          throw new UnauthorizedError('Unauthorized');
-        }
         if (!error.response) {
           throw new NetworkError('Network error');
         }
+
+        if (error.response.status === 401) {
+          const message =
+            typeof error.response.data === 'object' &&
+            error.response.data !== null &&
+            'message' in error.response.data
+              ? String(
+                  (error.response.data as { message?: unknown }).message ??
+                    'Unauthorized'
+                )
+              : 'Unauthorized';
+
+          throw new UnauthorizedError(message);
+        }
+
         throw error;
       }
     );

@@ -19,4 +19,14 @@ export class ProfileApi {
   ): Promise<Result<UserProfile, DomainError>> {
     return this.apiClient.put<UserProfile>('/users/me', input, token);
   }
+
+  deactivateAccount(
+    token: string,
+  ): Promise<Result<{ message: string }, DomainError>> {
+    return this.apiClient.post<{ message: string }>(
+      '/users/me/deactivate',
+      {},
+      token,
+    );
+  }
 }

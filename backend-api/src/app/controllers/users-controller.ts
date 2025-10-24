@@ -190,6 +190,23 @@ export class UsersController {
     }
   }
 
+  async deactivateAccount(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const authUser = request.user;
+      if (!authUser) {
+        throw new UnauthorizedError('Missing authenticated user');
+      }
+
+      await this.userService.deactivateAccount(authUser.id);
+
+      return reply.send({
+        message: 'Cuenta desactivada correctamente',
+      });
+    } catch (error) {
+      return this.handleError(reply, error);
+    }
+  }
+
   /**
    * Upload user avatar to Supabase Storage
    * Handles multipart/form-data with a single image file

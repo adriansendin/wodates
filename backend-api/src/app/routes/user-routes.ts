@@ -119,4 +119,26 @@ export async function userRoutes(fastify: FastifyInstance) {
     },
     controller.uploadAvatar.bind(controller),
   );
+
+  fastify.post(
+    '/users/me/deactivate',
+    {
+      schema: {
+        description: 'Soft delete the authenticated user account',
+        tags: ['users'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    controller.deactivateAccount.bind(controller),
+  );
 }

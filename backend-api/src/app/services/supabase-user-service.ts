@@ -175,6 +175,24 @@ export class SupabaseUserService {
     }
   }
 
+  async deactivateAccount(userId: string): Promise<void> {
+    try {
+      await this.markAuthUserAsDeleted(userId);
+      await this.hideUserFromFeed(userId);
+
+      const partnerIds = await this.getActiveChatPartnerIds(userId);
+      if (partnerIds.size > 0) {
+        await this.blockChatPartners(userId, partnerIds);
+      }
+    } catch (error) {
+      if (error instanceof DomainError) {
+        throw error;
+      }
+
+      throw new InternalError('Unexpected error deactivating user account', error);
+    }
+  }
+
   private async ensureProfileRow(userId: string): Promise<UserProfileRow> {
     const existingProfile = await this.findProfileRow(userId);
     if (existingProfile) {
@@ -341,6 +359,99 @@ export class SupabaseUserService {
       avatarUrl: this.sanitizeAvatarUrl(row.avatar_url),
       show_in_feed: row.show_in_feed,
     };
+  }
+
+  private async markAuthUserAsDeleted(userId: string): Promise<void> {
+    const { error } = await this.client.auth.admin.deleteUser(userId, true);
+
+    if (error) {
+      throw new InternalError(
+        `Failed to mark auth user as deleted: ${this.formatSupabaseError(error)}`,
+        error,
+      );
+    }
+  }
+
+  private async hideUserFromFeed(userId: string): Promise<void> {
+    const { error } = await this.client
+      .from('users')
+      .update({ show_in_feed: false })
+      .eq('id', userId);
+
+    if (error) {
+      throw new InternalError(
+        `Failed to hide user from feed: ${this.formatSupabaseError(error)}`,
+        error,
+      );
+    }
+  }
+
+  private async getActiveChatPartnerIds(userId: string): Promise<Set<string>> {
+    const partnerIds = new Set<string>();
+
+    const { data: chatRows, error: chatsError } = await this.client
+      .from('chat_participants')
+      .select('chat_id')
+      .eq('user_id', userId);
+
+    if (chatsError) {
+      throw new InternalError(
+        `Failed to fetch chat participations: ${this.formatSupabaseError(chatsError)}`,
+        chatsError,
+      );
+    }
+
+    const chatIds =
+      chatRows?.map((row: { chat_id: string }) => row.chat_id).filter(Boolean) ?? [];
+
+    if (chatIds.length === 0) {
+      return partnerIds;
+    }
+
+    const { data: participantRows, error: participantsError } = await this.client
+      .from('chat_participants')
+      .select('chat_id, user_id')
+      .in('chat_id', chatIds);
+
+    if (participantsError) {
+      throw new InternalError(
+        `Failed to resolve chat participants: ${this.formatSupabaseError(participantsError)}`,
+        participantsError,
+      );
+    }
+
+    for (const row of participantRows ?? []) {
+      if (row?.user_id && row.user_id !== userId) {
+        partnerIds.add(row.user_id);
+      }
+    }
+
+    return partnerIds;
+  }
+
+  private async blockChatPartners(userId: string, partnerIds: Set<string>): Promise<void> {
+    if (partnerIds.size === 0) {
+      return;
+    }
+
+    const rows = Array.from(partnerIds).map((partnerId) => ({
+      blocker_id: userId,
+      blocked_id: partnerId,
+    }));
+
+    const { error } = await this.client
+      .from('blocked_users')
+      .upsert(rows, {
+        onConflict: 'blocker_id,blocked_id',
+        ignoreDuplicates: true,
+      });
+
+    if (error) {
+      throw new InternalError(
+        `Failed to block chat partners: ${this.formatSupabaseError(error)}`,
+        error,
+      );
+    }
   }
 
   private resolveAvatarUrl(

@@ -127,6 +127,7 @@ export class SupabaseAuthService implements AuthService {
         });
 
         if (!error && data.user) {
+          this.ensureUserIsActive(data.user);
           return this.mapUser(data.user);
         }
       }
@@ -148,6 +149,8 @@ export class SupabaseAuthService implements AuthService {
       if (!matchedUser) {
         throw new UnauthorizedError('Invalid email or password');
       }
+
+      this.ensureUserIsActive(matchedUser);
 
       return this.mapUser(matchedUser);
     } catch (error) {
@@ -172,6 +175,17 @@ export class SupabaseAuthService implements AuthService {
       email: user.email ?? '',
       name: displayName ?? user.email ?? 'User',
     };
+  }
+
+  private ensureUserIsActive(user: User): void {
+    const deletedAt =
+      (user as unknown as { deleted_at?: string | null })?.deleted_at ?? null;
+
+    if (deletedAt) {
+      throw new UnauthorizedError(
+        'Tu cuenta ha sido desactivada. Contacta con soporte si deseas reactivarla.',
+      );
+    }
   }
 
   private resolveConfig(config?: Partial<SupabaseAuthConfig>): SupabaseAuthConfig {

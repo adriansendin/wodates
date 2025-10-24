@@ -16,6 +16,7 @@ import {
   Pressable,
   KeyboardAvoidingView,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { AvatarPicker } from '../../src/components/AvatarPicker';
 import { AgeRangePicker } from '../../src/components/AgeRangePicker';
 import { useAuthStore } from '../../src/domain/stores/authStore';
@@ -38,6 +39,7 @@ import {
   takePictureWithCamera,
   uploadAvatarToBackend,
 } from '../../src/data/api/imageService';
+import { getSupabaseClient } from '../../src/data/api/supabaseClient';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 const AVATAR_PLACEHOLDER = require('../../assets/placeholder.png');
@@ -131,7 +133,9 @@ const calculateAge = (birthDate: string): number => {
 };
 
 export default function ProfileScreen() {
-  const { tokens, user } = useAuthStore();
+  const router = useRouter();
+  const supabase = useMemo(() => getSupabaseClient(), []);
+  const { tokens, user, logout } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [isLoading, setIsLoading] = useState(false);
@@ -147,6 +151,7 @@ export default function ProfileScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [showValidationError, setShowValidationError] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
@@ -556,15 +561,61 @@ export default function ProfileScreen() {
     }, 2000);
   };
 
-  const handleDeleteConfirm = () => {
-    // TODO: Implement account deletion
-    console.log('Account deletion confirmed');
-    setIsDeleteModalVisible(false);
-    setFeedback({
-      type: 'info',
-      message: 'Funcionalidad de eliminación de cuenta en desarrollo.',
-    });
-  };
+  const handleDeleteConfirm = useCallback(async () => {
+    if (isDeletingAccount || !tokens?.accessToken) {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
+    try {
+      const result = await profileApi.deactivateAccount(tokens.accessToken);
+
+      if (!result.success) {
+        const message =
+          result.error.message ?? 'No se pudo desactivar tu cuenta.';
+        Alert.alert('Error', message);
+        setFeedback({
+          type: 'error',
+          message,
+        });
+        return;
+      }
+
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.warn('[Profile] supabase signOut failed', signOutError);
+      }
+
+      logout();
+      setIsDeleteModalVisible(false);
+
+      Alert.alert(
+        'Cuenta desactivada',
+        'Tu cuenta ha sido desactivada. Contacta con soporte si deseas reactivarla.',
+      );
+
+      router.replace('/(auth)/login');
+    } catch (error) {
+      console.error('[Profile] handleDeleteConfirm error', error);
+      const message = 'No se pudo desactivar la cuenta. Intentalo de nuevo.';
+      Alert.alert('Error', message);
+      setFeedback({
+        type: 'error',
+        message,
+      });
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  }, [
+    isDeletingAccount,
+    tokens?.accessToken,
+    profileApi,
+    supabase,
+    logout,
+    router,
+  ]);
 
 
 
@@ -956,10 +1007,16 @@ export default function ProfileScreen() {
                 <Text style={styles.deleteCancelButtonText}>No</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.deleteConfirmButton}
+                style={[
+                  styles.deleteConfirmButton,
+                  isDeletingAccount ? styles.deleteConfirmButtonDisabled : null,
+                ]}
                 onPress={handleDeleteConfirm}
+                disabled={isDeletingAccount}
               >
-                <Text style={styles.deleteConfirmButtonText}>Sí</Text>
+                <Text style={styles.deleteConfirmButtonText}>
+                  {isDeletingAccount ? 'Desactivando...' : 'Si'}
+                </Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -1512,10 +1569,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F45C5C',
     alignItems: 'center',
   },
+  deleteConfirmButtonDisabled: {
+    opacity: 0.6,
+  },
   deleteConfirmButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
   },
 });
-
