@@ -54,7 +54,7 @@ const resolvePhotoUrl = (photoUrl?: string | null) => {
   if (typeof photoUrl === 'string') {
     const trimmed = photoUrl.trim();
     if (trimmed) {
-      return trimmed;
+      return { uri: trimmed };
     }
   }
 
@@ -218,12 +218,12 @@ export default function FeedScreen() {
   }
 
   const age = resolveAge(currentUser);
-  const photoUrl = resolvePhotoUrl(currentUser.photoUrl);
+  const photoSource = resolvePhotoUrl(currentUser.photoUrl);
 
   return (
     <View style={styles.container}>
       {/* Imagen a pantalla completa */}
-      <Image source={{ uri: photoUrl }} style={styles.fullScreenImage} resizeMode="cover" />
+      <Image source={photoSource} style={styles.fullScreenImage} resizeMode="cover" />
       
       {/* Gradiente inferior para mejor legibilidad */}
       <LinearGradient

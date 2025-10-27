@@ -9,3 +9,11 @@ Documentación estructurada según los apartados solicitados (0–7).
 - [docs/04_USER_STORIES.md](docs/04_USER_STORIES.md) — Historias de Usuario (5)
 - [docs/05_TICKETS.md](docs/05_TICKETS.md) — Tickets (6)
 - [docs/06_PULL_REQUESTS.md](docs/06_PULL_REQUESTS.md) — Pull Requests (7)
+
+## Capturas de pantalla
+
+El directorio [screenshots/] contiene capturas de pantalla de la aplicación en funcionamiento.
+
+## Testing
+
+Se han pasado los tests unitarios, de integración y end-to-end (e2e) de la aplicación.
