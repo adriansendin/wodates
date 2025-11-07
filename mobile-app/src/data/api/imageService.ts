@@ -219,17 +219,44 @@ export async function uploadAvatarToBackend(
     // Create FormData with the image file
     const formData = new FormData();
     
-    // In React Native, we need to provide file info in a specific format
-    const filename = imageUri.split('/').pop() || 'avatar.jpg';
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : 'image/jpeg';
+    if (Platform.OS === 'web') {
+      // On web, blob URLs need to be converted to File/Blob objects
+      if (imageUri.startsWith('blob:')) {
+        // Fetch the blob URL to get the Blob
+        const response = await fetch(imageUri);
+        const blob = await response.blob();
+        
+        // Determine MIME type from blob or default to jpeg
+        const mimeType = blob.type || 'image/jpeg';
+        
+        // Create a File object from the Blob
+        const filename = `avatar.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
+        const file = new File([blob], filename, { type: mimeType });
+        
+        // Append File object to FormData (standard web format)
+        formData.append('file', file);
+      } else {
+        // If it's not a blob URL, try to fetch it as a file
+        const response = await fetch(imageUri);
+        const blob = await response.blob();
+        const mimeType = blob.type || 'image/jpeg';
+        const filename = `avatar.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
+        const file = new File([blob], filename, { type: mimeType });
+        formData.append('file', file);
+      }
+    } else {
+      // In React Native, we need to provide file info in a specific format
+      const filename = imageUri.split('/').pop() || 'avatar.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
 
-    // @ts-ignore - FormData in React Native accepts this format
-    formData.append('file', {
-      uri: imageUri,
-      type: type,
-      name: filename,
-    });
+      // @ts-ignore - FormData in React Native accepts this format
+      formData.append('file', {
+        uri: imageUri,
+        type: type,
+        name: filename,
+      });
+    }
 
     // Upload to backend API endpoint using axios directly
     const response = await axios.post(

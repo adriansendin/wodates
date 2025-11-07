@@ -506,10 +506,8 @@ export default function ProfileScreen() {
         const updatedProfile = updateResult.data;
         setProfile(updatedProfile);
         setForm(mapProfileToForm(updatedProfile));
-        setFeedback({
-          type: 'success',
-          message: 'Foto de perfil actualizada correctamente.',
-        });
+        // Clear feedback - user can see the avatar has changed visually
+        setFeedback(null);
       } else {
         Alert.alert('Error', updateResult.error.message ?? 'No se pudo actualizar la foto de perfil.');
         setFeedback({

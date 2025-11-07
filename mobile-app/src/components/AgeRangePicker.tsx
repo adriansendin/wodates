@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 // Only used on native platforms (ios/android)
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 
@@ -32,35 +31,6 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
     setLocalMaxAge(maxAge);
   }, [minAge, maxAge]);
 
-  // Generar array de edades disponibles (web)
-  const ageOptions = useMemo(() => {
-    const options: number[] = [];
-    for (let i = MIN_AGE; i <= MAX_AGE; i++) {
-      options.push(i);
-    }
-    return options;
-  }, []);
-
-  // Filtrar opciones para web
-  const minAgeOptions = useMemo(() => {
-    return ageOptions.filter((age) => age <= maxAge);
-  }, [ageOptions, maxAge]);
-
-  const maxAgeOptions = useMemo(() => {
-    return ageOptions.filter((age) => age >= minAge);
-  }, [ageOptions, minAge]);
-
-  const handleMinAgeChange = (value: number) => {
-    if (!disabled) {
-      onRangeChange(value, maxAge);
-    }
-  };
-
-  const handleMaxAgeChange = (value: number) => {
-    if (!disabled) {
-      onRangeChange(minAge, value);
-    }
-  };
 
   // Uso de slider nativo para iOS/Android
   if (Platform.OS !== 'web') {
@@ -122,54 +92,197 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
     );
   }
 
-  // Web: mantener pickers actuales
+  // Web: Range slider con dos handles usando HTML5 inputs
   return (
     <View style={[styles.container, style]}>
-      <View style={styles.pickersContainer}>
-        {/* Picker para edad mínima */}
-        <View style={styles.pickerWrapper}>
-          <Text style={styles.pickerLabel}>Edad mínima</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={minAge}
-              onValueChange={(value) => handleMinAgeChange(Number(value))}
-              enabled={!disabled}
-              style={styles.picker}
-              itemStyle={styles.pickerItem}
-            >
-              {minAgeOptions.map((age) => (
-                <Picker.Item key={age} label={`${age}`} value={age} />
-              ))}
-            </Picker>
-          </View>
-        </View>
-
-        {/* Picker para edad máxima */}
-        <View style={styles.pickerWrapper}>
-          <Text style={styles.pickerLabel}>Edad máxima</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={maxAge}
-              onValueChange={(value) => handleMaxAgeChange(Number(value))}
-              enabled={!disabled}
-              style={styles.picker}
-              itemStyle={styles.pickerItem}
-            >
-              {maxAgeOptions.map((age) => (
-                <Picker.Item key={age} label={`${age}`} value={age} />
-              ))}
-            </Picker>
-          </View>
-        </View>
+      <View style={styles.webSliderContainer}>
+        <WebRangeSlider
+          minAge={localMinAge}
+          maxAge={localMaxAge}
+          onRangeChange={(min, max) => {
+            if (disabled) return;
+            setLocalMinAge(min);
+            setLocalMaxAge(max);
+            onRangeChange(min, max);
+          }}
+          disabled={disabled}
+        />
       </View>
 
-      {/* Mostrar el rango actual */}
       <View style={styles.rangeDisplay}>
         <Text style={styles.rangeText}>
-          {`Rango: ${minAge} - ${maxAge} años`}
+          {`Rango: ${localMinAge} - ${localMaxAge} años`}
         </Text>
       </View>
     </View>
+  );
+};
+
+// Componente web específico para el range slider
+const WebRangeSlider: React.FC<{
+  minAge: number;
+  maxAge: number;
+  onRangeChange: (min: number, max: number) => void;
+  disabled: boolean;
+}> = ({ minAge, maxAge, onRangeChange, disabled }) => {
+  const [localMin, setLocalMin] = useState(minAge);
+  const [localMax, setLocalMax] = useState(maxAge);
+
+  // Inyectar estilos CSS cuando el componente se monte en web
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const styleId = 'age-range-slider-styles';
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+          .range-input {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 40px;
+            background: transparent;
+            pointer-events: none;
+            outline: none;
+            margin: 0;
+            padding: 0;
+          }
+
+          .range-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e91e63;
+            border: 2px solid #fff;
+            cursor: pointer;
+            pointer-events: all;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            margin-top: -11px;
+          }
+
+          .range-input::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+          }
+
+          .range-input::-webkit-slider-thumb:active {
+            transform: scale(1.15);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+          }
+
+          .range-input::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e91e63;
+            border: 2px solid #fff;
+            cursor: pointer;
+            pointer-events: all;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+          }
+
+          .range-input::-moz-range-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+          }
+
+          .range-input::-moz-range-thumb:active {
+            transform: scale(1.15);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+          }
+
+          .range-input::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            margin: 18px 0;
+          }
+
+          .range-input::-moz-range-track {
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            margin: 18px 0;
+          }
+
+          .range-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+
+          .range-input:disabled::-webkit-slider-thumb {
+            cursor: not-allowed;
+          }
+
+          .range-input:disabled::-moz-range-thumb {
+            cursor: not-allowed;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    setLocalMin(minAge);
+    setLocalMax(maxAge);
+  }, [minAge, maxAge]);
+
+  const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    const newMin = Math.min(value, localMax);
+    setLocalMin(newMin);
+    onRangeChange(newMin, localMax);
+  };
+
+  const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    const newMax = Math.max(value, localMin);
+    setLocalMax(newMax);
+    onRangeChange(localMin, newMax);
+  };
+
+  // Calcular el porcentaje para el track activo
+  const minPercent = ((localMin - MIN_AGE) / (MAX_AGE - MIN_AGE)) * 100;
+  const maxPercent = ((localMax - MIN_AGE) / (MAX_AGE - MIN_AGE)) * 100;
+
+  return (
+    <div style={webStyles.sliderWrapper}>
+      <div style={webStyles.trackContainer}>
+        <div style={webStyles.trackBackground} />
+        <div
+          style={{
+            ...webStyles.trackActive,
+            left: `${minPercent}%`,
+            width: `${maxPercent - minPercent}%`,
+          }}
+        />
+      </div>
+      <input
+        type="range"
+        min={MIN_AGE}
+        max={MAX_AGE}
+        value={localMin}
+        onChange={handleMinChange}
+        disabled={disabled}
+        style={webStyles.input}
+        className="range-input range-input-min"
+      />
+      <input
+        type="range"
+        min={MIN_AGE}
+        max={MAX_AGE}
+        value={localMax}
+        onChange={handleMaxChange}
+        disabled={disabled}
+        style={webStyles.input}
+        className="range-input range-input-max"
+      />
+    </div>
   );
 };
 
@@ -177,61 +290,13 @@ const styles = StyleSheet.create({
   container: {
     gap: 12,
   },
-  pickersContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  pickerWrapper: {
-    flex: 1,
-    gap: 4,
-  },
-  pickerLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#555',
-    marginBottom: 2,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        height: 44,
-        justifyContent: 'center',
-      },
-      ios: {
-        height: 44,
-        justifyContent: 'center',
-      },
-      android: {
-        height: 50,
-      },
-    }),
-  },
-  picker: {
-    ...Platform.select({
-      web: {
-        height: 44,
-        fontSize: 16,
-      },
-      ios: {
-        height: 44,
-      },
-      android: {
-        height: 50,
-      },
-    }),
-  },
   sliderContainer: {
     paddingHorizontal: 8,
     paddingVertical: 8,
   },
-  pickerItem: {
-    fontSize: 16,
-    height: 120,
+  webSliderContainer: {
+    paddingHorizontal: 8,
+    paddingVertical: 16,
   },
   rangeDisplay: {
     paddingVertical: 8,
@@ -248,4 +313,55 @@ const styles = StyleSheet.create({
     color: '#e91e63',
   },
 });
+
+// Estilos web usando objetos de estilo inline (compatibles con React Native Web)
+const webStyles: { [key: string]: React.CSSProperties } = {
+  sliderWrapper: {
+    position: 'relative',
+    width: '100%',
+    height: '40px',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 8px',
+  },
+  trackContainer: {
+    position: 'absolute',
+    width: 'calc(100% - 16px)',
+    height: '4px',
+    backgroundColor: '#e0e0e0',
+    borderRadius: '2px',
+    top: '50%',
+    left: '8px',
+    transform: 'translateY(-50%)',
+  },
+  trackBackground: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#e0e0e0',
+    borderRadius: '2px',
+  },
+  trackActive: {
+    position: 'absolute',
+    height: '100%',
+    backgroundColor: '#e91e63',
+    borderRadius: '2px',
+    top: 0,
+  },
+  input: {
+    position: 'absolute',
+    width: 'calc(100% - 16px)',
+    height: '40px',
+    background: 'transparent',
+    pointerEvents: 'none',
+    WebkitAppearance: 'none',
+    appearance: 'none',
+    outline: 'none',
+    left: '8px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    margin: 0,
+    padding: 0,
+  },
+};
 
