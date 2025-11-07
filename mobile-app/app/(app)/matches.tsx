@@ -21,8 +21,10 @@ export default function MatchesScreen() {
   const router = useRouter();
   const {
     matches,
+    activeChatsCount,
     isLoading,
     setMatches,
+    setActiveChatsCount,
     setLoading,
     setError,
     clearError,
@@ -109,6 +111,7 @@ export default function MatchesScreen() {
       });
 
       setMatches(normalizedMatches);
+      setActiveChatsCount(result.data.activeChatsCount);
     } catch (error) {
       console.error('Failed to load matches', error);
       const message = 'Network error. Please try again.';
@@ -123,7 +126,7 @@ export default function MatchesScreen() {
       isInitialLoad.current = false;
       isFetching.current = false;
     }
-  }, [clearError, matchApi, setError, setLoading, setMatches, tokens, user]);
+  }, [clearError, matchApi, setError, setLoading, setMatches, setActiveChatsCount, tokens, user]);
 
   useFocusEffect(
     useCallback(() => {

@@ -98,6 +98,9 @@ export class SupabaseMatchRepository implements MatchRepository {
         createdAt: chatRow.created_at,
       };
 
+      // Update active_chats_count for both users
+      await this.updateActiveChatsCount([matchData.userId1, matchData.userId2]);
+
       return success(match);
     } catch (error) {
       return failure(
@@ -208,6 +211,23 @@ export class SupabaseMatchRepository implements MatchRepository {
 
   async delete(matchId: string): Promise<Result<void, DomainError>> {
     try {
+      // Get user IDs before deleting participants (needed to update active_chats_count)
+      const { data: participantRows, error: fetchError } = await this.client
+        .from('chat_participants')
+        .select('user_id')
+        .eq('chat_id', matchId);
+
+      if (fetchError) {
+        return failure(
+          new InternalError(
+            `Failed to fetch chat participants: ${this.formatSupabaseError(fetchError)}`,
+          ),
+        );
+      }
+
+      const userIds =
+        participantRows?.map((row: { user_id: string }) => row.user_id) ?? [];
+
       // Delete chat participants first (due to foreign key constraints)
       const { error: participantsError } = await this.client
         .from('chat_participants')
@@ -248,6 +268,11 @@ export class SupabaseMatchRepository implements MatchRepository {
             `Failed to delete chat: ${this.formatSupabaseError(chatError)}`,
           ),
         );
+      }
+
+      // Update active_chats_count for both users
+      if (userIds.length > 0) {
+        await this.updateActiveChatsCount(userIds);
       }
 
       return success(undefined);
@@ -377,6 +402,166 @@ export class SupabaseMatchRepository implements MatchRepository {
       url,
       serviceRoleKey,
     };
+  }
+
+  /**
+   * Gets active_chats_count for given users
+   */
+  async getActiveChatsCount(userIds: string[]): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    
+    if (userIds.length === 0) {
+      return result;
+    }
+
+    const { data, error } = await this.client
+      .from('users')
+      .select('id, active_chats_count')
+      .in('id', userIds);
+
+    if (error) {
+      console.error(
+        `[SupabaseMatchRepository] Failed to get active_chats_count:`,
+        this.formatSupabaseError(error),
+      );
+      // Return map with 0 for all users on error
+      for (const userId of userIds) {
+        result.set(userId, 0);
+      }
+      return result;
+    }
+
+    for (const row of data ?? []) {
+      result.set(row.id, row.active_chats_count ?? 0);
+    }
+
+    // Set 0 for users not found
+    for (const userId of userIds) {
+      if (!result.has(userId)) {
+        result.set(userId, 0);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Updates active_chats_count for given users by counting their active chats
+   * (chats that are not blocked)
+   * Public method to be called from use cases
+   */
+  async updateActiveChatsCountForUsers(userIds: string[]): Promise<void> {
+    await this.updateActiveChatsCount(userIds);
+  }
+
+  /**
+   * Updates active_chats_count for given users by counting their active chats
+   * (chats that are not blocked)
+   */
+  private async updateActiveChatsCount(userIds: string[]): Promise<void> {
+    for (const userId of userIds) {
+      // Count active chats: chats where user is participant AND not blocked
+      const { data: participantRows, error: participantError } = await this.client
+        .from('chat_participants')
+        .select('chat_id')
+        .eq('user_id', userId);
+
+      if (participantError) {
+        console.error(
+          `[SupabaseMatchRepository] Failed to count chats for user ${userId}:`,
+          this.formatSupabaseError(participantError),
+        );
+        continue;
+      }
+
+      const chatIds =
+        participantRows?.map((row: { chat_id: string }) => row.chat_id) ?? [];
+
+      if (chatIds.length === 0) {
+        // No chats, set to 0
+        await this.client
+          .from('users')
+          .update({ active_chats_count: 0 })
+          .eq('id', userId);
+        continue;
+      }
+
+      // Get all participants for these chats to check for blocks
+      const { data: allParticipants, error: allParticipantsError } =
+        await this.client
+          .from('chat_participants')
+          .select('chat_id, user_id')
+          .in('chat_id', chatIds);
+
+      if (allParticipantsError) {
+        console.error(
+          `[SupabaseMatchRepository] Failed to fetch all participants for user ${userId}:`,
+          this.formatSupabaseError(allParticipantsError),
+        );
+        continue;
+      }
+
+      // Group participants by chat_id
+      const chatParticipantsMap = new Map<string, string[]>();
+      for (const participant of allParticipants ?? []) {
+        const chatId = participant.chat_id;
+        if (!chatParticipantsMap.has(chatId)) {
+          chatParticipantsMap.set(chatId, []);
+        }
+        chatParticipantsMap.get(chatId)!.push(participant.user_id);
+      }
+
+      // Get all blocks involving this user
+      const { data: blocks, error: blocksError } = await this.client
+        .from('blocked_users')
+        .select('blocker_id, blocked_id')
+        .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+
+      if (blocksError) {
+        console.error(
+          `[SupabaseMatchRepository] Failed to fetch blocks for user ${userId}:`,
+          this.formatSupabaseError(blocksError),
+        );
+        continue;
+      }
+
+      const blockedUserIds = new Set<string>();
+      for (const block of blocks ?? []) {
+        if (block.blocker_id === userId) {
+          blockedUserIds.add(block.blocked_id);
+        } else {
+          blockedUserIds.add(block.blocker_id);
+        }
+      }
+
+      // Count active chats (chats without blocks)
+      let activeChatsCount = 0;
+      for (const [, participantIds] of chatParticipantsMap.entries()) {
+        // Get the other participant (not the current user)
+        const otherParticipantId = participantIds.find((id) => id !== userId);
+        if (!otherParticipantId) {
+          continue;
+        }
+
+        // Check if there's a block between this user and the other participant
+        if (!blockedUserIds.has(otherParticipantId)) {
+          activeChatsCount++;
+        }
+      }
+
+      // Update active_chats_count
+      const { error: updateError } = await this.client
+        .from('users')
+        .update({ active_chats_count: activeChatsCount })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error(
+          `[SupabaseMatchRepository] Failed to update active_chats_count for user ${userId}:`,
+          this.formatSupabaseError(updateError),
+        );
+      }
+    }
   }
 
   private formatSupabaseError(error: unknown): string {

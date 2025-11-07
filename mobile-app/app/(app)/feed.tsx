@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { ApiClient } from '../../src/data/api/apiClient';
 import { useMatchesStore } from '../../src/domain/stores/matchesStore';
 import { MatchSchema } from '../../src/domain/entities/Match';
 import { showAlert } from '../../src/utils/showAlert';
+import { MatchApi } from '../../src/data/api/matchApi';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 const FALLBACK_PHOTO = require('../../assets/placeholder.png');
@@ -74,11 +75,34 @@ export default function FeedScreen() {
   } = useFeedStore();
   const { tokens, user } = useAuthStore();
   const addMatch = useMatchesStore((state) => state.addMatch);
+  const activeChatsCount = useMatchesStore((state) => state.activeChatsCount);
+  const setActiveChatsCount = useMatchesStore((state) => state.setActiveChatsCount);
   const [isLiking, setIsLiking] = useState(false);
   const [isPassing, setIsPassing] = useState(false);
 
   const apiClient = new ApiClient(API_URL);
   const feedApi = new FeedApi(apiClient);
+  const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
+
+  // Load matches to get activeChatsCount
+  useEffect(() => {
+    const loadMatchesForCount = async () => {
+      if (!tokens?.accessToken || !user?.id) {
+        return;
+      }
+
+      try {
+        const result = await matchApi.getMatches(tokens.accessToken);
+        if (result.success) {
+          setActiveChatsCount(result.data.activeChatsCount);
+        }
+      } catch (error) {
+        console.error('Failed to load matches count', error);
+      }
+    };
+
+    loadMatchesForCount();
+  }, [tokens?.accessToken, user?.id, matchApi, setActiveChatsCount]);
 
   useEffect(() => {
     loadFeed();
@@ -206,6 +230,27 @@ export default function FeedScreen() {
     );
   }
 
+  // Show blocked message if user has 3+ active chats
+  if (activeChatsCount >= 3) {
+    return (
+      <View style={styles.emptyContainer}>
+        <View style={styles.emptyIconContainer}>
+          <Text style={styles.emptyIcon}>💬</Text>
+        </View>
+        <Text style={styles.emptyTitle}>Conoce a tus matches</Text>
+        <Text style={styles.emptySubtext}>
+          Tienes {activeChatsCount} conversaciones activas. Conecta con tus matches antes de descubrir más personas.
+        </Text>
+        <TouchableOpacity 
+          style={styles.discoverButton}
+          onPress={() => router.push('/(app)/matches')}
+        >
+          <Text style={styles.discoverButtonText}>Ver mis matches</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   if (!currentUser) {
     return (
       <View style={styles.emptyContainer}>
@@ -295,6 +340,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     paddingHorizontal: 20,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  emptyIcon: {
+    fontSize: 32,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  discoverButton: {
+    backgroundColor: '#e91e63',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    shadowColor: '#e91e63',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  discoverButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   emptyText: {
     fontSize: 18,

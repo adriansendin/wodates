@@ -18,7 +18,7 @@ export class MatchesController {
     }
 
     return reply.send({
-      matches: result.data.map((match) => ({
+      matches: result.data.matches.map((match) => ({
         id: match.id,
         userId1: match.userId1,
         userId2: match.userId2,
@@ -27,6 +27,7 @@ export class MatchesController {
         lastMessage: match.lastMessage ?? null,
         unreadCount: match.unreadCount,
       })),
+      activeChatsCount: result.data.activeChatsCount,
     });
   }
 }

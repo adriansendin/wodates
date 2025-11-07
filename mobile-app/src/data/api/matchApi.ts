@@ -30,8 +30,8 @@ export class MatchApi {
 
   async getMatches(
     token: string,
-  ): Promise<Result<{ matches: MatchOverview[] }, DomainError>> {
-    const response = await this.apiClient.get<{ matches: unknown }>(
+  ): Promise<Result<{ matches: MatchOverview[]; activeChatsCount: number }, DomainError>> {
+    const response = await this.apiClient.get<{ matches: unknown; activeChatsCount: unknown }>(
       '/matches',
       token,
     );
@@ -43,6 +43,7 @@ export class MatchApi {
     const parseResult = z
       .object({
         matches: z.array(MatchOverviewSchema),
+        activeChatsCount: z.number().nonnegative(),
       })
       .safeParse(response.data);
 

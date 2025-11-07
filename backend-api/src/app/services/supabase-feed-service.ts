@@ -70,6 +70,7 @@ export class SupabaseFeedService {
         .from('users')
         .select('id, birthDate, gender, bio, avatar_url') // Removed 'name' - comes from auth.users
         .neq('id', userId)
+        .lt('active_chats_count', 3) // Exclude users with 3 or more active chats
         .range(offset, offset + limit - 1);
 
       if (genderFilter !== 'any') {

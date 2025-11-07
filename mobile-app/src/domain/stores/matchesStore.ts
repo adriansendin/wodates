@@ -13,12 +13,14 @@ export interface MatchWithUser extends Match {
 
 interface MatchesState {
   matches: MatchWithUser[];
+  activeChatsCount: number;
   isLoading: boolean;
   error: string | null;
 }
 
 interface MatchesActions {
   setMatches: (matches: MatchWithUser[]) => void;
+  setActiveChatsCount: (count: number) => void;
   addMatch: (match: MatchWithUser) => void;
   updateMatch: (matchId: string, updates: Partial<MatchWithUser>) => void;
   setLoading: (loading: boolean) => void;
@@ -38,11 +40,13 @@ const sortMatches = (matches: MatchWithUser[]) =>
 export const useMatchesStore = create<MatchesState & MatchesActions>((set, get) => ({
   // State
   matches: [],
+  activeChatsCount: 0,
   isLoading: false,
   error: null,
 
   // Actions
   setMatches: (matches) => set({ matches: sortMatches(matches) }),
+  setActiveChatsCount: (count) => set({ activeChatsCount: count }),
   addMatch: (match) => set((state) => {
     const exists = state.matches.some((existing) => existing.id === match.id);
 
@@ -68,6 +72,7 @@ export const useMatchesStore = create<MatchesState & MatchesActions>((set, get) 
   clearError: () => set({ error: null }),
   reset: () => set({ 
     matches: [], 
+    activeChatsCount: 0,
     isLoading: false, 
     error: null 
   }),

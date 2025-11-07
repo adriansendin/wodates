@@ -39,6 +39,11 @@ type AuthUserRow = {
   raw_user_meta_data: Record<string, unknown> | null;
 };
 
+type MatchOverviewResult = {
+  matches: MatchOverview[];
+  activeChatsCount: number;
+};
+
 export class MatchOverviewService {
   private readonly client: SupabaseClient;
 
@@ -57,15 +62,25 @@ export class MatchOverviewService {
     });
   }
 
-  async list(userId: string): Promise<Result<MatchOverview[], DomainError>> {
+  async list(userId: string): Promise<Result<MatchOverviewResult, DomainError>> {
     const matchesResult = await this.matchRepository.findByUserId(userId);
     if (!matchesResult.success) {
       return failure(matchesResult.error);
     }
 
     const matches = matchesResult.data;
+    
+    // Get active_chats_count for the current user
+    const activeChatsCounts = await this.matchRepository.getActiveChatsCount([
+      userId,
+    ]);
+    const userActiveChatsCount = activeChatsCounts.get(userId) ?? 0;
+
     if (matches.length === 0) {
-      return success([]);
+      return success({
+        matches: [],
+        activeChatsCount: userActiveChatsCount,
+      });
     }
 
     // Filter out matches where there's a block relationship
@@ -83,7 +98,10 @@ export class MatchOverviewService {
     }
 
     if (filteredMatches.length === 0) {
-      return success([]);
+      return success({
+        matches: [],
+        activeChatsCount: userActiveChatsCount,
+      });
     }
 
     const otherUserIds = new Set<string>();
@@ -167,7 +185,10 @@ export class MatchOverviewService {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
-    return success(overviews);
+    return success({
+      matches: overviews,
+      activeChatsCount: userActiveChatsCount,
+    });
   }
 
   /**

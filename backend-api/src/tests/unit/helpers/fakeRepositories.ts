@@ -155,6 +155,22 @@ export class TestMatchRepository implements MatchRepository {
     this.matches.delete(matchId);
     return success(undefined);
   }
+
+  async updateActiveChatsCountForUsers(_userIds: string[]): Promise<void> {
+    // No-op for tests
+  }
+
+  async getActiveChatsCount(userIds: string[]): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    for (const userId of userIds) {
+      // Count matches for this user
+      const userMatches = Array.from(this.matches.values()).filter(
+        (match) => match.userId1 === userId || match.userId2 === userId
+      );
+      result.set(userId, userMatches.length);
+    }
+    return result;
+  }
 }
 
 export class TestMessageRepository implements MessageRepository {

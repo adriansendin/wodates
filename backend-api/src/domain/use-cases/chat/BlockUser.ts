@@ -58,6 +58,12 @@ export class BlockUser {
       return blockResult;
     }
 
+    // Update active_chats_count for both users (blocked chat no longer counts as active)
+    await this.matchRepository.updateActiveChatsCountForUsers([
+      blockerId,
+      blockedId,
+    ]);
+
     // The match is preserved in the database but will be filtered out
     // by the match-overview-service based on the blocked_users table
     
