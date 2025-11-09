@@ -17,7 +17,7 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
-      router.replace('/(app)/feed');
+      router.replace('/(app)/matches');
     }
   }, [user, router]);
 

@@ -135,11 +135,11 @@ export default function CompleteScreen() {
       // Limpiar el store de registro
       resetRegistration();
 
-      // Redirigir al perfil
+      // Redirigir a matches
       setFeedback({ type: 'success', message: '¡Bienvenido! Tu cuenta ha sido creada exitosamente' });
       
       setTimeout(() => {
-        router.replace('/(app)/profile');
+        router.replace('/(app)/matches');
       }, 1500);
 
     } catch (err) {

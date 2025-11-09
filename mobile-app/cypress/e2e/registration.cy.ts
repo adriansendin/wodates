@@ -84,7 +84,7 @@ describe('Registration', () => {
     cy.get('input[type="password"]').should('be.visible');
   });
 
-  it('creates an account and redirects to the profile screen', () => {
+  it('creates an account and redirects to the matches screen', () => {
     cy.intercept('POST', '**/auth/register', {
       statusCode: 200,
       body: registerResponse,
@@ -108,7 +108,7 @@ describe('Registration', () => {
     cy.wait('@updateProfile');
     cy.wait('@getProfile');
 
-    cy.location('pathname', { timeout: 10000 }).should('include', '/profile');
+    cy.location('pathname', { timeout: 10000 }).should('include', '/matches');
   });
 
   it('shows the backend error when registration fails', () => {

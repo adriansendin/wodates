@@ -1,5 +1,5 @@
 import { Result, success, failure } from '../../domain/Result';
-import { DomainError, ConflictError, InternalError } from '../../domain/errors/DomainError';
+import { DomainError, InternalError } from '../../domain/errors/DomainError';
 import { MatchRepository } from '../../domain/repositories/MatchRepository';
 import { LikeRepository } from '../../domain/repositories/LikeRepository';
 import { DocLoveHelper } from './doc-love-helper';

@@ -73,7 +73,7 @@ export default function LoginScreen() {
       };
 
       login(normalizedUser, tokens);
-      router.replace('/(app)/feed');
+      router.replace('/(app)/matches');
     } catch (err) {
       console.error('Login error', err);
       const message = 'Error de red. Intentalo de nuevo.';

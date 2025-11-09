@@ -5,7 +5,7 @@ export default function AuthLayout() {
   const { user } = useAuthStore();
 
   if (user) {
-    return <Redirect href="/(app)/feed" />;
+    return <Redirect href="/(app)/matches" />;
   }
 
   return (

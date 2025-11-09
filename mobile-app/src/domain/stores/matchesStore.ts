@@ -3,7 +3,9 @@ import { Match } from '../entities/Match';
 import { User } from '../entities/User';
 import { Message } from '../entities/Message';
 
-export type MatchUser = Pick<User, 'id' | 'name'> & Partial<User>;
+export type MatchUser = Pick<User, 'id' | 'name'> & Partial<User> & {
+  isBot?: boolean;
+};
 
 export interface MatchWithUser extends Match {
   otherUser: MatchUser;

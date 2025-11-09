@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,7 @@ export default function MatchesScreen() {
 
   const isInitialLoad = useRef(true);
   const isFetching = useRef(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const loadMatches = useCallback(async () => {
     const shouldShowLoader = isInitialLoad.current;
@@ -46,6 +47,7 @@ export default function MatchesScreen() {
         setLoading(false);
         isInitialLoad.current = false;
       }
+      setHasLoadedOnce(true);
       return;
     }
 
@@ -113,6 +115,7 @@ export default function MatchesScreen() {
 
       setMatches(normalizedMatches);
       setActiveChatsCount(result.data.activeChatsCount);
+      setHasLoadedOnce(true);
     } catch (error) {
       console.error('Failed to load matches', error);
       const message = 'Network error. Please try again.';
@@ -123,6 +126,7 @@ export default function MatchesScreen() {
     } finally {
       if (shouldShowLoader) {
         setLoading(false);
+        setHasLoadedOnce(true);
       }
       isInitialLoad.current = false;
       isFetching.current = false;
@@ -197,11 +201,11 @@ export default function MatchesScreen() {
     </TouchableOpacity>
   );
 
-  if (isLoading) {
+  if (isLoading || !hasLoadedOnce) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#e91e63" />
-        <Text style={styles.loadingText}>Loading matches...</Text>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -209,20 +213,9 @@ export default function MatchesScreen() {
   return (
     <View style={styles.container}>
       {matches.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconContainer}>
-            <Text style={styles.emptyIcon}>💕</Text>
-          </View>
-          <Text style={styles.emptyTitle}>No matches yet</Text>
-          <Text style={styles.emptySubtext}>
-            Keep swiping in Discover to find your perfect match!
-          </Text>
-          <TouchableOpacity 
-            style={styles.discoverButton}
-            onPress={() => router.push('/(app)/feed')}
-          >
-            <Text style={styles.discoverButtonText}>Start Discovering</Text>
-          </TouchableOpacity>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#e91e63" />
+          <Text style={styles.loadingText}>Loading ...</Text>
         </View>
       ) : (
         <FlatList 
@@ -255,61 +248,6 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingVertical: 8,
-  },
-  
-  // Estado vacío mejorado
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  emptyIcon: {
-    fontSize: 32,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-  },
-  discoverButton: {
-    backgroundColor: '#e91e63',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 25,
-    shadowColor: '#e91e63',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  discoverButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   
   // Tarjetas de matches rediseñadas
