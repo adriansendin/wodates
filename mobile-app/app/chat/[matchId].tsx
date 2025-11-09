@@ -76,6 +76,7 @@ export default function ChatScreen() {
     name?: string | string[];
     photoUrl?: string | string[];
     otherUserId?: string | string[];
+    isBot?: string | string[];
   }>();
 
   const matchId = useMemo(() => {
@@ -97,6 +98,12 @@ export default function ChatScreen() {
     if (!params.photoUrl) return undefined;
     return Array.isArray(params.photoUrl) ? params.photoUrl[0] : params.photoUrl;
   }, [params.photoUrl]);
+
+  const isBot = useMemo(() => {
+    if (!params.isBot) return false;
+    const isBotValue = Array.isArray(params.isBot) ? params.isBot[0] : params.isBot;
+    return isBotValue === 'true';
+  }, [params.isBot]);
 
   const router = useRouter();
   const { tokens, user } = useAuthStore();
@@ -433,14 +440,15 @@ export default function ChatScreen() {
               </Text>
             </TouchableOpacity>
           ),
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => setShowMenu(true)}
-              style={styles.menuButton}
-            >
-              <Ionicons name="ellipsis-vertical" size={24} color="#333" />
-            </TouchableOpacity>
-          ),
+          headerRight: () =>
+            !isBot ? (
+              <TouchableOpacity
+                onPress={() => setShowMenu(true)}
+                style={styles.menuButton}
+              >
+                <Ionicons name="ellipsis-vertical" size={24} color="#333" />
+              </TouchableOpacity>
+            ) : null,
         }}
       />
       <SafeAreaView style={styles.safeArea}>

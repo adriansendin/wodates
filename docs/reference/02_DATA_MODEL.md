@@ -63,3 +63,4 @@ erDiagram
 - **public.chats / chat_participants / messages:** comunicación entre usuarios.  
 - **public.interactions:** registros de likes/passes que generan matches.  
 - **public.blocked_users:** usuarios bloqueados.
+

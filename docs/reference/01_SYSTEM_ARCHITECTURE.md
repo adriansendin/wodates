@@ -47,3 +47,4 @@ flowchart LR
 ## 2.5 Tests
 - **Unitarios e integración:** Jest/TSX en backend.  
 - **E2E:** Cypress (auth, registro, chat, feed).
+

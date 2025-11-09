@@ -43,6 +43,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
                             photoUrl: { type: ['string', 'null'], format: 'uri' },
                             birthDate: { type: ['string', 'null'], format: 'date' },
                             gender: { type: ['string', 'null'] },
+                            isBot: { type: 'boolean' },
                           },
                           required: ['id', 'name'],
                         },

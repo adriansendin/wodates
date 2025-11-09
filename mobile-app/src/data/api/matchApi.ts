@@ -14,6 +14,7 @@ const MatchUserSchema = z
     photoUrl: z.string().url().nullable().optional(),
     birthDate: z.string().nullable().optional(),
     gender: z.string().nullable().optional(),
+    isBot: z.boolean().optional(),
   })
   .nullable();
 

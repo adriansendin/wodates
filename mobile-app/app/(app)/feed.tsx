@@ -178,6 +178,7 @@ export default function FeedScreen() {
               name: currentUser.name,
               photoUrl: currentUser.photoUrl ?? '',
               otherUserId: currentUser.id,
+              isBot: 'false', // Users from feed are never bots
             },
           });
         } else {

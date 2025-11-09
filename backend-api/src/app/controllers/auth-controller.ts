@@ -3,9 +3,13 @@ import { RegisterSchema, LoginSchema } from '../../domain/entities/Auth';
 import { DomainError } from '../../domain/errors/DomainError';
 import { ZodError } from 'zod';
 import { AuthService } from '../services/auth-service';
+import { SystemUserService } from '../services/system-user-service';
 
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly systemUserService?: SystemUserService,
+  ) {}
 
   async register(request: FastifyRequest, reply: FastifyReply) {
     try {
@@ -13,6 +17,31 @@ export class AuthController {
 
       const user = await this.authService.registerUser(userData);
       const token = this.generateToken(user.id, user.email);
+
+      // Create welcome match with Doc Love (non-blocking)
+      if (this.systemUserService) {
+        this.systemUserService
+          .createWelcomeMatch(user.id)
+          .then((result) => {
+            if (result.success) {
+              request.log.info(
+                { userId: user.id, matchId: result.data.id },
+                'Welcome match created with Doc Love',
+              );
+            } else {
+              request.log.warn(
+                { userId: user.id, error: result.error },
+                'Failed to create welcome match with Doc Love',
+              );
+            }
+          })
+          .catch((error) => {
+            request.log.error(
+              { userId: user.id, error },
+              'Unexpected error creating welcome match',
+            );
+          });
+      }
 
       return reply.status(201).send({
         user: this.buildResponseUser(user),

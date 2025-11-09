@@ -3,6 +3,10 @@ import { AuthController } from '../controllers/auth-controller';
 import { SupabaseAuthService } from '../services/supabase-auth-service';
 import { GENDER_VALUES } from '../../domain/entities/User';
 import { AuthService } from '../services/auth-service';
+import { SystemUserService } from '../services/system-user-service';
+import { DocLoveHelper } from '../services/doc-love-helper';
+import { SupabaseLikeRepository } from '../../data/repositories/SupabaseLikeRepository';
+import { SupabaseMatchRepository } from '../../data/repositories/SupabaseMatchRepository';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -19,7 +23,18 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
   options: AuthRoutesOptions,
 ) => {
   const authService = options?.authService ?? new SupabaseAuthService();
-  const authController = new AuthController(authService);
+  
+  // Initialize SystemUserService for welcome matches with Doc Love
+  const docLoveHelper = new DocLoveHelper();
+  const likeRepository = new SupabaseLikeRepository();
+  const matchRepository = new SupabaseMatchRepository();
+  const systemUserService = new SystemUserService(
+    docLoveHelper,
+    likeRepository,
+    matchRepository,
+  );
+  
+  const authController = new AuthController(authService, systemUserService);
 
   fastify.post('/register', {
     schema: {

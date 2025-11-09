@@ -93,6 +93,7 @@ export default function MatchesScreen() {
               photoUrl: match.otherUser.photoUrl ?? undefined,
               gender: normalizeGender(match.otherUser.gender ?? undefined),
               birthDate: match.otherUser.birthDate ?? undefined,
+              isBot: match.otherUser.isBot ?? false,
             }
           : {
               id: otherUserId,
@@ -150,6 +151,7 @@ export default function MatchesScreen() {
         name: match.otherUser?.name ?? 'Chat',
         photoUrl: match.otherUser?.photoUrl ?? '',
         otherUserId: match.otherUser?.id ?? '',
+        isBot: match.otherUser?.isBot ? 'true' : 'false',
       },
     });
   };

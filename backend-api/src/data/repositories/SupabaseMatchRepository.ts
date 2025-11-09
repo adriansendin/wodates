@@ -534,12 +534,46 @@ export class SupabaseMatchRepository implements MatchRepository {
         }
       }
 
-      // Count active chats (chats without blocks)
+      // Get is_bot status for all other participants to exclude bot chats
+      const otherParticipantIds = Array.from(
+        new Set(
+          Array.from(chatParticipantsMap.values())
+            .flat()
+            .filter((id) => id !== userId),
+        ),
+      );
+
+      const { data: userRows, error: usersError } = await this.client
+        .from('users')
+        .select('id, is_bot')
+        .in('id', otherParticipantIds);
+
+      if (usersError) {
+        console.error(
+          `[SupabaseMatchRepository] Failed to fetch user bot status for user ${userId}:`,
+          this.formatSupabaseError(usersError),
+        );
+        continue;
+      }
+
+      const botUserIds = new Set<string>();
+      for (const userRow of userRows ?? []) {
+        if (userRow.is_bot === true) {
+          botUserIds.add(userRow.id);
+        }
+      }
+
+      // Count active chats (chats without blocks AND without bots)
       let activeChatsCount = 0;
       for (const [, participantIds] of chatParticipantsMap.entries()) {
         // Get the other participant (not the current user)
         const otherParticipantId = participantIds.find((id) => id !== userId);
         if (!otherParticipantId) {
+          continue;
+        }
+
+        // Exclude chats with bots
+        if (botUserIds.has(otherParticipantId)) {
           continue;
         }
 

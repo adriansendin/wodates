@@ -11,3 +11,4 @@
 3. **Feature:** Subida de avatar pública  
    - Endpoint `/users/me/avatar`.  
    - Integración con Supabase Storage bucket `avatars`.
+

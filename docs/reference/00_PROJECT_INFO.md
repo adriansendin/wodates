@@ -64,3 +64,4 @@ Ejecutar con:
 cd mobile-app
 npx cypress run
 ```
+

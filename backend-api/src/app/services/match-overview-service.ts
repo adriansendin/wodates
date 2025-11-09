@@ -20,6 +20,7 @@ type MatchOverview = Match & {
     photoUrl?: string | null;
     birthDate?: string | null;
     gender?: string | null;
+    isBot?: boolean;
   } | null;
   lastMessage?: Message;
   unreadCount: number;
@@ -31,6 +32,7 @@ type UserRow = {
   birthDate: string | null;
   gender: string | null;
   avatar_url: string | null;
+  is_bot: boolean | null;
 };
 
 type AuthUserRow = {
@@ -115,7 +117,7 @@ export class MatchOverviewService {
     // Get profile data from public.users
     const { data: userRows, error: userError } = await this.client
       .from('users')
-      .select('id, bio, birthDate, gender, avatar_url')
+      .select('id, bio, birthDate, gender, avatar_url, is_bot')
       .in('id', Array.from(otherUserIds));
 
     if (userError) {
@@ -172,6 +174,7 @@ export class MatchOverviewService {
               photoUrl: this.normalizeUrl(otherUserRow.avatar_url),
               birthDate: otherUserRow.birthDate,
               gender: otherUserRow.gender,
+              isBot: otherUserRow.is_bot ?? false,
             }
           : null,
         lastMessage: lastMessage ?? undefined,

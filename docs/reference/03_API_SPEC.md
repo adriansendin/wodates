@@ -27,7 +27,7 @@ paths:
       summary: Obtener lista de usuarios según filtros de edad/género/preferencia
   /likes:
     post:
-      summary: Dar “like” a otro usuario
+      summary: Dar "like" a otro usuario
   /passes:
     post:
       summary: Pasar usuario
@@ -43,3 +43,4 @@ paths:
 
 **Base URL:** `http://localhost:3000`  
 Documentación Swagger disponible en `/documentation`.
+
