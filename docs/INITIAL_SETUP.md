@@ -34,14 +34,14 @@ Esto crea automáticamente:
 ```sql
 UPDATE public.users
 SET is_bot = TRUE,
-    show_in_feed = FALSE
+    show_bio_in_feed = FALSE
 WHERE id IN (
   SELECT id FROM auth.users WHERE email = 'doclove@wodates.com'
 );
 ```
 
 **Por qué:** Marca a Doc Love como bot para que:
-- No aparezca en el feed (`show_in_feed = FALSE`)
+- No aparezca en el feed (`show_bio_in_feed = FALSE`)
 - Sus chats no cuenten para el límite de 3 (`is_bot = TRUE`)
 - El código pueda identificarlo correctamente
 
@@ -51,11 +51,11 @@ Después del deployment, verificar:
 
 1. Doc Love existe y está marcado como bot:
    ```sql
-   SELECT id, is_bot, show_in_feed 
+   SELECT id, is_bot, show_bio_in_feed 
    FROM public.users 
    WHERE id IN (SELECT id FROM auth.users WHERE email = 'doclove@wodates.com');
    ```
-   Debe mostrar: `is_bot = TRUE`, `show_in_feed = FALSE`
+   Debe mostrar: `is_bot = TRUE`, `show_bio_in_feed = FALSE`
 
 2. Usuarios nuevos tienen match automático con Doc Love (se crea automáticamente al registrarse)
 

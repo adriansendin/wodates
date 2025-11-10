@@ -27,7 +27,7 @@ END$$;
 -- Tabla: users
 CREATE TABLE IF NOT EXISTS public.users (
   active_chats_count integer DEFAULT 0 CHECK (active_chats_count >= 0),
-  show_in_feed boolean DEFAULT TRUE,
+  show_bio_in_feed boolean DEFAULT TRUE,
   id uuid DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   "birthDate" date,
   gender public.user_gender,
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 -- Índices para users
 CREATE INDEX IF NOT EXISTS idx_users_min_age ON public.users (min_age);
 CREATE INDEX IF NOT EXISTS idx_users_max_age ON public.users (max_age);
-CREATE INDEX IF NOT EXISTS idx_users_show_in_feed ON public.users (show_in_feed);
+CREATE INDEX IF NOT EXISTS idx_users_show_bio_in_feed ON public.users (show_bio_in_feed);
 CREATE INDEX IF NOT EXISTS idx_users_gender ON public.users (gender);
 
 -- Tabla: interactions

@@ -29,7 +29,7 @@ type UpdateUserProfileInput = {
   bio?: string | null;
   city?: string | null;
   avatarUrl?: string | null;
-  show_in_feed?: boolean | null;
+  show_bio_in_feed?: boolean | null;
 };
 
 type FakeUserProfile = {
@@ -44,7 +44,7 @@ type FakeUserProfile = {
   bio: string | null;
   city: string | null;
   avatarUrl: string | null;
-  show_in_feed: boolean | null;
+  show_bio_in_feed: boolean | null;
 };
 
 class FakeUserService {
@@ -93,8 +93,8 @@ class FakeUserService {
     if ('avatarUrl' in input) {
       profile.avatarUrl = input.avatarUrl ?? null;
     }
-    if ('show_in_feed' in input) {
-      profile.show_in_feed = input.show_in_feed ?? null;
+    if ('show_bio_in_feed' in input) {
+      profile.show_bio_in_feed = input.show_bio_in_feed ?? null;
     }
 
     this.profiles.set(userId, profile);
@@ -159,7 +159,7 @@ const UserProfileResponseSchema = z.object({
   bio: z.string().nullable(),
   city: z.string().nullable(),
   avatarUrl: z.string().nullable(),
-  show_in_feed: z.boolean().nullable(),
+  show_bio_in_feed: z.boolean().nullable(),
 });
 
 type RegisteredUser = {
@@ -390,7 +390,7 @@ function seedProfile(user: RegisteredUser, overrides: Partial<FakeUserProfile> =
     bio: null,
     city: profileData.location ?? null,
     avatarUrl: null,
-    show_in_feed: null,
+    show_bio_in_feed: null,
     ...overrides,
   });
 }

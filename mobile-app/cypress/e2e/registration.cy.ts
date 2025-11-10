@@ -30,7 +30,7 @@ const profileResponse = {
   bio: null,
   city: 'Madrid',
   avatarUrl: null,
-  show_in_feed: true,
+  show_bio_in_feed: true,
 };
 
 const completeRegistrationSteps = () => {

@@ -20,15 +20,15 @@ WHERE id IN (
   WHERE email = 'doclove@wodates.com'
 );
 
--- 4. Asegurar que Doc Love tiene show_in_feed = FALSE
+-- 4. Asegurar que Doc Love tiene show_bio_in_feed = FALSE
 UPDATE public.users
-SET show_in_feed = FALSE
+SET show_bio_in_feed = FALSE
 WHERE id IN (
   SELECT id 
   FROM auth.users 
   WHERE email = 'doclove@wodates.com'
 )
-AND (show_in_feed IS NULL OR show_in_feed = TRUE);
+AND (show_bio_in_feed IS NULL OR show_bio_in_feed = TRUE);
 
 COMMIT;
 

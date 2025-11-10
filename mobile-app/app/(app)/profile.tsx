@@ -54,7 +54,7 @@ type FormState = {
   max_age: number;
   bio: string;
   city: string;
-  show_in_feed: boolean;
+  show_bio_in_feed: boolean;
 };
 
 type Feedback = {
@@ -99,7 +99,7 @@ const emptyForm: FormState = {
   max_age: 99,
   bio: '',
   city: '',
-  show_in_feed: true,
+  show_bio_in_feed: true,
 };
 
 const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
@@ -109,7 +109,7 @@ const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
   max_age: nextProfile?.max_age ?? 99,
   bio: nextProfile?.bio ?? '',
   city: nextProfile?.city ?? '',
-  show_in_feed: nextProfile?.show_in_feed ?? true,
+  show_bio_in_feed: nextProfile?.show_bio_in_feed ?? true,
 });
 
 
@@ -339,13 +339,13 @@ export default function ProfileScreen() {
   }, [profileApi, tokens?.accessToken, isAutoSaving]);
 
   const handleShowInFeedToggle = () => {
-    const newValue = !form.show_in_feed;
+    const newValue = !form.show_bio_in_feed;
     setForm((prev) => ({
       ...prev,
-      show_in_feed: newValue,
+      show_bio_in_feed: newValue,
     }));
-    // Auto-save show_in_feed change
-    autoSave('show_in_feed', newValue);
+    // Auto-save show_bio_in_feed change
+    autoSave('show_bio_in_feed', newValue);
   };
 
   const handleSelectAvatar = () => {
@@ -439,8 +439,8 @@ export default function ProfileScreen() {
         case 'max_age':
           payload.max_age = value;
           break;
-        case 'show_in_feed':
-          payload.show_in_feed = value;
+        case 'show_bio_in_feed':
+          payload.show_bio_in_feed = value;
           break;
         default:
           return; // Don't auto-save other fields
@@ -859,7 +859,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={[
                 styles.toggle,
-                form.show_in_feed ? styles.toggleActive : styles.toggleInactive,
+                form.show_bio_in_feed ? styles.toggleActive : styles.toggleInactive,
               ]}
               onPress={handleShowInFeedToggle}
               activeOpacity={0.7}
@@ -867,7 +867,7 @@ export default function ProfileScreen() {
               <View
                 style={[
                   styles.toggleThumb,
-                  form.show_in_feed ? styles.toggleThumbActive : styles.toggleThumbInactive,
+                  form.show_bio_in_feed ? styles.toggleThumbActive : styles.toggleThumbInactive,
                 ]}
               />
             </TouchableOpacity>
