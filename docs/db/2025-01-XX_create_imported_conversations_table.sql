@@ -1,0 +1,22 @@
+-- ============================================================================
+-- Migración: Crear tabla imported_conversations
+-- ============================================================================
+-- 
+-- NOTA: Este SQL ya fue ejecutado previamente. Se mantiene aquí como referencia.
+-- La estructura real de la tabla está definida en el SQL ejecutado por el usuario.
+-- 
+-- Fecha: 2025-01-XX
+-- Versión: 1.0.0
+-- ============================================================================
+
+-- Este archivo es solo de referencia. El SQL real ya fue ejecutado y contiene:
+-- - Extensión pgcrypto para gen_random_uuid()
+-- - Tabla imported_conversations con columnas mínimas
+-- - Columnas adicionales con ALTER TABLE IF NOT EXISTS
+-- - Defaults para source, ingress, uploaded_at
+-- - RLS con políticas select, insert, delete
+-- - Índices y constraint de unicidad
+-- - Comentarios descriptivos
+--
+-- Ver el SQL ejecutado por el usuario para la estructura exacta.
+

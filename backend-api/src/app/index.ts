@@ -11,6 +11,7 @@ import { feedRoutes } from './routes/feed-routes';
 import { chatRoutes } from './routes/chat-routes';
 import { userRoutes } from './routes/user-routes';
 import { matchRoutes } from './routes/match-routes';
+import { storageRoutes } from './routes/storage-routes';
 import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
 import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
 import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepository';
@@ -110,6 +111,7 @@ async function buildApp() {
   await fastify.register(chatRoutes, { prefix: '/api/v1' });
   await fastify.register(matchRoutes, { prefix: '/api/v1' });
   await fastify.register(userRoutes, { prefix: '/api/v1' });
+  await fastify.register(storageRoutes, { prefix: '/api/v1' });
 
   // Health check
   fastify.get('/health', async () => {

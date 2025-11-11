@@ -24,6 +24,7 @@ import { useAuthStore } from '../../src/domain/stores/authStore';
 import { useChatStore } from '../../src/domain/stores/chatStore';
 import { Message, MessageSchema } from '../../src/domain/entities/Message';
 import { useMatchesStore } from '../../src/domain/stores/matchesStore';
+import { pickZipFile, uploadZipFile } from '../../src/data/api/zipUploadService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
@@ -126,6 +127,7 @@ export default function ChatScreen() {
   const [isBlocking, setIsBlocking] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isUploadingZip, setIsUploadingZip] = useState(false);
   const flatListRef = useRef<FlatList<Message>>(null);
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -367,6 +369,62 @@ export default function ChatScreen() {
     });
   }, [photoUrl, otherUserName, router]);
 
+  const handleAttachZip = useCallback(async () => {
+    console.log('[ChatScreen] handleAttachZip called', { userId: user?.id, isUploadingZip, isBlocked });
+    
+    if (!user?.id || isUploadingZip || isBlocked) {
+      console.log('[ChatScreen] Early return:', { hasUserId: !!user?.id, isUploadingZip, isBlocked });
+      return;
+    }
+
+    setIsUploadingZip(true);
+    clearError();
+
+    try {
+      console.log('[ChatScreen] Step 1: Picking ZIP file...');
+      // Step 1: Pick ZIP file
+      const pickResult = await pickZipFile();
+      console.log('[ChatScreen] Pick result:', { success: pickResult.success, hasData: !!pickResult.success && !!pickResult.data });
+      
+      if (!pickResult.success) {
+        console.error('[ChatScreen] Pick failed:', pickResult.error);
+        Alert.alert('Error', pickResult.error.message);
+        setError(pickResult.error.message);
+        return;
+      }
+
+      if (!pickResult.data) {
+        // User cancelled
+        console.log('[ChatScreen] User cancelled file pick');
+        setIsUploadingZip(false);
+        return;
+      }
+
+      console.log('[ChatScreen] Step 2: Uploading ZIP file...', { fileName: pickResult.data.name, fileSize: pickResult.data.size });
+      // Step 2: Upload ZIP file
+      const uploadResult = await uploadZipFile(pickResult.data, user.id);
+      console.log('[ChatScreen] Upload result:', { success: uploadResult.success });
+      
+      if (!uploadResult.success) {
+        console.error('[ChatScreen] Upload failed:', uploadResult.error);
+        Alert.alert('Error', uploadResult.error.message);
+        setError(uploadResult.error.message);
+        return;
+      }
+
+      // Step 3: Show success message
+      console.log('[ChatScreen] Upload successful!');
+      Alert.alert('Éxito', uploadResult.data);
+    } catch (error) {
+      console.error('[ChatScreen] Error uploading ZIP:', error);
+      const errorMessage = 'No se pudo subir. Inténtalo de nuevo.';
+      Alert.alert('Error', errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsUploadingZip(false);
+    }
+  }, [user?.id, isUploadingZip, isBlocked, clearError, setError]);
+
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isOwn = item.senderId === user?.id;
     const messageDate = new Date(item.createdAt);
@@ -498,6 +556,19 @@ export default function ChatScreen() {
             styles.inputContainer,
             Platform.OS === 'android' && { marginBottom: keyboardHeight > 0 ? keyboardHeight : 0 }
           ]}>
+            {isBot && (
+              <TouchableOpacity
+                style={styles.attachButton}
+                onPress={handleAttachZip}
+                disabled={isUploadingZip || isBlocked}
+              >
+                {isUploadingZip ? (
+                  <ActivityIndicator size="small" color="#666" />
+                ) : (
+                  <Ionicons name="attach" size={24} color="#666" />
+                )}
+              </TouchableOpacity>
+            )}
             <TextInput
               style={[styles.textInput, isBlocked && styles.textInputDisabled]}
               value={message}
@@ -669,6 +740,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
     minHeight: 60,
+  },
+  attachButton: {
+    marginRight: 8,
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   textInput: {
     flex: 1,
