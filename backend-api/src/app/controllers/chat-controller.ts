@@ -44,6 +44,11 @@ export class ChatController {
       const { matchId } = request.params as { matchId: string };
       const { content } = SendMessageSchema.parse(request.body);
       
+      request.log.info(
+        { matchId, userId, contentLength: content.length },
+        '1. Usuario escribe mensaje - Recibido en controller',
+      );
+      
       const result = await this.sendMessageUseCase.execute(matchId, userId, content);
       
       if (result.success) {

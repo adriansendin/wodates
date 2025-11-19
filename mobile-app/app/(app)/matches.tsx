@@ -63,13 +63,17 @@ export default function MatchesScreen() {
     clearError();
 
     try {
+      console.log('[MatchesScreen] Calling getMatches API...');
       const result = await matchApi.getMatches(tokens.accessToken);
+      console.log('[MatchesScreen] API response received:', result.success ? 'success' : 'error', result);
 
       if (!result.success) {
+        console.error('[MatchesScreen] API returned error:', result.error);
         setError(result.error.message);
         if (shouldShowLoader) {
           Alert.alert('Error', result.error.message);
         }
+        // Don't return here - let finally block execute
         return;
       }
       const normalizeGender = (
@@ -113,17 +117,20 @@ export default function MatchesScreen() {
         };
       });
 
+      console.log('[MatchesScreen] Setting matches:', normalizedMatches.length);
       setMatches(normalizedMatches);
       setActiveChatsCount(result.data.activeChatsCount);
       setHasLoadedOnce(true);
+      console.log('[MatchesScreen] Matches loaded successfully');
     } catch (error) {
-      console.error('Failed to load matches', error);
+      console.error('[MatchesScreen] Failed to load matches:', error);
       const message = 'Network error. Please try again.';
       setError(message);
       if (shouldShowLoader) {
         Alert.alert('Error', message);
       }
     } finally {
+      console.log('[MatchesScreen] Finally block executing, resetting loading state');
       if (shouldShowLoader) {
         setLoading(false);
         setHasLoadedOnce(true);

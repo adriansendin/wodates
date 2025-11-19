@@ -36,18 +36,35 @@ export const useChatStore = create<ChatState & ChatActions>((set, get) => ({
       [matchId]: messages
     }
   })),
-  addMessage: (matchId, message) => set((state) => ({
-    messages: {
-      ...state.messages,
-      [matchId]: [...(state.messages[matchId] || []), message]
+  addMessage: (matchId, message) => set((state) => {
+    const existingMessages = state.messages[matchId] || [];
+    // Check if message already exists to prevent duplicates
+    const messageExists = existingMessages.some(msg => msg.id === message.id);
+    if (messageExists) {
+      return state; // Don't add duplicate
     }
-  })),
-  addMessages: (matchId, messages) => set((state) => ({
-    messages: {
-      ...state.messages,
-      [matchId]: [...(state.messages[matchId] || []), ...messages]
+    return {
+      messages: {
+        ...state.messages,
+        [matchId]: [...existingMessages, message]
+      }
+    };
+  }),
+  addMessages: (matchId, messages) => set((state) => {
+    const existingMessages = state.messages[matchId] || [];
+    const existingIds = new Set(existingMessages.map(msg => msg.id));
+    // Filter out messages that already exist to prevent duplicates
+    const newMessages = messages.filter(msg => !existingIds.has(msg.id));
+    if (newMessages.length === 0) {
+      return state; // No new messages to add
     }
-  })),
+    return {
+      messages: {
+        ...state.messages,
+        [matchId]: [...existingMessages, ...newMessages]
+      }
+    };
+  }),
   setLoading: (isLoading) => set({ isLoading }),
   setSending: (isSending) => set({ isSending }),
   setError: (error) => set({ error }),

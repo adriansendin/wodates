@@ -23,6 +23,10 @@ import { SendMessage } from '../domain/use-cases/chat/SendMessage';
 import { GetMessages } from '../domain/use-cases/chat/GetMessages';
 import { BlockUser } from '../domain/use-cases/chat/BlockUser';
 import { MatchOverviewService } from './services/match-overview-service';
+import { DocLoveHelper } from './services/doc-love-helper';
+import { DocLoveService } from './services/doc-love-service';
+import { AIService } from './ai/AIService';
+import { createAIProvider } from './ai/config';
 
 async function buildApp() {
   const logLevel = process.env.FASTIFY_LOG_LEVEL ?? (process.env.NODE_ENV === 'development' ? 'warn' : 'info');
@@ -85,10 +89,39 @@ async function buildApp() {
   const messageRepository = new SupabaseMessageRepository();
   const blockedUserRepository = new SupabaseBlockedUserRepository();
 
+  // Initialize AI services (for Doc Love chatbot)
+  let docLoveService: DocLoveService | undefined;
+  try {
+    const aiProvider = createAIProvider(fastify.log);
+    const aiService = new AIService(aiProvider, fastify.log);
+    const docLoveHelper = new DocLoveHelper();
+    docLoveService = new DocLoveService(
+      docLoveHelper,
+      aiService,
+      messageRepository,
+      matchRepository,
+      // UserRepository is optional - pass undefined for now
+      // Can be added later if needed for user context
+      undefined,
+      fastify.log, // Pass logger to DocLoveService
+    );
+    fastify.log.warn(`AI provider initialized: ${aiService.getProviderName()} (model: ${aiService.getModel()})`);
+  } catch (error) {
+    // Log error but don't fail startup - Doc Love will just not work
+    fastify.log.warn(
+      `Failed to initialize AI services (Doc Love will be disabled): ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+  }
+
   // Initialize use cases
   const likeUser = new LikeUser(likeRepository, matchRepository);
   const passUser = new PassUser(passRepository);
-  const sendMessage = new SendMessage(messageRepository, matchRepository);
+  const sendMessage = new SendMessage(
+    messageRepository,
+    matchRepository,
+    docLoveService, // Pass Doc Love service if available
+    fastify.log, // Pass logger to SendMessage
+  );
   const getMessages = new GetMessages(messageRepository, matchRepository);
   const blockUser = new BlockUser(blockedUserRepository, matchRepository);
   const matchOverviewService = new MatchOverviewService(

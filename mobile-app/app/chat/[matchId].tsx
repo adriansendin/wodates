@@ -24,7 +24,15 @@ import { useAuthStore } from '../../src/domain/stores/authStore';
 import { useChatStore } from '../../src/domain/stores/chatStore';
 import { Message, MessageSchema } from '../../src/domain/entities/Message';
 import { useMatchesStore } from '../../src/domain/stores/matchesStore';
+import { z } from 'zod';
+
 import { pickZipFile, uploadZipFile } from '../../src/data/api/zipUploadService';
+
+// More lenient message schema for displaying messages - allows longer content
+// The backend may return messages that exceed the normal 1000 char limit
+const DisplayMessageSchema = MessageSchema.extend({
+  content: z.string().min(1), // Remove max(1000) restriction for display purposes
+});
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
@@ -201,7 +209,7 @@ export default function ChatScreen() {
         return;
       }
 
-      const validation = MessageSchema.array().safeParse(result.data.messages);
+      const validation = DisplayMessageSchema.array().safeParse(result.data.messages);
       if (!validation.success) {
         setError('Invalid messages received from server.');
         console.warn('Invalid messages payload', validation.error);
@@ -280,35 +288,50 @@ export default function ChatScreen() {
       return;
     }
 
+    // Store the message content to clear it later
+    const messageToSend = messageContent;
+    
+    // Clear the input immediately when user clicks send (optimistic update)
+    // This provides immediate feedback and ensures the text is cleared
+    console.log('[ChatScreen] Clearing message input immediately');
+    setMessage('');
+    
     setSending(true);
     clearError();
 
     try {
+      console.log('[ChatScreen] Sending message:', { matchId, isBot, messageLength: messageToSend.length });
+      
       const result = await chatApi.sendMessage(
         matchId,
-        { content: messageContent },
+        { content: messageToSend },
         tokens.accessToken,
       );
+
+      console.log('[ChatScreen] Send result:', { success: result.success, hasData: !!result.data });
 
       if (!result.success) {
         const messageText = result.error.message || 'Could not send your message.';
         setError(messageText);
         Alert.alert('Error', messageText);
+        // Restore message on error so user can retry
+        setMessage(messageToSend);
         return;
       }
 
       const validation = MessageSchema.safeParse(result.data.message);
       if (!validation.success) {
+        console.warn('[ChatScreen] Validation failed:', validation.error);
         Alert.alert('Error', 'Received invalid message data.');
         console.warn('Invalid message payload received from server', validation.error);
         return;
       }
 
+      console.log('[ChatScreen] Adding message to store');
       addMessage(matchId, validation.data);
       updateMatch(matchId, { lastMessage: validation.data, unreadCount: 0 });
-      setMessage('');
     } catch (error) {
-      console.error('Failed to send message', error);
+      console.error('[ChatScreen] Failed to send message', error);
       const fallbackMessage = 'Network error. Please try again.';
       setError(fallbackMessage);
       Alert.alert('Error', fallbackMessage);
@@ -320,6 +343,7 @@ export default function ChatScreen() {
     chatApi,
     clearError,
     isBlocked,
+    isBot,
     isSending,
     matchId,
     message,
@@ -577,6 +601,24 @@ export default function ChatScreen() {
               multiline
               maxLength={1000}
               editable={!isBlocked}
+              onSubmitEditing={() => {
+                // Only send if message is not empty and not sending
+                if (message.trim() && !isSending && !isBlocked) {
+                  handleSendMessage();
+                }
+              }}
+              blurOnSubmit={false}
+              returnKeyType="send"
+              onKeyPress={(e) => {
+                // Handle Enter key press to send message
+                // On some platforms, Enter key might be detected as 'Enter' or 'Enter' key
+                if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                  if (message.trim() && !isSending && !isBlocked) {
+                    e.preventDefault?.();
+                    handleSendMessage();
+                  }
+                }
+              }}
               onFocus={() => {
                 // Scroll to bottom when input is focused
                 setTimeout(() => {

@@ -11,16 +11,31 @@ const MatchUserSchema = z
     id: z.string().uuid(),
     name: z.string().min(1),
     bio: z.string().nullable().optional(),
-    photoUrl: z.string().url().nullable().optional(),
+    photoUrl: z
+      .preprocess(
+        (val) => {
+          if (val === '' || val === undefined) {
+            return null;
+          }
+          return val;
+        },
+        z.union([z.string().url(), z.null()]).optional().nullable(),
+      ),
     birthDate: z.string().nullable().optional(),
     gender: z.string().nullable().optional(),
     isBot: z.boolean().optional(),
   })
   .nullable();
 
+// More lenient message schema for lastMessage - allows longer content for display purposes
+// The backend may return messages that exceed the normal 1000 char limit
+const LastMessageSchema = MessageSchema.extend({
+  content: z.string().min(1), // Remove max(1000) restriction for display purposes
+});
+
 const MatchOverviewSchema = MatchSchema.extend({
   otherUser: MatchUserSchema,
-  lastMessage: MessageSchema.nullable(),
+  lastMessage: LastMessageSchema.nullable(),
   unreadCount: z.number().nonnegative(),
 });
 
@@ -49,7 +64,15 @@ export class MatchApi {
       .safeParse(response.data);
 
     if (!parseResult.success) {
-      return { success: false, error: new ValidationError('Invalid matches payload') };
+      const errorDetails = parseResult.error.errors
+        .map((err) => `${err.path.join('.')}: ${err.message}`)
+        .join('; ');
+      console.error('[MatchApi] Validation error details:', errorDetails);
+      console.error('[MatchApi] Failed data:', JSON.stringify(response.data, null, 2));
+      return {
+        success: false,
+        error: new ValidationError(`Invalid matches payload: ${errorDetails}`),
+      };
     }
 
     return {
