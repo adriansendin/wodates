@@ -208,10 +208,36 @@ export class TestMessageRepository implements MessageRepository {
     return success(message);
   }
 
-  async findByMatchId(matchId: string): Promise<Result<Message[], DomainError>> {
-    const messages = Array.from(this.messages.values()).filter(
+  async findByMatchId(
+    matchId: string,
+    limit: number,
+    before?: string,
+  ): Promise<Result<Message[], DomainError>> {
+    let messages = Array.from(this.messages.values()).filter(
       (message) => message.matchId === matchId
     );
+
+    // Sort by createdAt descending
+    messages.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA;
+    });
+
+    // If before is provided, filter messages created before that message
+    if (before) {
+      const beforeMessage = this.messages.get(before);
+      if (beforeMessage) {
+        const beforeDate = new Date(beforeMessage.createdAt).getTime();
+        messages = messages.filter(
+          (message) => new Date(message.createdAt).getTime() < beforeDate,
+        );
+      }
+    }
+
+    // Apply limit
+    messages = messages.slice(0, limit);
+
     return success(messages);
   }
 
@@ -221,6 +247,59 @@ export class TestMessageRepository implements MessageRepository {
       return failure(new NotFoundError('Message not found'));
     }
     return success(message);
+  }
+
+  async findUnprocessedBySenderId(
+    senderId: string,
+    limit: number = 100,
+  ): Promise<Result<Message[], DomainError>> {
+    const messages = Array.from(this.messages.values())
+      .filter(
+        (message) =>
+          message.senderId === senderId &&
+          (message.profileProcessedAt === null || message.profileProcessedAt === undefined),
+      )
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateA - dateB; // ascending order
+      })
+      .slice(0, limit);
+
+    return success(messages);
+  }
+
+  async markAsProcessed(messageId: string): Promise<Result<void, DomainError>> {
+    const message = this.messages.get(messageId);
+    if (!message) {
+      return failure(new NotFoundError('Message not found'));
+    }
+
+    this.messages.set(messageId, {
+      ...message,
+      profileProcessedAt: now(),
+    });
+
+    return success(undefined);
+  }
+
+  async markManyAsProcessed(messageIds: string[]): Promise<Result<void, DomainError>> {
+    if (messageIds.length === 0) {
+      return success(undefined);
+    }
+
+    const processedAt = now();
+    for (const messageId of messageIds) {
+      const message = this.messages.get(messageId);
+      if (message) {
+        this.messages.set(messageId, {
+          ...message,
+          profileProcessedAt: processedAt,
+        });
+      }
+    }
+
+    return success(undefined);
   }
 }
 

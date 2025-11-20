@@ -19,6 +19,7 @@ type MessageRow = {
   sender_id: string;
   content: string;
   created_at: string;
+  profile_processed_at: string | null;
 };
 
 export class SupabaseMessageRepository implements MessageRepository {
@@ -43,7 +44,7 @@ export class SupabaseMessageRepository implements MessageRepository {
           sender_id: message.senderId,
           content: message.content,
         })
-        .select('id, chat_id, sender_id, content, created_at')
+        .select('id, chat_id, sender_id, content, created_at, profile_processed_at')
         .single<MessageRow>();
 
       if (error) {
@@ -85,7 +86,7 @@ export class SupabaseMessageRepository implements MessageRepository {
 
       let query = this.client
         .from('messages')
-        .select('id, chat_id, sender_id, content, created_at')
+        .select('id, chat_id, sender_id, content, created_at, profile_processed_at')
         .eq('chat_id', matchId)
         .order('created_at', { ascending: false })
         .limit(limit);
@@ -120,7 +121,7 @@ export class SupabaseMessageRepository implements MessageRepository {
     try {
       const { data, error } = await this.client
         .from('messages')
-        .select('id, chat_id, sender_id, content, created_at')
+        .select('id, chat_id, sender_id, content, created_at, profile_processed_at')
         .eq('id', id)
         .maybeSingle<MessageRow>();
 
@@ -151,6 +152,9 @@ export class SupabaseMessageRepository implements MessageRepository {
       senderId: row.sender_id,
       content: row.content,
       createdAt: new Date(row.created_at).toISOString(),
+      profileProcessedAt: row.profile_processed_at
+        ? new Date(row.profile_processed_at).toISOString()
+        : null,
     };
   }
 
@@ -169,6 +173,89 @@ export class SupabaseMessageRepository implements MessageRepository {
       url,
       serviceRoleKey,
     };
+  }
+
+  async findUnprocessedBySenderId(
+    senderId: string,
+    limit: number = 100,
+  ): Promise<Result<Message[], DomainError>> {
+    try {
+      const { data, error } = await this.client
+        .from('messages')
+        .select('id, chat_id, sender_id, content, created_at, profile_processed_at')
+        .eq('sender_id', senderId)
+        .is('profile_processed_at', null)
+        .order('created_at', { ascending: true })
+        .limit(limit);
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to fetch unprocessed messages: ${this.formatSupabaseError(error)}`,
+          ),
+        );
+      }
+
+      if (!data) {
+        return success([]);
+      }
+
+      return success(data.map((row) => this.mapRowToMessage(row)));
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error fetching unprocessed messages', error),
+      );
+    }
+  }
+
+  async markAsProcessed(messageId: string): Promise<Result<void, DomainError>> {
+    try {
+      const { error } = await this.client
+        .from('messages')
+        .update({ profile_processed_at: new Date().toISOString() })
+        .eq('id', messageId);
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to mark message as processed: ${this.formatSupabaseError(error)}`,
+          ),
+        );
+      }
+
+      return success(undefined);
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error marking message as processed', error),
+      );
+    }
+  }
+
+  async markManyAsProcessed(messageIds: string[]): Promise<Result<void, DomainError>> {
+    if (messageIds.length === 0) {
+      return success(undefined);
+    }
+
+    try {
+      const { error } = await this.client
+        .from('messages')
+        .update({ profile_processed_at: new Date().toISOString() })
+        .in('id', messageIds);
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to mark messages as processed: ${this.formatSupabaseError(error)}`,
+          ),
+        );
+      }
+
+      return success(undefined);
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error marking messages as processed', error),
+      );
+    }
   }
 
   private formatSupabaseError(error: unknown): string {

@@ -6,6 +6,7 @@ export const MessageSchema = z.object({
   senderId: z.string().uuid(),
   content: z.string().min(1).max(1000),
   createdAt: z.string().datetime(),
+  profileProcessedAt: z.string().datetime().nullable().optional(),
 });
 
 export const CreateMessageSchema = MessageSchema.omit({

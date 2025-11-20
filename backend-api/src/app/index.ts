@@ -24,9 +24,12 @@ import { GetMessages } from '../domain/use-cases/chat/GetMessages';
 import { BlockUser } from '../domain/use-cases/chat/BlockUser';
 import { MatchOverviewService } from './services/match-overview-service';
 import { DocLoveHelper } from './services/doc-love-helper';
-import { DocLoveService } from './services/doc-love-service';
-import { AIService } from './ai/AIService';
-import { createAIProvider } from './ai/config';
+import { DocLoveChatService } from './ai/chat/DocLoveChatService';
+import { createChatModel, createSummarizerModel, createEmbeddingModel } from './ai/core/config';
+import { AIConfig } from './ai/ai-settings';
+import { UserProfileAIService } from './ai/profile/UserProfileAIService';
+import { SupabaseUserProfileSummaryRepository } from '../data/repositories/SupabaseUserProfileSummaryRepository';
+import { SupabaseUserRepository } from '../data/repositories/SupabaseUserRepository';
 
 async function buildApp() {
   const logLevel = process.env.FASTIFY_LOG_LEVEL ?? (process.env.NODE_ENV === 'development' ? 'warn' : 'info');
@@ -90,26 +93,56 @@ async function buildApp() {
   const blockedUserRepository = new SupabaseBlockedUserRepository();
 
   // Initialize AI services (for Doc Love chatbot)
-  let docLoveService: DocLoveService | undefined;
+  let docLoveChatService: DocLoveChatService | undefined;
+  
   try {
-    const aiProvider = createAIProvider(fastify.log);
-    const aiService = new AIService(aiProvider, fastify.log);
+    // Create AI models
+    const chatModel = createChatModel(fastify.log);
+    const summarizerModel = createSummarizerModel(fastify.log);
+    const embeddingModel = createEmbeddingModel(fastify.log);
+    
     const docLoveHelper = new DocLoveHelper();
-    docLoveService = new DocLoveService(
+    
+    // Initialize Doc Love chat service (for online chat)
+    docLoveChatService = new DocLoveChatService(
       docLoveHelper,
-      aiService,
+      chatModel,
       messageRepository,
       matchRepository,
       // UserRepository is optional - pass undefined for now
       // Can be added later if needed for user context
       undefined,
-      fastify.log, // Pass logger to DocLoveService
+      fastify.log,
     );
-    fastify.log.warn(`AI provider initialized: ${aiService.getProviderName()} (model: ${aiService.getModel()})`);
+    
+    // Initialize User Profile AI service (for async summary generation)
+    // Note: This service is available but not used in request/response path
+    // It should be called asynchronously via jobs/cron to build user summaries
+    const userProfileSummaryRepository = new SupabaseUserProfileSummaryRepository();
+    const userRepository = new SupabaseUserRepository();
+    // Store reference for potential future use (e.g., admin endpoints, cron jobs)
+    // Currently not exposed, but available if needed
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    void new UserProfileAIService(
+      summarizerModel,
+      embeddingModel,
+      userProfileSummaryRepository,
+      messageRepository,
+      matchRepository,
+      userRepository,
+      docLoveHelper,
+      fastify.log,
+    );
+    
+    // Show active LLM in console (similar to server startup messages)
+    const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
+    const activeModel = chatModel.model;
+    console.log(`🤖 AI Provider: ${providerName.toUpperCase()} | Model: ${activeModel}`);
+    fastify.log.info(`AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), SummarizerModel=${summarizerModel.name} (${summarizerModel.model}), EmbeddingModel=${embeddingModel.name} (${embeddingModel.model})`);
   } catch (error) {
-    // Log error but don't fail startup - Doc Love will just not work
+    // Log error but don't fail startup - AI features will just not work
     fastify.log.warn(
-      `Failed to initialize AI services (Doc Love will be disabled): ${error instanceof Error ? error.message : 'Unknown error'}`,
+      `Failed to initialize AI services (AI features will be disabled): ${error instanceof Error ? error.message : 'Unknown error'}`,
     );
   }
 
@@ -119,7 +152,7 @@ async function buildApp() {
   const sendMessage = new SendMessage(
     messageRepository,
     matchRepository,
-    docLoveService, // Pass Doc Love service if available
+    docLoveChatService, // Pass Doc Love chat service if available
     fastify.log, // Pass logger to SendMessage
   );
   const getMessages = new GetMessages(messageRepository, matchRepository);

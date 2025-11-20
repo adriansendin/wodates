@@ -19,6 +19,7 @@ export class InMemoryMessageRepository implements MessageRepository {
       senderId: data.senderId,
       content: data.content,
       createdAt: new Date().toISOString(),
+      profileProcessedAt: null,
     };
 
     this.messages.push(message);
@@ -59,6 +60,52 @@ export class InMemoryMessageRepository implements MessageRepository {
     }
 
     return success(message);
+  }
+
+  async findUnprocessedBySenderId(
+    senderId: string,
+    limit: number = 100,
+  ): Promise<Result<Message[], DomainError>> {
+    const unprocessed = this.messages
+      .filter(
+        (msg) =>
+          msg.senderId === senderId &&
+          (msg.profileProcessedAt === null || msg.profileProcessedAt === undefined),
+      )
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .slice(0, limit);
+
+    return success(unprocessed);
+  }
+
+  async markAsProcessed(messageId: string): Promise<Result<void, DomainError>> {
+    const message = this.messages.find((msg) => msg.id === messageId);
+    if (!message) {
+      return failure(new NotFoundError('Message not found'));
+    }
+
+    message.profileProcessedAt = new Date().toISOString();
+    return success(undefined);
+  }
+
+  async markManyAsProcessed(messageIds: string[]): Promise<Result<void, DomainError>> {
+    if (messageIds.length === 0) {
+      return success(undefined);
+    }
+
+    const now = new Date().toISOString();
+    let foundCount = 0;
+
+    for (const messageId of messageIds) {
+      const message = this.messages.find((msg) => msg.id === messageId);
+      if (message) {
+        message.profileProcessedAt = now;
+        foundCount++;
+      }
+    }
+
+    // Note: We don't fail if some messages aren't found, we just process the ones that exist
+    return success(undefined);
   }
 }
 

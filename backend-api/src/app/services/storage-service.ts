@@ -30,13 +30,13 @@ export class StorageService {
   /**
    * Uploads a ZIP file to Supabase Storage
    * Uses SERVICE_ROLE_KEY for direct upload (same pattern as avatar upload)
-   * @param userId - The user ID
+   * @param _userId - The user ID
    * @param buffer - File buffer
    * @param filePath - The file path within the bucket
    * @returns The storage path of the uploaded file
    */
   async uploadZipFile(
-    userId: string,
+    _userId: string,
     buffer: Buffer,
     filePath: string,
   ): Promise<string> {
