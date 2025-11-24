@@ -1,14 +1,38 @@
 /**
  * Centralized AI Configuration
- * 
+ *
  * This file is the single source of truth for all AI-related configuration.
  * It reads from environment variables and provides sensible defaults.
- * 
+ *
  * Architecture:
  * - .env file: Contains environment-specific values (user configurable)
  * - ai-settings.ts: Reads .env + provides defaults + centralizes structure
  * - config.ts: Uses ai-settings.ts to create providers (factory pattern)
  */
+
+/**
+ * AI Model Constants - Technical specifications that rarely change
+ *
+ * These constants define model-specific technical parameters that affect data compatibility.
+ * WARNING: Changing these values may require regenerating existing data (embeddings, summaries, etc.)
+ *
+ * Export these constants for use in validation, schemas, and other places that need to reference
+ * the technical specifications without importing the full AIConfig.
+ */
+export const AIModelConstants = {
+  /**
+   * Embedding model specifications
+   *
+   * WARNING: Changing DEFAULT_MODEL or DIMENSION requires:
+   * - Regenerating all existing embeddings in user_ai_profiles.summary_embedding
+   * - Updating database schema if dimension changes (vector(768) -> vector(NEW_DIM))
+   * - Updating all code that references the dimension (768)
+   */
+  EMBEDDING: {
+    DEFAULT_MODEL: 'yxchia/multilingual-e5-base',
+    DIMENSION: 768, // Fixed dimension for multilingual-e5-base
+  },
+} as const;
 
 /**
  * AI Configuration - Single Source of Truth
@@ -17,8 +41,7 @@ export const AIConfig = {
   /**
    * Default provider selection
    */
-  defaultProvider:
-    process.env.NODE_ENV === 'development' ? 'ollama' : 'openai',
+  defaultProvider: process.env.NODE_ENV === 'development' ? 'ollama' : 'openai',
 
   /**
    * Context configuration (used by DocLoveService)
@@ -77,6 +100,23 @@ export const AIConfig = {
       num_ctx: process.env.OLLAMA_NUM_CTX
         ? parseInt(process.env.OLLAMA_NUM_CTX, 10)
         : 512, // Context window size (reduced for speed)
+    },
+
+    /**
+     * Ollama embeddings configuration
+     * Separate from chat model - uses multilingual-e5-base for embeddings
+     *
+     * To override the default model, set OLLAMA_EMBEDDING_MODEL in .env
+     * WARNING: Changing the model may require regenerating all existing embeddings
+     */
+    embeddings: {
+      model:
+        process.env.OLLAMA_EMBEDDING_MODEL ||
+        AIModelConstants.EMBEDDING.DEFAULT_MODEL,
+      dimension: AIModelConstants.EMBEDDING.DIMENSION,
+      timeout: process.env.OLLAMA_EMBEDDING_TIMEOUT
+        ? parseInt(process.env.OLLAMA_EMBEDDING_TIMEOUT, 10)
+        : 30000, // 30 seconds default (embeddings are usually faster than chat)
     },
   },
 
@@ -139,4 +179,3 @@ Nunca, bajo ninguna circunstancia, hablas de ti como si fueras una persona o tuv
  * Type-safe access to configuration
  */
 export type AIConfigType = typeof AIConfig;
-

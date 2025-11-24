@@ -96,4 +96,3 @@ describe('authStore', () => {
     expect(state.tokens).toEqual(validTokens);
   });
 });
-

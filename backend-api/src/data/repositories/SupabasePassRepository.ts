@@ -52,8 +52,8 @@ export class SupabasePassRepository implements PassRepository {
 
         return failure(
           new InternalError(
-            `Failed to register pass: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to register pass: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
@@ -66,7 +66,7 @@ export class SupabasePassRepository implements PassRepository {
       return failure(
         error instanceof DomainError
           ? error
-          : new InternalError('Unexpected error creating pass', error),
+          : new InternalError('Unexpected error creating pass', error)
       );
     }
   }
@@ -83,22 +83,22 @@ export class SupabasePassRepository implements PassRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to query passes: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to query passes: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success((data ?? []).map((row) => this.mapPass(row)));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching passes', error),
+        new InternalError('Unexpected error fetching passes', error)
       );
     }
   }
 
   async hasPassed(
     userId: string,
-    targetUserId: string,
+    targetUserId: string
   ): Promise<Result<boolean, DomainError>> {
     try {
       const { data, error } = await this.client
@@ -112,15 +112,15 @@ export class SupabasePassRepository implements PassRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to verify pass: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to verify pass: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success(Boolean(data));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error checking pass', error),
+        new InternalError('Unexpected error checking pass', error)
       );
     }
   }
@@ -141,7 +141,7 @@ export class SupabasePassRepository implements PassRepository {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'SupabasePassRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'SupabasePassRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
@@ -166,7 +166,9 @@ export class SupabasePassRepository implements PassRepository {
       const hint = (error as { hint?: string }).hint;
 
       return [message, details, hint]
-        .filter((segment) => typeof segment === 'string' && segment.trim().length)
+        .filter(
+          (segment) => typeof segment === 'string' && segment.trim().length
+        )
         .join(' | ');
     }
 

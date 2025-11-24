@@ -5,7 +5,10 @@ import { createTestApp } from './test-app';
 import { InMemoryAuthService } from './in-memory-auth-service';
 import { UserFactory } from './factories/user-factory';
 import { ProfileFactory } from './factories/profile-factory';
-import { authenticateUser, AuthSuccessResponseSchema } from './authenticate-user';
+import {
+  authenticateUser,
+  AuthSuccessResponseSchema,
+} from './authenticate-user';
 
 const ErrorResponseSchema = z.object({
   error: z.string(),

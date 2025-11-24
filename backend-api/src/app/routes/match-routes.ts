@@ -40,8 +40,14 @@ export async function matchRoutes(fastify: FastifyInstance) {
                             id: { type: 'string', format: 'uuid' },
                             name: { type: 'string' },
                             bio: { type: ['string', 'null'] },
-                            photoUrl: { type: ['string', 'null'], format: 'uri' },
-                            birthDate: { type: ['string', 'null'], format: 'date' },
+                            photoUrl: {
+                              type: ['string', 'null'],
+                              format: 'uri',
+                            },
+                            birthDate: {
+                              type: ['string', 'null'],
+                              format: 'date',
+                            },
                             gender: { type: ['string', 'null'] },
                             isBot: { type: 'boolean' },
                           },
@@ -61,14 +67,26 @@ export async function matchRoutes(fastify: FastifyInstance) {
                             content: { type: 'string' },
                             createdAt: { type: 'string', format: 'date-time' },
                           },
-                          required: ['id', 'matchId', 'senderId', 'content', 'createdAt'],
+                          required: [
+                            'id',
+                            'matchId',
+                            'senderId',
+                            'content',
+                            'createdAt',
+                          ],
                         },
                         { type: 'null' },
                       ],
                     },
                     unreadCount: { type: 'number' },
                   },
-                  required: ['id', 'userId1', 'userId2', 'createdAt', 'unreadCount'],
+                  required: [
+                    'id',
+                    'userId1',
+                    'userId2',
+                    'createdAt',
+                    'unreadCount',
+                  ],
                 },
               },
             },
@@ -77,6 +95,6 @@ export async function matchRoutes(fastify: FastifyInstance) {
       },
       preHandler: fastify.authMiddleware,
     },
-    controller.list.bind(controller),
+    controller.list.bind(controller)
   );
 }

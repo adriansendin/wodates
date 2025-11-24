@@ -3,9 +3,10 @@ import { Match } from '../entities/Match';
 import { User } from '../entities/User';
 import { Message } from '../entities/Message';
 
-export type MatchUser = Pick<User, 'id' | 'name'> & Partial<User> & {
-  isBot?: boolean;
-};
+export type MatchUser = Pick<User, 'id' | 'name'> &
+  Partial<User> & {
+    isBot?: boolean;
+  };
 
 export interface MatchWithUser extends Match {
   otherUser: MatchUser;
@@ -39,7 +40,7 @@ const lastInteractionAt = (match: MatchWithUser) => {
 const sortMatches = (matches: MatchWithUser[]) =>
   [...matches].sort((a, b) => lastInteractionAt(b) - lastInteractionAt(a));
 
-export const useMatchesStore = create<MatchesState & MatchesActions>((set, get) => ({
+export const useMatchesStore = create<MatchesState & MatchesActions>((set) => ({
   // State
   matches: [],
   activeChatsCount: 0,
@@ -49,33 +50,36 @@ export const useMatchesStore = create<MatchesState & MatchesActions>((set, get) 
   // Actions
   setMatches: (matches) => set({ matches: sortMatches(matches) }),
   setActiveChatsCount: (count) => set({ activeChatsCount: count }),
-  addMatch: (match) => set((state) => {
-    const exists = state.matches.some((existing) => existing.id === match.id);
+  addMatch: (match) =>
+    set((state) => {
+      const exists = state.matches.some((existing) => existing.id === match.id);
 
-    const updatedMatches = exists
-      ? state.matches.map((existing) =>
-          existing.id === match.id ? { ...existing, ...match } : existing,
+      const updatedMatches = exists
+        ? state.matches.map((existing) =>
+            existing.id === match.id ? { ...existing, ...match } : existing
+          )
+        : [...state.matches, match];
+
+      return {
+        matches: sortMatches(updatedMatches),
+      };
+    }),
+  updateMatch: (matchId, updates) =>
+    set((state) => ({
+      matches: sortMatches(
+        state.matches.map((match) =>
+          match.id === matchId ? { ...match, ...updates } : match
         )
-      : [...state.matches, match];
-
-    return {
-      matches: sortMatches(updatedMatches),
-    };
-  }),
-  updateMatch: (matchId, updates) => set((state) => ({
-    matches: sortMatches(
-      state.matches.map(match =>
-        match.id === matchId ? { ...match, ...updates } : match
-      )
-    )
-  })),
+      ),
+    })),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
-  reset: () => set({ 
-    matches: [], 
-    activeChatsCount: 0,
-    isLoading: false, 
-    error: null 
-  }),
+  reset: () =>
+    set({
+      matches: [],
+      activeChatsCount: 0,
+      isLoading: false,
+      error: null,
+    }),
 }));

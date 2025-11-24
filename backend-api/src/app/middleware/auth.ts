@@ -14,7 +14,7 @@ export async function authMiddleware(
   reply: FastifyReply
 ) {
   const authHeader = request.headers.authorization;
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return reply.status(401).send({
       error: 'UNAUTHORIZED',
@@ -23,7 +23,7 @@ export async function authMiddleware(
   }
 
   const token = authHeader.substring(7);
-  
+
   try {
     // In v0.1, we'll use a simple token validation
     // In production, use proper JWT verification
@@ -31,8 +31,10 @@ export async function authMiddleware(
     if (tokenParts.length !== 3) {
       throw new Error('Invalid token format');
     }
-    const payload = JSON.parse(Buffer.from(tokenParts[1] || '', 'base64').toString());
-    
+    const payload = JSON.parse(
+      Buffer.from(tokenParts[1] || '', 'base64').toString()
+    );
+
     if (!payload.userId || !payload.email) {
       throw new Error('Invalid token payload');
     }

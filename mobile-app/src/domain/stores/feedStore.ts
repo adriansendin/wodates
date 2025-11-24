@@ -21,7 +21,7 @@ interface FeedActions {
   reset: () => void;
 }
 
-export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
+export const useFeedStore = create<FeedState & FeedActions>((set) => ({
   // State
   users: [],
   currentIndex: 0,
@@ -31,22 +31,25 @@ export const useFeedStore = create<FeedState & FeedActions>((set, get) => ({
 
   // Actions
   setUsers: (users) => set({ users, currentIndex: 0 }),
-  addUsers: (users) => set((state) => ({ 
-    users: [...state.users, ...users] 
-  })),
+  addUsers: (users) =>
+    set((state) => ({
+      users: [...state.users, ...users],
+    })),
   setCurrentIndex: (currentIndex) => set({ currentIndex }),
-  nextUser: () => set((state) => ({ 
-    currentIndex: state.currentIndex + 1 
-  })),
+  nextUser: () =>
+    set((state) => ({
+      currentIndex: state.currentIndex + 1,
+    })),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   setHasMore: (hasMore) => set({ hasMore }),
   clearFeed: () => set({ users: [], currentIndex: 0 }),
-  reset: () => set({ 
-    users: [], 
-    currentIndex: 0, 
-    isLoading: false, 
-    error: null, 
-    hasMore: true 
-  }),
+  reset: () =>
+    set({
+      users: [],
+      currentIndex: 0,
+      isLoading: false,
+      error: null,
+      hasMore: true,
+    }),
 }));

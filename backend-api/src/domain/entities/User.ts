@@ -1,10 +1,6 @@
 import { z } from 'zod';
 
-export const GENDER_VALUES = [
-  'male',
-  'female',
-  'non_binary',
-] as const;
+export const GENDER_VALUES = ['male', 'female', 'non_binary'] as const;
 
 export const GenderSchema = z.enum(GENDER_VALUES);
 
@@ -17,12 +13,14 @@ export const UserSchema = z.object({
   gender: GenderSchema,
   bio: z.string().max(500).optional(),
   photoUrl: z.string().url().optional(),
-  location: z.object({
-    latitude: z.number(),
-    longitude: z.number(),
-    city: z.string(),
-    country: z.string(),
-  }).optional(),
+  location: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+      city: z.string(),
+      country: z.string(),
+    })
+    .optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

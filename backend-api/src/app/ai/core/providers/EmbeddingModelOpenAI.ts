@@ -1,9 +1,13 @@
 import OpenAI from 'openai';
-import { EmbeddingModel, EmbeddingRequest, EmbeddingResponse } from '../EmbeddingModel';
+import {
+  EmbeddingModel,
+  EmbeddingRequest,
+  EmbeddingResponse,
+} from '../EmbeddingModel';
 
 /**
  * OpenAI implementation of EmbeddingModel
- * 
+ *
  * Uses OpenAI's embeddings API to generate vector embeddings.
  */
 export class EmbeddingModelOpenAI implements EmbeddingModel {
@@ -12,7 +16,11 @@ export class EmbeddingModelOpenAI implements EmbeddingModel {
   readonly dimension: number;
   private readonly client: OpenAI;
 
-  constructor(apiKey: string, model: string = 'text-embedding-3-small', dimension: number = 1536) {
+  constructor(
+    apiKey: string,
+    model: string = 'text-embedding-3-small',
+    dimension: number = 1536
+  ) {
     if (!apiKey) {
       throw new Error('OpenAI API key is required');
     }
@@ -21,7 +29,9 @@ export class EmbeddingModelOpenAI implements EmbeddingModel {
     this.dimension = dimension;
   }
 
-  async generateEmbedding(request: EmbeddingRequest): Promise<EmbeddingResponse> {
+  async generateEmbedding(
+    request: EmbeddingRequest
+  ): Promise<EmbeddingResponse> {
     try {
       const response = await this.client.embeddings.create({
         model: this.model,
@@ -48,4 +58,3 @@ export class EmbeddingModelOpenAI implements EmbeddingModel {
     }
   }
 }
-

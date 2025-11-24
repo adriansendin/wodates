@@ -25,27 +25,33 @@ import { BlockUser } from '../domain/use-cases/chat/BlockUser';
 import { MatchOverviewService } from './services/match-overview-service';
 import { DocLoveHelper } from './services/doc-love-helper';
 import { DocLoveChatService } from './ai/chat/DocLoveChatService';
-import { createChatModel, createSummarizerModel, createEmbeddingModel } from './ai/core/config';
+import {
+  createChatModel,
+  createSummarizerModel,
+  createEmbeddingModel,
+} from './ai/core/config';
 import { AIConfig } from './ai/ai-settings';
-import { UserProfileAIService } from './ai/profile/UserProfileAIService';
-import { SupabaseUserProfileSummaryRepository } from '../data/repositories/SupabaseUserProfileSummaryRepository';
-import { SupabaseUserRepository } from '../data/repositories/SupabaseUserRepository';
+import { UserAIProfileEmbeddingService } from './ai/profile/UserAIProfileEmbeddingService';
+import { SupabaseUserAIProfileRepository } from '../data/repositories/SupabaseUserAIProfileRepository';
 
 async function buildApp() {
-  const logLevel = process.env.FASTIFY_LOG_LEVEL ?? (process.env.NODE_ENV === 'development' ? 'warn' : 'info');
+  const logLevel =
+    process.env.FASTIFY_LOG_LEVEL ??
+    (process.env.NODE_ENV === 'development' ? 'warn' : 'info');
 
   const fastify = Fastify({
-    logger: process.env.NODE_ENV === 'development'
-      ? {
-          level: logLevel,
-          transport: {
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
+    logger:
+      process.env.NODE_ENV === 'development'
+        ? {
+            level: logLevel,
+            transport: {
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+              },
             },
-          },
-        }
-      : { level: logLevel },
+          }
+        : { level: logLevel },
     disableRequestLogging: logLevel !== 'info',
   }).withTypeProvider<ZodTypeProvider>();
 
@@ -59,6 +65,11 @@ async function buildApp() {
     },
   });
 
+  // Log all incoming requests for debugging
+  fastify.addHook('onRequest', async (request) => {
+    console.log(`[${new Date().toISOString()}] ${request.method} ${request.url} - Origin: ${request.headers.origin || 'none'}`);
+  });
+
   // Configure schema validation
   fastify.addHook('preValidation', async (request) => {
     request.body = request.body || {};
@@ -66,7 +77,7 @@ async function buildApp() {
 
   // Configure serializer
   fastify.setSerializerCompiler(() => {
-    return data => JSON.stringify(data);
+    return (data) => JSON.stringify(data);
   });
 
   // Error handler for validation errors
@@ -75,7 +86,7 @@ async function buildApp() {
       return reply.status(400).send({
         error: 'VALIDATION_ERROR',
         message: error.message,
-        details: error.validation
+        details: error.validation,
       });
     }
     request.log.error(error);
@@ -94,15 +105,15 @@ async function buildApp() {
 
   // Initialize AI services (for Doc Love chatbot)
   let docLoveChatService: DocLoveChatService | undefined;
-  
+
   try {
     // Create AI models
     const chatModel = createChatModel(fastify.log);
     const summarizerModel = createSummarizerModel(fastify.log);
     const embeddingModel = createEmbeddingModel(fastify.log);
-    
+
     const docLoveHelper = new DocLoveHelper();
-    
+
     // Initialize Doc Love chat service (for online chat)
     docLoveChatService = new DocLoveChatService(
       docLoveHelper,
@@ -112,37 +123,36 @@ async function buildApp() {
       // UserRepository is optional - pass undefined for now
       // Can be added later if needed for user context
       undefined,
-      fastify.log,
+      fastify.log
     );
-    
-    // Initialize User Profile AI service (for async summary generation)
-    // Note: This service is available but not used in request/response path
-    // It should be called asynchronously via jobs/cron to build user summaries
-    const userProfileSummaryRepository = new SupabaseUserProfileSummaryRepository();
-    const userRepository = new SupabaseUserRepository();
-    // Store reference for potential future use (e.g., admin endpoints, cron jobs)
+
+    // Initialize User AI Profile Embedding Service
+    // This service generates embeddings from summaries stored in user_ai_profiles table
+    // Should be called asynchronously (via jobs/cron/webhooks) when summaries are updated
+    const userAIProfileRepository = new SupabaseUserAIProfileRepository();
+    const userAIProfileEmbeddingService = new UserAIProfileEmbeddingService(
+      embeddingModel,
+      userAIProfileRepository,
+      fastify.log
+    );
+    // Store reference for potential future use (e.g., admin endpoints, cron jobs, webhooks)
     // Currently not exposed, but available if needed
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    void new UserProfileAIService(
-      summarizerModel,
-      embeddingModel,
-      userProfileSummaryRepository,
-      messageRepository,
-      matchRepository,
-      userRepository,
-      docLoveHelper,
-      fastify.log,
-    );
-    
+    void userAIProfileEmbeddingService;
+
     // Show active LLM in console (similar to server startup messages)
     const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
     const activeModel = chatModel.model;
-    console.log(`🤖 AI Provider: ${providerName.toUpperCase()} | Model: ${activeModel}`);
-    fastify.log.info(`AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), SummarizerModel=${summarizerModel.name} (${summarizerModel.model}), EmbeddingModel=${embeddingModel.name} (${embeddingModel.model})`);
+    console.log(
+      `🤖 AI Provider: ${providerName.toUpperCase()} | Model: ${activeModel}`
+    );
+    fastify.log.info(
+      `AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), SummarizerModel=${summarizerModel.name} (${summarizerModel.model}), EmbeddingModel=${embeddingModel.name} (${embeddingModel.model})`
+    );
   } catch (error) {
     // Log error but don't fail startup - AI features will just not work
     fastify.log.warn(
-      `Failed to initialize AI services (AI features will be disabled): ${error instanceof Error ? error.message : 'Unknown error'}`,
+      `Failed to initialize AI services (AI features will be disabled): ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
 
@@ -153,14 +163,14 @@ async function buildApp() {
     messageRepository,
     matchRepository,
     docLoveChatService, // Pass Doc Love chat service if available
-    fastify.log, // Pass logger to SendMessage
+    fastify.log // Pass logger to SendMessage
   );
   const getMessages = new GetMessages(messageRepository, matchRepository);
   const blockUser = new BlockUser(blockedUserRepository, matchRepository);
   const matchOverviewService = new MatchOverviewService(
     matchRepository,
     messageRepository,
-    blockedUserRepository,
+    blockedUserRepository
   );
 
   // Decorate fastify with use cases
@@ -190,13 +200,17 @@ async function buildApp() {
 async function start() {
   try {
     const app = await buildApp();
-    
+
     const port = parseInt(process.env.PORT || '3000');
     const host = '0.0.0.0';
-    
+
     await app.listen({ port, host });
-    console.log(`🚀 Server running at http://localhost:${port}`);
+    console.log(`🚀 Server running on port ${port}`);
     console.log(`📚 API Documentation: http://localhost:${port}/documentation`);
+    console.log(`🔗 Health check: http://localhost:${port}/health`);
+    console.log(`🌐 Listening on all interfaces (0.0.0.0:${port})`);
+    console.log(`   - Local: http://localhost:${port}`);
+    console.log(`   - Network: http://192.168.1.11:${port} (or your local IP)`);
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);

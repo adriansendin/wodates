@@ -1,24 +1,9 @@
 import { randomUUID } from 'crypto';
-import {
-  success,
-  failure,
-  Result,
-} from '../../../domain/Result';
-import {
-  DomainError,
-  NotFoundError,
-} from '../../../domain/errors/DomainError';
-import {
-  UserRepository,
-} from '../../../domain/repositories/UserRepository';
-import {
-  PreferencesRepository,
-} from '../../../domain/repositories/PreferencesRepository';
-import {
-  User,
-  CreateUser,
-  UpdateUser,
-} from '../../../domain/entities/User';
+import { success, failure, Result } from '../../../domain/Result';
+import { DomainError, NotFoundError } from '../../../domain/errors/DomainError';
+import { UserRepository } from '../../../domain/repositories/UserRepository';
+import { PreferencesRepository } from '../../../domain/repositories/PreferencesRepository';
+import { User, CreateUser, UpdateUser } from '../../../domain/entities/User';
 import {
   Preferences,
   CreatePreferences,
@@ -84,7 +69,10 @@ export class InMemoryUserRepository implements UserRepository {
     return success(user);
   }
 
-  async update(id: string, data: UpdateUser): Promise<Result<User, DomainError>> {
+  async update(
+    id: string,
+    data: UpdateUser
+  ): Promise<Result<User, DomainError>> {
     const existing = this.users.get(id);
 
     if (!existing) {
@@ -118,7 +106,7 @@ export class InMemoryUserRepository implements UserRepository {
   async findFeedUsers(
     userId: string,
     limit: number,
-    offset: number,
+    offset: number
   ): Promise<Result<User[], DomainError>> {
     const candidates = Array.from(this.users.values())
       .filter((user) => user.id !== userId)
@@ -140,7 +128,9 @@ export class InMemoryPreferencesRepository implements PreferencesRepository {
     this.preferences.clear();
   }
 
-  async findByUserId(userId: string): Promise<Result<Preferences, DomainError>> {
+  async findByUserId(
+    userId: string
+  ): Promise<Result<Preferences, DomainError>> {
     const preference = this.preferences.get(userId);
 
     if (!preference) {
@@ -151,7 +141,7 @@ export class InMemoryPreferencesRepository implements PreferencesRepository {
   }
 
   async create(
-    data: CreatePreferences & { userId: string },
+    data: CreatePreferences & { userId: string }
   ): Promise<Result<Preferences, DomainError>> {
     const now = new Date().toISOString();
     const preference: Preferences = {
@@ -171,7 +161,7 @@ export class InMemoryPreferencesRepository implements PreferencesRepository {
 
   async update(
     userId: string,
-    data: UpdatePreferences,
+    data: UpdatePreferences
   ): Promise<Result<Preferences, DomainError>> {
     const existing = this.preferences.get(userId);
 

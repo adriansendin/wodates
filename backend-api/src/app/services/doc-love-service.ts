@@ -6,15 +6,12 @@ import { MatchRepository } from '../../domain/repositories/MatchRepository';
 import { UserRepository } from '../../domain/repositories/UserRepository';
 import { DocLoveHelper } from './doc-love-helper';
 import { AIService } from '../ai/AIService';
-import {
-  IAMessage,
-  IAGenerateRequest,
-} from '../ai/providers/IAProvider';
+import { IAMessage, IAGenerateRequest } from '../ai/providers/IAProvider';
 import { AIConfig } from '../ai/ai-settings';
 
 /**
  * Service for handling Doc Love AI chatbot functionality
- * 
+ *
  * This service:
  * - Detects if a conversation is with Doc Love
  * - Retrieves conversation history
@@ -28,16 +25,18 @@ export class DocLoveService {
     private messageRepository: MessageRepository,
     private matchRepository: MatchRepository,
     private userRepository?: UserRepository, // Optional for user context
-    private logger?: any, // Optional: logger for debugging
+    private logger?: any // Optional: logger for debugging
   ) {}
 
   /**
    * Detects if a match/conversation is with Doc Love
-   * 
+   *
    * @param matchId - The match ID to check
    * @returns Result indicating if this is a Doc Love conversation
    */
-  async isDocLoveConversation(matchId: string): Promise<Result<boolean, DomainError>> {
+  async isDocLoveConversation(
+    matchId: string
+  ): Promise<Result<boolean, DomainError>> {
     try {
       const matchResult = await this.matchRepository.findById(matchId);
       if (!matchResult.success) {
@@ -55,15 +54,15 @@ export class DocLoveService {
       return failure(
         new InternalError(
           'Failed to check if conversation is with Doc Love',
-          error,
-        ),
+          error
+        )
       );
     }
   }
 
   /**
    * Generates and saves an AI response from Doc Love
-   * 
+   *
    * @param matchId - The match/conversation ID
    * @param userId - The user who sent the message
    * @param userMessage - The message sent by the user
@@ -72,11 +71,14 @@ export class DocLoveService {
   async generateAndSaveReply(
     matchId: string,
     userId: string,
-    userMessage: Message,
+    userMessage: Message
   ): Promise<Result<Message, DomainError>> {
     try {
       if (this.logger) {
-        this.logger.debug({ matchId, userId, messageId: userMessage.id }, 'Starting Doc Love reply generation');
+        this.logger.debug(
+          { matchId, userId, messageId: userMessage.id },
+          'Starting Doc Love reply generation'
+        );
       }
 
       // Get Doc Love's user ID
@@ -90,10 +92,15 @@ export class DocLoveService {
       // (prevents infinite loops)
       if (userId === docLoveId) {
         if (this.logger) {
-          this.logger.warn({ matchId, userId }, 'Attempted to generate reply from Doc Love to itself, preventing infinite loop');
+          this.logger.warn(
+            { matchId, userId },
+            'Attempted to generate reply from Doc Love to itself, preventing infinite loop'
+          );
         }
         return failure(
-          new InternalError('Cannot generate Doc Love reply: sender is Doc Love'),
+          new InternalError(
+            'Cannot generate Doc Love reply: sender is Doc Love'
+          )
         );
       }
 
@@ -103,18 +110,24 @@ export class DocLoveService {
       }
       const historyResult = await this.getConversationHistory(
         matchId,
-        AIConfig.context.conversationHistoryLimit,
+        AIConfig.context.conversationHistoryLimit
       );
       if (!historyResult.success) {
         if (this.logger) {
-          this.logger.error({ matchId, error: historyResult.error }, 'Failed to get conversation history');
+          this.logger.error(
+            { matchId, error: historyResult.error },
+            'Failed to get conversation history'
+          );
         }
         return failure(historyResult.error);
       }
 
       const conversationHistory = historyResult.data;
       if (this.logger) {
-        this.logger.debug({ matchId, historyLength: conversationHistory.length }, 'Conversation history retrieved');
+        this.logger.debug(
+          { matchId, historyLength: conversationHistory.length },
+          'Conversation history retrieved'
+        );
       }
 
       // Get user context (optional - controlled by centralized config)
@@ -147,9 +160,11 @@ export class DocLoveService {
             historyLength: conversationHistory.length,
             hasUserContext: !!userContext,
             activeMatchesCount: activeMatches.length,
-            lastUserMessage: userMessage.content.substring(0, 100) + (userMessage.content.length > 100 ? '...' : ''),
+            lastUserMessage:
+              userMessage.content.substring(0, 100) +
+              (userMessage.content.length > 100 ? '...' : ''),
           },
-          '4. Mensaje antes de enviarse a LLM de Ollama - Request preparado',
+          '4. Mensaje antes de enviarse a LLM de Ollama - Request preparado'
         );
       }
 
@@ -159,7 +174,7 @@ export class DocLoveService {
         if (this.logger) {
           this.logger.error(
             { matchId, userId, error: aiResponseResult.error },
-            'AI service failed to generate reply',
+            'AI service failed to generate reply'
           );
         }
         return failure(aiResponseResult.error);
@@ -174,9 +189,11 @@ export class DocLoveService {
             responseLength: aiResponse.content.length,
             provider: aiResponse.provider,
             model: aiResponse.model,
-            responsePreview: aiResponse.content.substring(0, 200) + (aiResponse.content.length > 200 ? '...' : ''),
+            responsePreview:
+              aiResponse.content.substring(0, 200) +
+              (aiResponse.content.length > 200 ? '...' : ''),
           },
-          '9. DocLoveService - Respuesta de Ollama recibida y procesada',
+          '9. DocLoveService - Respuesta de Ollama recibida y procesada'
         );
       }
 
@@ -184,7 +201,7 @@ export class DocLoveService {
       if (this.logger) {
         this.logger.info(
           { matchId, docLoveId, responseLength: aiResponse.content.length },
-          '10. DocLoveService - Guardando respuesta como mensaje en base de datos',
+          '10. DocLoveService - Guardando respuesta como mensaje en base de datos'
         );
       }
       const saveResult = await this.messageRepository.create({
@@ -197,7 +214,7 @@ export class DocLoveService {
         if (this.logger) {
           this.logger.error(
             { matchId, error: saveResult.error },
-            'Failed to save AI response message',
+            'Failed to save AI response message'
           );
         }
         return failure(saveResult.error);
@@ -205,38 +222,45 @@ export class DocLoveService {
 
       if (this.logger) {
         this.logger.info(
-          { matchId, messageId: saveResult.data.id, contentLength: saveResult.data.content.length },
-          '11. DocLoveService - Mensaje de Doc Love guardado exitosamente - Proceso completado',
+          {
+            matchId,
+            messageId: saveResult.data.id,
+            contentLength: saveResult.data.content.length,
+          },
+          '11. DocLoveService - Mensaje de Doc Love guardado exitosamente - Proceso completado'
         );
       }
 
       return success(saveResult.data);
     } catch (error) {
       if (this.logger) {
-        this.logger.error({ matchId, userId, error }, 'Unexpected error in generateAndSaveReply');
+        this.logger.error(
+          { matchId, userId, error },
+          'Unexpected error in generateAndSaveReply'
+        );
       }
       return failure(
-        new InternalError('Failed to generate and save Doc Love reply', error),
+        new InternalError('Failed to generate and save Doc Love reply', error)
       );
     }
   }
 
   /**
    * Gets conversation history formatted for AI
-   * 
+   *
    * @param matchId - The match/conversation ID
    * @param limit - Maximum number of messages to retrieve
    * @returns Result containing formatted conversation history
    */
   private async getConversationHistory(
     matchId: string,
-    limit: number = 20,
+    limit: number = 20
   ): Promise<Result<IAMessage[], DomainError>> {
     try {
       // Get messages from repository (most recent first)
       const messagesResult = await this.messageRepository.findByMatchId(
         matchId,
-        limit,
+        limit
       );
       if (!messagesResult.success) {
         return failure(messagesResult.error);
@@ -245,29 +269,27 @@ export class DocLoveService {
       const docLoveId = await this.docLoveHelper.getDocLoveUserId();
 
       // Transform to AI format (reverse to chronological order)
-      const history: IAMessage[] = messagesResult.data
-        .reverse()
-        .map((msg) => ({
-          role: msg.senderId === docLoveId ? 'assistant' : 'user',
-          content: msg.content,
-        }));
+      const history: IAMessage[] = messagesResult.data.reverse().map((msg) => ({
+        role: msg.senderId === docLoveId ? 'assistant' : 'user',
+        content: msg.content,
+      }));
 
       return success(history);
     } catch (error) {
       return failure(
-        new InternalError('Failed to get conversation history', error),
+        new InternalError('Failed to get conversation history', error)
       );
     }
   }
 
   /**
    * Gets user context for AI (optional)
-   * 
+   *
    * @param userId - The user ID
    * @returns User context or undefined if not available
    */
   private async getUserContext(
-    userId: string,
+    userId: string
   ): Promise<{ name?: string; bio?: string } | undefined> {
     if (!this.userRepository) {
       return undefined;
@@ -292,14 +314,14 @@ export class DocLoveService {
 
   /**
    * Gets active matches for the user (excluding Doc Love)
-   * 
+   *
    * @param userId - The user ID
    * @param docLoveId - Doc Love's user ID (to exclude)
    * @returns Array of active matches (max 3)
    */
   private async getActiveMatches(
     userId: string,
-    docLoveId: string,
+    docLoveId: string
   ): Promise<
     Array<{
       matchId: string;
@@ -318,7 +340,7 @@ export class DocLoveService {
         (match) =>
           match.userId1 !== docLoveId &&
           match.userId2 !== docLoveId &&
-          (match.userId1 === userId || match.userId2 === userId),
+          (match.userId1 === userId || match.userId2 === userId)
       );
 
       // Limit to 3 matches
@@ -333,11 +355,15 @@ export class DocLoveService {
           // Get last message
           const messagesResult = await this.messageRepository.findByMatchId(
             match.id,
-            1,
+            1
           );
 
           let lastMessage: string | undefined;
-          if (messagesResult.success && messagesResult.data.length > 0 && messagesResult.data[0]) {
+          if (
+            messagesResult.success &&
+            messagesResult.data.length > 0 &&
+            messagesResult.data[0]
+          ) {
             lastMessage = messagesResult.data[0].content;
           }
 
@@ -355,7 +381,7 @@ export class DocLoveService {
             otherUserName,
             ...(lastMessage && { lastMessage }),
           };
-        }),
+        })
       );
 
       return activeMatches;
@@ -365,4 +391,3 @@ export class DocLoveService {
     }
   }
 }
-

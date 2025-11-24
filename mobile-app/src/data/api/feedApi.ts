@@ -33,11 +33,11 @@ export class FeedApi {
   async getFeed(
     limit: number = 10,
     offset: number = 0,
-    token: string,
+    token: string
   ): Promise<Result<FeedResponse, DomainError>> {
     const result = await this.apiClient.get<FeedResponse>(
       `/feed?limit=${limit}&offset=${offset}`,
-      token,
+      token
     );
 
     if (!result.success) {
@@ -47,7 +47,7 @@ export class FeedApi {
     const validation = FeedResponseSchema.safeParse(result.data);
     if (!validation.success) {
       return failure(
-        new ValidationError('Invalid feed payload', validation.error),
+        new ValidationError('Invalid feed payload', validation.error)
       );
     }
 
@@ -56,14 +56,14 @@ export class FeedApi {
 
   async likeUser(
     targetUserId: string,
-    token: string,
+    token: string
   ): Promise<Result<LikeResponse, DomainError>> {
     return this.apiClient.post('/likes', { targetUserId }, token);
   }
 
   async passUser(
     targetUserId: string,
-    token: string,
+    token: string
   ): Promise<Result<PassResponse, DomainError>> {
     return this.apiClient.post('/passes', { targetUserId }, token);
   }

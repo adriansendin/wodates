@@ -1,8 +1,12 @@
-import { SummarizerModel, SummarizerRequest, SummarizerResponse } from '../SummarizerModel';
+import {
+  SummarizerModel,
+  SummarizerRequest,
+  SummarizerResponse,
+} from '../SummarizerModel';
 
 /**
  * Ollama implementation of SummarizerModel
- * 
+ *
  * Uses Ollama for generating user personality summaries.
  */
 interface OllamaParameters {
@@ -25,7 +29,7 @@ export class SummarizerModelOllama implements SummarizerModel {
     baseUrl?: string,
     timeout?: number,
     parameters?: OllamaParameters,
-    logger?: any,
+    logger?: any
   ) {
     this.model = model;
     this.baseUrl = baseUrl || 'http://localhost:11434';
@@ -34,7 +38,9 @@ export class SummarizerModelOllama implements SummarizerModel {
     this.logger = logger;
   }
 
-  async generateSummary(request: SummarizerRequest): Promise<SummarizerResponse> {
+  async generateSummary(
+    request: SummarizerRequest
+  ): Promise<SummarizerResponse> {
     try {
       const prompt = this.buildPrompt(request);
 
@@ -45,7 +51,7 @@ export class SummarizerModelOllama implements SummarizerModel {
             promptLength: prompt.length,
             hasPreviousSummary: !!request.previousSummary,
           },
-          'Generating user summary with Ollama',
+          'Generating user summary with Ollama'
         );
       }
 
@@ -122,7 +128,10 @@ export class SummarizerModelOllama implements SummarizerModel {
       }
     }
 
-    if (newContent.importedConversations && newContent.importedConversations.length > 0) {
+    if (
+      newContent.importedConversations &&
+      newContent.importedConversations.length > 0
+    ) {
       prompt += `\nCONVERSACIONES IMPORTADAS:\n`;
       for (const conv of newContent.importedConversations.slice(0, 3)) {
         conversationCount++;
@@ -208,7 +217,7 @@ export class SummarizerModelOllama implements SummarizerModel {
       let fullResponse = '';
 
       try {
-        while (true) {
+        for (;;) {
           if (controller.signal.aborted) {
             throw new Error('Request aborted due to timeout');
           }
@@ -241,7 +250,10 @@ export class SummarizerModelOllama implements SummarizerModel {
               }
             } catch (parseError) {
               if (!(parseError instanceof SyntaxError)) {
-                console.warn('[SummarizerModelOllama] Error parsing chunk:', parseError);
+                console.warn(
+                  '[SummarizerModelOllama] Error parsing chunk:',
+                  parseError
+                );
               }
             }
           }
@@ -266,4 +278,3 @@ export class SummarizerModelOllama implements SummarizerModel {
     }
   }
 }
-

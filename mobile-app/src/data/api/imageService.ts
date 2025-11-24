@@ -11,8 +11,9 @@ import {
   CameraError,
   UploadError,
 } from '../../domain/errors/DomainError';
+import { getApiUrl } from '../../utils/apiConfig';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = getApiUrl();
 
 const MAX_IMAGE_SIZE_KB = 500;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024;
@@ -26,12 +27,14 @@ async function compressImageIfNeeded(uri: string): Promise<string> {
   // Get file info to check size
   const response = await fetch(uri);
   const blob = await response.blob();
-  
+
   if (blob.size <= MAX_IMAGE_SIZE_BYTES) {
     return uri; // Image is already small enough
   }
 
-  console.log(`[ImageService] Image size: ${Math.round(blob.size / 1024)}KB, compressing...`);
+  console.log(
+    `[ImageService] Image size: ${Math.round(blob.size / 1024)}KB, compressing...`
+  );
 
   // Start with quality 0.8 and reduce if needed
   let quality = 0.8;
@@ -49,11 +52,15 @@ async function compressImageIfNeeded(uri: string): Promise<string> {
     const compressedResponse = await fetch(result.uri);
     const compressedBlob = await compressedResponse.blob();
 
-    console.log(`[ImageService] Attempt ${attempts + 1}: Quality ${quality}, Size: ${Math.round(compressedBlob.size / 1024)}KB`);
+    console.log(
+      `[ImageService] Attempt ${attempts + 1}: Quality ${quality}, Size: ${Math.round(compressedBlob.size / 1024)}KB`
+    );
 
     if (compressedBlob.size <= MAX_IMAGE_SIZE_BYTES) {
       compressedUri = result.uri;
-      console.log(`[ImageService] Compression successful: ${Math.round(compressedBlob.size / 1024)}KB`);
+      console.log(
+        `[ImageService] Compression successful: ${Math.round(compressedBlob.size / 1024)}KB`
+      );
       break;
     }
 
@@ -116,19 +123,23 @@ async function pickImageFromWeb(): Promise<string | null> {
  * Note: Only allows selecting a single image (no multiple selection)
  * @returns {Promise<Result<string, DomainError>>} Result with image URI or error
  */
-export async function pickImageFromGallery(): Promise<Result<string | null, DomainError>> {
+export async function pickImageFromGallery(): Promise<
+  Result<string | null, DomainError>
+> {
   try {
     // Check if running on web
-  if (Platform.OS === 'web') {
-    const uri = await pickImageFromWeb();
+    if (Platform.OS === 'web') {
+      const uri = await pickImageFromWeb();
       return success(uri);
     }
 
     const hasPermission = await requestMediaLibraryPermissions();
-    
+
     if (!hasPermission) {
       return failure(
-        new PermissionDeniedError('Se necesitan permisos para acceder a la galería de fotos.')
+        new PermissionDeniedError(
+          'Se necesitan permisos para acceder a la galería de fotos.'
+        )
       );
     }
 
@@ -151,7 +162,10 @@ export async function pickImageFromGallery(): Promise<Result<string | null, Doma
   } catch (error) {
     console.error('[ImageService] Error picking image from gallery:', error);
     return failure(
-      new ImagePickerError('Error al seleccionar la imagen. Inténtalo de nuevo.', error)
+      new ImagePickerError(
+        'Error al seleccionar la imagen. Inténtalo de nuevo.',
+        error
+      )
     );
   }
 }
@@ -160,7 +174,9 @@ export async function pickImageFromGallery(): Promise<Result<string | null, Doma
  * Takes a photo using the device camera
  * @returns {Promise<Result<string, DomainError>>} Result with image URI or error
  */
-export async function takePictureWithCamera(): Promise<Result<string | null, DomainError>> {
+export async function takePictureWithCamera(): Promise<
+  Result<string | null, DomainError>
+> {
   try {
     // Check if running on web
     if (Platform.OS === 'web') {
@@ -170,10 +186,12 @@ export async function takePictureWithCamera(): Promise<Result<string | null, Dom
     }
 
     const hasPermission = await requestCameraPermissions();
-    
+
     if (!hasPermission) {
       return failure(
-        new PermissionDeniedError('Se necesitan permisos para acceder a la cámara.')
+        new PermissionDeniedError(
+          'Se necesitan permisos para acceder a la cámara.'
+        )
       );
     }
 
@@ -205,7 +223,7 @@ export async function takePictureWithCamera(): Promise<Result<string | null, Dom
  * @returns {Promise<Result<string, DomainError>>} Result with public URL or error
  */
 export async function uploadAvatarToBackend(
-  imageUri: string,
+  imageUri: string
 ): Promise<Result<string, DomainError>> {
   try {
     console.log('[ImageService] Uploading avatar via backend:', imageUri);
@@ -218,21 +236,21 @@ export async function uploadAvatarToBackend(
 
     // Create FormData with the image file
     const formData = new FormData();
-    
+
     if (Platform.OS === 'web') {
       // On web, blob URLs need to be converted to File/Blob objects
       if (imageUri.startsWith('blob:')) {
         // Fetch the blob URL to get the Blob
         const response = await fetch(imageUri);
         const blob = await response.blob();
-        
+
         // Determine MIME type from blob or default to jpeg
         const mimeType = blob.type || 'image/jpeg';
-        
+
         // Create a File object from the Blob
         const filename = `avatar.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
         const file = new File([blob], filename, { type: mimeType });
-        
+
         // Append File object to FormData (standard web format)
         formData.append('file', file);
       } else {
@@ -250,7 +268,7 @@ export async function uploadAvatarToBackend(
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
 
-      // @ts-ignore - FormData in React Native accepts this format
+      // @ts-expect-error - FormData in React Native accepts this format
       formData.append('file', {
         uri: imageUri,
         type: type,
@@ -259,16 +277,12 @@ export async function uploadAvatarToBackend(
     }
 
     // Upload to backend API endpoint using axios directly
-    const response = await axios.post(
-      `${API_URL}/users/me/avatar`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${tokens.accessToken}`,
-        },
-      }
-    );
+    const response = await axios.post(`${API_URL}/users/me/avatar`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${tokens.accessToken}`,
+      },
+    });
 
     const { avatarUrl } = response.data;
     console.log('[ImageService] Upload successful:', avatarUrl);
@@ -276,16 +290,19 @@ export async function uploadAvatarToBackend(
     return success(avatarUrl);
   } catch (error: any) {
     console.error('[ImageService] Unexpected error uploading avatar:', error);
-    
+
     // Handle axios error format
     if (error.response) {
-      const message = error.response.data?.message || 'Error al subir la imagen.';
+      const message =
+        error.response.data?.message || 'Error al subir la imagen.';
       return failure(new UploadError(message, error));
     }
 
     return failure(
-      new UploadError('Error inesperado al subir la imagen. Inténtalo de nuevo.', error)
+      new UploadError(
+        'Error inesperado al subir la imagen. Inténtalo de nuevo.',
+        error
+      )
     );
   }
 }
-

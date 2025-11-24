@@ -2,7 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../../domain/entities/User';
 import { AuthTokens } from '../../domain/entities/Auth';
 import { Result, success, failure } from '../../domain/Result';
-import { DomainError, NotFoundError, ServerError } from '../../domain/errors/DomainError';
+import {
+  DomainError,
+  NotFoundError,
+  ServerError,
+} from '../../domain/errors/DomainError';
 
 const USER_KEY = '@wodates_user';
 const TOKENS_KEY = '@wodates_tokens';

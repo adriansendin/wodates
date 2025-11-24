@@ -73,4 +73,3 @@ export async function createChatUserTestApp(): Promise<CreateChatUserTestAppResu
     blockedUserRepository,
   };
 }
-

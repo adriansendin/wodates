@@ -1,8 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import {
-  DomainError,
-  InternalError,
-} from '../../domain/errors/DomainError';
+import { DomainError, InternalError } from '../../domain/errors/DomainError';
 
 type SupabaseConfig = {
   url: string;
@@ -38,12 +35,14 @@ export class StorageService {
   async uploadZipFile(
     _userId: string,
     buffer: Buffer,
-    filePath: string,
+    filePath: string
   ): Promise<string> {
     try {
       const BUCKET = 'external_conversations';
-      
-      console.log(`[StorageService] Uploading ZIP: ${filePath}, Size: ${Math.round(buffer.length / 1024)}KB`);
+
+      console.log(
+        `[StorageService] Uploading ZIP: ${filePath}, Size: ${Math.round(buffer.length / 1024)}KB`
+      );
 
       // Upload to Supabase Storage
       const { error } = await this.client.storage
@@ -54,10 +53,13 @@ export class StorageService {
         });
 
       if (error) {
-        console.error('[StorageService] Error uploading to Supabase Storage:', error);
+        console.error(
+          '[StorageService] Error uploading to Supabase Storage:',
+          error
+        );
         throw new InternalError(
           `Failed to upload ZIP file: ${this.formatSupabaseError(error)}`,
-          error,
+          error
         );
       }
 
@@ -91,7 +93,7 @@ export class StorageService {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'StorageService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'StorageService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
@@ -101,4 +103,3 @@ export class StorageService {
     };
   }
 }
-

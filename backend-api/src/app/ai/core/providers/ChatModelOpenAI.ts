@@ -4,7 +4,7 @@ import { AIConfig } from '../../ai-settings';
 
 /**
  * OpenAI implementation of ChatModel
- * 
+ *
  * Uses OpenAI's chat completions API for conversations.
  */
 export class ChatModelOpenAI implements ChatModel {
@@ -25,7 +25,10 @@ export class ChatModelOpenAI implements ChatModel {
       const messages = this.buildMessages(request);
 
       // Log LLM call parameters
-      const totalPromptLength = messages.reduce((acc, m) => acc + m.content.length, 0);
+      const totalPromptLength = messages.reduce(
+        (acc, m) => acc + m.content.length,
+        0
+      );
       console.log('\n=== LLM CALL PARAMETERS (OpenAI) ===');
       console.log('Provider:', this.name);
       console.log('Model:', this.model);
@@ -73,9 +76,7 @@ export class ChatModelOpenAI implements ChatModel {
     const messages: Array<{
       role: 'system' | 'user' | 'assistant';
       content: string;
-    }> = [
-      { role: 'system', content: systemPrompt },
-    ];
+    }> = [{ role: 'system', content: systemPrompt }];
 
     for (const msg of request.conversationHistory) {
       if (msg.role === 'user' || msg.role === 'assistant') {
@@ -126,4 +127,3 @@ export class ChatModelOpenAI implements ChatModel {
     return prompt;
   }
 }
-

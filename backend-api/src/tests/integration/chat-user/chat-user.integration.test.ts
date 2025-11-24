@@ -2,7 +2,10 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { authenticateUser, AuthSuccessResponseSchema } from '../auth/authenticate-user';
+import {
+  authenticateUser,
+  AuthSuccessResponseSchema,
+} from '../auth/authenticate-user';
 import { UserFactory } from '../auth/factories/user-factory';
 import {
   ProfileFactory,
@@ -65,7 +68,7 @@ class FakeUserService {
 
   async updateProfile(
     userId: string,
-    input: UpdateUserProfileInput,
+    input: UpdateUserProfileInput
   ): Promise<FakeUserProfile> {
     const profile = { ...this.ensureProfile(userId) };
 
@@ -255,13 +258,15 @@ describe('Chat routes', () => {
     expect(body.pagination.limit).toBe(50);
     expect(body.pagination.hasMore).toBe(false);
     expect(body.messages.map((message) => message.content)).toEqual(
-      [...contents].reverse(),
+      [...contents].reverse()
     );
 
     for (let index = 0; index < body.messages.length - 1; index += 1) {
       const current = body.messages[index];
       const next = body.messages[index + 1];
-      expect(current.createdAt.localeCompare(next.createdAt)).toBeGreaterThanOrEqual(0);
+      expect(
+        current.createdAt.localeCompare(next.createdAt)
+      ).toBeGreaterThanOrEqual(0);
     }
   });
 
@@ -322,7 +327,9 @@ describe('User routes', () => {
     const profile = UserProfileResponseSchema.parse(response.json());
     expect(profile.bio).toBe('Apasionado por la escalada y el cafe.');
     expect(profile.city).toBe('Lisboa');
-    expect(profile.avatarUrl).toBe('https://static.example.com/avatars/profile.png');
+    expect(profile.avatarUrl).toBe(
+      'https://static.example.com/avatars/profile.png'
+    );
   });
 });
 
@@ -347,7 +354,9 @@ async function registerUser(): Promise<RegisteredUser> {
   });
 
   expect(registration.statusCode).toBe(201);
-  const registrationPayload = AuthSuccessResponseSchema.parse(registration.json());
+  const registrationPayload = AuthSuccessResponseSchema.parse(
+    registration.json()
+  );
 
   const login = await authenticateUser(app, {
     email: userData.email,
@@ -369,13 +378,16 @@ function seedMatch(userA: RegisteredUser, userB: RegisteredUser) {
     MatchFactory.create({
       userId1: userA.id,
       userId2: userB.id,
-    }),
+    })
   );
   matchRepository.seedMatch(domainMatch);
   return domainMatch;
 }
 
-function seedProfile(user: RegisteredUser, overrides: Partial<FakeUserProfile> = {}) {
+function seedProfile(
+  user: RegisteredUser,
+  overrides: Partial<FakeUserProfile> = {}
+) {
   const profileData = user.profile;
 
   userService.seedProfile({

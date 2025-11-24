@@ -17,12 +17,12 @@ const SupabaseTimestampSchema = z.string().transform((value, ctx) => {
 /**
  * BlockedUser entity represents when one user blocks another user.
  * Once blocked, users can no longer see each other's matches or communicate.
- * 
+ *
  * Table: public.blocked_users
  * - blocker_id: User who initiated the block (part of composite PK)
  * - blocked_id: User who was blocked (part of composite PK)
  * - created_at: When the block occurred
- * 
+ *
  * Note: Uses composite primary key (blocker_id, blocked_id) instead of separate id
  */
 export const BlockedUserSchema = z.object({
@@ -37,4 +37,3 @@ export const CreateBlockedUserSchema = BlockedUserSchema.omit({
 
 export type BlockedUser = z.infer<typeof BlockedUserSchema>;
 export type CreateBlockedUser = z.infer<typeof CreateBlockedUserSchema>;
-

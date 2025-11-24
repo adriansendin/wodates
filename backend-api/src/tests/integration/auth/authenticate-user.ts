@@ -10,14 +10,17 @@ export const AuthSuccessResponseSchema = z.object({
   }),
   token: z
     .string()
-    .refine(token => token.split('.').length === 3, 'Token must be JWT-like format'),
+    .refine(
+      (token) => token.split('.').length === 3,
+      'Token must be JWT-like format'
+    ),
 });
 
 type AuthSuccessResponse = z.infer<typeof AuthSuccessResponseSchema>;
 
 export async function authenticateUser(
   app: FastifyInstance,
-  credentials: LoginRequest,
+  credentials: LoginRequest
 ): Promise<AuthSuccessResponse> {
   const parsedCredentials = LoginSchema.parse(credentials);
 
@@ -29,11 +32,10 @@ export async function authenticateUser(
 
   if (response.statusCode !== 200) {
     throw new Error(
-      `Failed to authenticate user. Expected status 200 but received ${response.statusCode}`,
+      `Failed to authenticate user. Expected status 200 but received ${response.statusCode}`
     );
   }
 
   const payload = AuthSuccessResponseSchema.parse(response.json());
   return payload;
 }
-

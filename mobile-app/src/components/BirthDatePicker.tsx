@@ -16,8 +16,18 @@ interface BirthDatePickerProps {
 }
 
 const MONTHS = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
 ];
 
 const MIN_AGE = 18;
@@ -43,7 +53,10 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
   const currentYear = new Date().getFullYear();
   const minYear = currentYear - MAX_AGE;
   const maxYear = currentYear - MIN_AGE;
-  const years = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i);
+  const years = Array.from(
+    { length: maxYear - minYear + 1 },
+    (_, i) => maxYear - i
+  );
 
   // Calcular días válidos para el mes seleccionado
   const daysInMonth = new Date(tempYear, tempMonth + 1, 0).getDate();
@@ -63,11 +76,14 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
-    
+
     return age;
   };
 
@@ -76,19 +92,19 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
    */
   const validateDate = (date: Date): string | null => {
     const age = calculateAge(date);
-    
+
     if (age < MIN_AGE) {
       return `Debes tener al menos ${MIN_AGE} años para registrarte`;
     }
-    
+
     if (age > MAX_AGE) {
       return `La edad máxima permitida es ${MAX_AGE} años`;
     }
-    
+
     if (date > new Date()) {
       return 'No puedes seleccionar una fecha futura';
     }
-    
+
     return null;
   };
 
@@ -131,7 +147,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
   const handleConfirm = () => {
     const newDate = new Date(tempYear, tempMonth, tempDay);
     const validationError = validateDate(newDate);
-    
+
     if (validationError) {
       setError(validationError);
       if (onError) {
@@ -139,7 +155,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
       }
       return;
     }
-    
+
     setError(null);
     if (onError) {
       onError(null);
@@ -153,7 +169,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
 
   return (
     <>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.triggerButton, !isValidAge && styles.triggerButtonError]}
         onPress={handleOpen}
         accessibilityLabel="Seleccionar fecha de nacimiento"
@@ -178,18 +194,18 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>¿Cuándo naciste?</Text>
-            
+
             {error && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
-            
+
             <View style={styles.pickerContainer}>
               {/* Selector de Día */}
               <View style={styles.pickerColumn}>
                 <Text style={styles.pickerLabel}>Día</Text>
-                <ScrollView 
+                <ScrollView
                   style={styles.pickerScroll}
                   showsVerticalScrollIndicator={Platform.OS === 'web'}
                 >
@@ -198,14 +214,16 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
                       key={day}
                       style={[
                         styles.pickerOption,
-                        tempDay === day && styles.pickerOptionSelected
+                        tempDay === day && styles.pickerOptionSelected,
                       ]}
                       onPress={() => setTempDay(day)}
                     >
-                      <Text style={[
-                        styles.pickerOptionText,
-                        tempDay === day && styles.pickerOptionTextSelected
-                      ]}>
+                      <Text
+                        style={[
+                          styles.pickerOptionText,
+                          tempDay === day && styles.pickerOptionTextSelected,
+                        ]}
+                      >
                         {day}
                       </Text>
                     </TouchableOpacity>
@@ -216,7 +234,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
               {/* Selector de Mes */}
               <View style={styles.pickerColumn}>
                 <Text style={styles.pickerLabel}>Mes</Text>
-                <ScrollView 
+                <ScrollView
                   style={styles.pickerScroll}
                   showsVerticalScrollIndicator={Platform.OS === 'web'}
                 >
@@ -225,14 +243,17 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
                       key={index}
                       style={[
                         styles.pickerOption,
-                        tempMonth === index && styles.pickerOptionSelected
+                        tempMonth === index && styles.pickerOptionSelected,
                       ]}
                       onPress={() => setTempMonth(index)}
                     >
-                      <Text style={[
-                        styles.pickerOptionText,
-                        tempMonth === index && styles.pickerOptionTextSelected
-                      ]}>
+                      <Text
+                        style={[
+                          styles.pickerOptionText,
+                          tempMonth === index &&
+                            styles.pickerOptionTextSelected,
+                        ]}
+                      >
                         {month}
                       </Text>
                     </TouchableOpacity>
@@ -243,7 +264,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
               {/* Selector de Año */}
               <View style={styles.pickerColumn}>
                 <Text style={styles.pickerLabel}>Año</Text>
-                <ScrollView 
+                <ScrollView
                   style={styles.pickerScroll}
                   showsVerticalScrollIndicator={Platform.OS === 'web'}
                 >
@@ -252,14 +273,16 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
                       key={year}
                       style={[
                         styles.pickerOption,
-                        tempYear === year && styles.pickerOptionSelected
+                        tempYear === year && styles.pickerOptionSelected,
                       ]}
                       onPress={() => setTempYear(year)}
                     >
-                      <Text style={[
-                        styles.pickerOptionText,
-                        tempYear === year && styles.pickerOptionTextSelected
-                      ]}>
+                      <Text
+                        style={[
+                          styles.pickerOptionText,
+                          tempYear === year && styles.pickerOptionTextSelected,
+                        ]}
+                      >
                         {year}
                       </Text>
                     </TouchableOpacity>
@@ -269,15 +292,15 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
             </View>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity 
-                style={styles.cancelButton} 
+              <TouchableOpacity
+                style={styles.cancelButton}
                 onPress={handleCancel}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.confirmButton} 
+
+              <TouchableOpacity
+                style={styles.confirmButton}
                 onPress={handleConfirm}
               >
                 <Text style={styles.confirmButtonText}>Confirmar</Text>
@@ -446,4 +469,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

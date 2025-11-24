@@ -60,7 +60,7 @@ export class SupabaseFeedService {
   async getFeedCandidates(
     userId: string,
     limit: number = 10,
-    offset: number = 0,
+    offset: number = 0
   ): Promise<FeedCandidate[]> {
     try {
       const currentUser = await this.fetchCurrentUser(userId);
@@ -85,7 +85,7 @@ export class SupabaseFeedService {
 
       if (error) {
         throw new InternalError(
-          `Failed to load feed candidates: ${this.formatSupabaseError(error)}`,
+          `Failed to load feed candidates: ${this.formatSupabaseError(error)}`
         );
       }
 
@@ -104,11 +104,11 @@ export class SupabaseFeedService {
           }
 
           return this.mapRowToCandidate({ ...row, name: identity.name });
-        }),
+        })
       );
 
       return candidatesWithNames.filter(
-        (candidate): candidate is FeedCandidate => candidate !== null,
+        (candidate): candidate is FeedCandidate => candidate !== null
       );
     } catch (error) {
       if (error instanceof DomainError) {
@@ -117,7 +117,7 @@ export class SupabaseFeedService {
 
       throw new InternalError(
         'Unexpected error while loading feed candidates',
-        error,
+        error
       );
     }
   }
@@ -131,7 +131,7 @@ export class SupabaseFeedService {
 
     if (error) {
       throw new InternalError(
-        `Failed to resolve current user: ${this.formatSupabaseError(error)}`,
+        `Failed to resolve current user: ${this.formatSupabaseError(error)}`
       );
     }
 
@@ -143,7 +143,7 @@ export class SupabaseFeedService {
   }
 
   private resolveGenderFilter(
-    lookingFor: LookingForValue | null,
+    lookingFor: LookingForValue | null
   ): 'any' | Gender[] {
     if (!lookingFor || lookingFor === 'both') {
       return 'any';
@@ -180,12 +180,15 @@ export class SupabaseFeedService {
         .select('to_user')
         .eq('from_user', userId)
         .eq('action', 'pass'),
-    ])) as [PostgrestResponse<InteractionRow>, PostgrestResponse<InteractionRow>];
+    ])) as [
+      PostgrestResponse<InteractionRow>,
+      PostgrestResponse<InteractionRow>,
+    ];
 
     const processResult = (result: PostgrestResponse<InteractionRow>) => {
       if (result.error) {
         throw new InternalError(
-          `Failed to fetch interactions for feed exclusion: ${this.formatSupabaseError(result.error)}`,
+          `Failed to fetch interactions for feed exclusion: ${this.formatSupabaseError(result.error)}`
         );
       }
 
@@ -204,24 +207,27 @@ export class SupabaseFeedService {
 
   /**
    * Obtiene el nombre del usuario desde auth.users.raw_user_meta_data.display_name
-   * 
+   *
    * @param userId - ID del usuario
    * @returns El nombre del usuario o un valor por defecto
    */
   private async fetchUserIdentity(
-    userId: string,
+    userId: string
   ): Promise<{ name: string; deletedAt: string | null } | null> {
     try {
       const { data, error } = await this.client.auth.admin.getUserById(userId);
-      
+
       if (error || !data?.user) {
-        console.warn(`[SupabaseFeedService] Could not fetch name for user ${userId}`, error);
+        console.warn(
+          `[SupabaseFeedService] Could not fetch name for user ${userId}`,
+          error
+        );
         return null;
       }
 
       const user = data.user;
       const metadata = user.user_metadata as Record<string, unknown> | null;
-      
+
       const displayName =
         metadata && typeof metadata.display_name === 'string'
           ? metadata.display_name.trim()
@@ -236,7 +242,10 @@ export class SupabaseFeedService {
         deletedAt,
       };
     } catch (error) {
-      console.warn(`[SupabaseFeedService] Error fetching name for user ${userId}`, error);
+      console.warn(
+        `[SupabaseFeedService] Error fetching name for user ${userId}`,
+        error
+      );
       return null;
     }
   }
@@ -354,7 +363,7 @@ export class SupabaseFeedService {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'SupabaseFeedService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'SupabaseFeedService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 

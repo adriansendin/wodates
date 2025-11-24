@@ -44,19 +44,23 @@ export class SupabaseMessageRepository implements MessageRepository {
           sender_id: message.senderId,
           content: message.content,
         })
-        .select('id, chat_id, sender_id, content, created_at, profile_processed_at')
+        .select(
+          'id, chat_id, sender_id, content, created_at, profile_processed_at'
+        )
         .single<MessageRow>();
 
       if (error) {
         return failure(
           new InternalError(
-            `Failed to insert message: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to insert message: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       if (!data) {
-        return failure(new InternalError('Supabase did not return message row'));
+        return failure(
+          new InternalError('Supabase did not return message row')
+        );
       }
 
       return success(this.mapRowToMessage(data));
@@ -64,7 +68,7 @@ export class SupabaseMessageRepository implements MessageRepository {
       return failure(
         error instanceof DomainError
           ? error
-          : new InternalError('Unexpected error creating message', error),
+          : new InternalError('Unexpected error creating message', error)
       );
     }
   }
@@ -72,7 +76,7 @@ export class SupabaseMessageRepository implements MessageRepository {
   async findByMatchId(
     matchId: string,
     limit: number,
-    before?: string,
+    before?: string
   ): Promise<Result<Message[], DomainError>> {
     try {
       let beforeCreatedAt: string | undefined;
@@ -86,7 +90,9 @@ export class SupabaseMessageRepository implements MessageRepository {
 
       let query = this.client
         .from('messages')
-        .select('id, chat_id, sender_id, content, created_at, profile_processed_at')
+        .select(
+          'id, chat_id, sender_id, content, created_at, profile_processed_at'
+        )
         .eq('chat_id', matchId)
         .order('created_at', { ascending: false })
         .limit(limit);
@@ -100,8 +106,8 @@ export class SupabaseMessageRepository implements MessageRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to fetch messages: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to fetch messages: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
@@ -112,7 +118,7 @@ export class SupabaseMessageRepository implements MessageRepository {
       return success(data.map((row) => this.mapRowToMessage(row)));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching messages', error),
+        new InternalError('Unexpected error fetching messages', error)
       );
     }
   }
@@ -121,15 +127,17 @@ export class SupabaseMessageRepository implements MessageRepository {
     try {
       const { data, error } = await this.client
         .from('messages')
-        .select('id, chat_id, sender_id, content, created_at, profile_processed_at')
+        .select(
+          'id, chat_id, sender_id, content, created_at, profile_processed_at'
+        )
         .eq('id', id)
         .maybeSingle<MessageRow>();
 
       if (error) {
         return failure(
           new InternalError(
-            `Failed to fetch message: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to fetch message: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
@@ -140,7 +148,7 @@ export class SupabaseMessageRepository implements MessageRepository {
       return success(this.mapRowToMessage(data));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching message', error),
+        new InternalError('Unexpected error fetching message', error)
       );
     }
   }
@@ -165,7 +173,7 @@ export class SupabaseMessageRepository implements MessageRepository {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'SupabaseMessageRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'SupabaseMessageRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
@@ -177,12 +185,14 @@ export class SupabaseMessageRepository implements MessageRepository {
 
   async findUnprocessedBySenderId(
     senderId: string,
-    limit: number = 100,
+    limit: number = 100
   ): Promise<Result<Message[], DomainError>> {
     try {
       const { data, error } = await this.client
         .from('messages')
-        .select('id, chat_id, sender_id, content, created_at, profile_processed_at')
+        .select(
+          'id, chat_id, sender_id, content, created_at, profile_processed_at'
+        )
         .eq('sender_id', senderId)
         .is('profile_processed_at', null)
         .order('created_at', { ascending: true })
@@ -191,8 +201,8 @@ export class SupabaseMessageRepository implements MessageRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to fetch unprocessed messages: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to fetch unprocessed messages: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
@@ -203,7 +213,10 @@ export class SupabaseMessageRepository implements MessageRepository {
       return success(data.map((row) => this.mapRowToMessage(row)));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching unprocessed messages', error),
+        new InternalError(
+          'Unexpected error fetching unprocessed messages',
+          error
+        )
       );
     }
   }
@@ -218,20 +231,25 @@ export class SupabaseMessageRepository implements MessageRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to mark message as processed: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to mark message as processed: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success(undefined);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error marking message as processed', error),
+        new InternalError(
+          'Unexpected error marking message as processed',
+          error
+        )
       );
     }
   }
 
-  async markManyAsProcessed(messageIds: string[]): Promise<Result<void, DomainError>> {
+  async markManyAsProcessed(
+    messageIds: string[]
+  ): Promise<Result<void, DomainError>> {
     if (messageIds.length === 0) {
       return success(undefined);
     }
@@ -245,15 +263,18 @@ export class SupabaseMessageRepository implements MessageRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to mark messages as processed: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to mark messages as processed: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success(undefined);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error marking messages as processed', error),
+        new InternalError(
+          'Unexpected error marking messages as processed',
+          error
+        )
       );
     }
   }
@@ -265,7 +286,10 @@ export class SupabaseMessageRepository implements MessageRepository {
       const hint = (error as { hint?: unknown }).hint;
 
       return [message, details, hint]
-        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        .filter(
+          (value): value is string =>
+            typeof value === 'string' && value.trim().length > 0
+        )
         .join(' | ');
     }
 

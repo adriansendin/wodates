@@ -6,10 +6,10 @@ import { AIConfig } from './ai-settings';
 
 /**
  * Factory function to create AI providers
- * 
+ *
  * Uses centralized configuration from ai-settings.ts.
  * This file only handles provider instantiation, not configuration.
- * 
+ *
  * @param logger - Optional logger instance to pass to providers
  * @returns Configured IAProvider instance
  * @throws Error if provider is unknown or required configuration is missing
@@ -24,16 +24,14 @@ export function createAIProvider(logger?: any): IAProvider {
         AIConfig.ollama.baseUrl,
         AIConfig.ollama.timeout,
         AIConfig.ollama.parameters,
-        logger,
+        logger
       );
     }
 
     case 'openai': {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) {
-        throw new Error(
-          'OPENAI_API_KEY is required when AI_PROVIDER=openai',
-        );
+        throw new Error('OPENAI_API_KEY is required when AI_PROVIDER=openai');
       }
       return new OpenAIProvider(apiKey, AIConfig.openai.model);
     }
@@ -50,8 +48,7 @@ export function createAIProvider(logger?: any): IAProvider {
 
     default:
       throw new Error(
-        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`,
+        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`
       );
   }
 }
-

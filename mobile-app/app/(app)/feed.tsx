@@ -18,8 +18,9 @@ import { useMatchesStore } from '../../src/domain/stores/matchesStore';
 import { MatchSchema } from '../../src/domain/entities/Match';
 import { showAlert } from '../../src/utils/showAlert';
 import { MatchApi } from '../../src/data/api/matchApi';
+import { getApiUrl } from '../../src/utils/apiConfig';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = getApiUrl();
 const FALLBACK_PHOTO = require('../../assets/placeholder.png');
 
 const getAgeFromBirthDate = (birthDate?: string | null) => {

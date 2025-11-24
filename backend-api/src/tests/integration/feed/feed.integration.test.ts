@@ -1,15 +1,26 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
-import { authenticateUser, AuthSuccessResponseSchema } from '../auth/authenticate-user';
-import { UserFactory, type UserFactoryAttributes } from '../auth/factories/user-factory';
-import { ProfileFactory, type ProfileFactoryAttributes } from '../auth/factories/profile-factory';
+import {
+  authenticateUser,
+  AuthSuccessResponseSchema,
+} from '../auth/authenticate-user';
+import {
+  UserFactory,
+  type UserFactoryAttributes,
+} from '../auth/factories/user-factory';
+import {
+  ProfileFactory,
+  type ProfileFactoryAttributes,
+} from '../auth/factories/profile-factory';
 import { createFeedTestApp } from './test-app';
-import type { InMemoryUserRepository, InMemoryPreferencesRepository } from './in-memory-repositories';
+import type {
+  InMemoryUserRepository,
+  InMemoryPreferencesRepository,
+} from './in-memory-repositories';
 import type {
   TestLikeRepository,
   TestMatchRepository,
-  TestPassRepository,
 } from '../../unit/helpers/fakeRepositories';
 import { PreferencesFactory } from './factories/preferences-factory';
 import { FeedFactory } from './factories/feed-factory';
@@ -40,7 +51,7 @@ const FeedResponseSchema = z.object({
       age: z.number().nullable(),
       gender: z.string().nullable(),
       photoUrl: z.string().nullable(),
-    }),
+    })
   ),
   pagination: z.object({
     limit: z.number(),
@@ -51,19 +62,21 @@ const FeedResponseSchema = z.object({
 
 const LikeResponseSchema = z.object({
   action: z.literal('like'),
-  result: z.object({
-    id: z.string(),
-    userId: z.string(),
-    targetUserId: z.string(),
-    createdAt: z.string(),
-  }).or(
-    z.object({
+  result: z
+    .object({
       id: z.string(),
-      userId1: z.string(),
-      userId2: z.string(),
+      userId: z.string(),
+      targetUserId: z.string(),
       createdAt: z.string(),
-    }),
-  ),
+    })
+    .or(
+      z.object({
+        id: z.string(),
+        userId1: z.string(),
+        userId2: z.string(),
+        createdAt: z.string(),
+      })
+    ),
   isMatch: z.boolean(),
 });
 
@@ -89,7 +102,9 @@ type RegisteredUser = {
 type RegisterOptions = {
   userOverrides?: Partial<UserFactoryAttributes>;
   profileOverrides?: Partial<ProfileFactoryAttributes>;
-  preferences?: Partial<Pick<Preferences, 'ageMin' | 'ageMax' | 'genderFilter' | 'maxDistance'>>;
+  preferences?: Partial<
+    Pick<Preferences, 'ageMin' | 'ageMax' | 'genderFilter' | 'maxDistance'>
+  >;
   seedOverrides?: Partial<User>;
 };
 
@@ -98,7 +113,6 @@ describe('Feed routes', () => {
   let userRepository: InMemoryUserRepository;
   let preferencesRepository: InMemoryPreferencesRepository;
   let likeRepository: TestLikeRepository;
-  let passRepository: TestPassRepository;
   let matchRepository: TestMatchRepository;
 
   beforeEach(async () => {
@@ -108,7 +122,6 @@ describe('Feed routes', () => {
     userRepository = setup.userRepository;
     preferencesRepository = setup.preferencesRepository;
     likeRepository = setup.likeRepository;
-    passRepository = setup.passRepository;
     matchRepository = setup.matchRepository;
   });
 
@@ -152,7 +165,9 @@ describe('Feed routes', () => {
     const viewer = await registerUserAndSeed({
       preferences: { genderFilter: ['female'], ageMin: 20, ageMax: 40 },
     });
-    const [candidate] = FeedFactory.generateSampleFeed([{ name: 'Lucia', gender: 'female', age: 28 }]);
+    const [candidate] = FeedFactory.generateSampleFeed([
+      { name: 'Lucia', gender: 'female', age: 28 },
+    ]);
     seedUser(candidate);
 
     const response = await likeUser(viewer.token, candidate.id);
@@ -177,7 +192,9 @@ describe('Feed routes', () => {
     const viewer = await registerUserAndSeed({
       preferences: { genderFilter: ['female'], ageMin: 20, ageMax: 40 },
     });
-    const [candidate] = FeedFactory.generateSampleFeed([{ name: 'Noa', gender: 'female', age: 29 }]);
+    const [candidate] = FeedFactory.generateSampleFeed([
+      { name: 'Noa', gender: 'female', age: 29 },
+    ]);
     seedUser(candidate);
 
     const initialFeed = await getFeed(viewer.token);
@@ -189,7 +206,9 @@ describe('Feed routes', () => {
 
     const updatedFeed = await getFeed(viewer.token);
     const updatedPayload = FeedResponseSchema.parse(updatedFeed.json());
-    expect(updatedPayload.users.map((user) => user.id)).not.toContain(candidate.id);
+    expect(updatedPayload.users.map((user) => user.id)).not.toContain(
+      candidate.id
+    );
   });
 
   it('creates a match when both users like each other', async () => {
@@ -209,7 +228,9 @@ describe('Feed routes', () => {
     expect(mutualLike.statusCode).toBe(200);
     const payload = LikeResponseSchema.parse(mutualLike.json());
     expect(payload.isMatch).toBe(true);
-    expect('userId1' in payload.result || 'userId2' in payload.result).toBe(true);
+    expect('userId1' in payload.result || 'userId2' in payload.result).toBe(
+      true
+    );
 
     const matches = await matchRepository.findByUserId(viewer.id);
     expect(matches.success).toBe(true);
@@ -217,7 +238,7 @@ describe('Feed routes', () => {
       expect(matches.data).toHaveLength(1);
       const match = matches.data[0];
       expect([match.userId1, match.userId2]).toEqual(
-        expect.arrayContaining([viewer.id, target.id]),
+        expect.arrayContaining([viewer.id, target.id])
       );
     }
   });
@@ -226,7 +247,9 @@ describe('Feed routes', () => {
     const viewer = await registerUserAndSeed({
       preferences: { genderFilter: ['female'], ageMin: 20, ageMax: 40 },
     });
-    const [candidate] = FeedFactory.generateSampleFeed([{ name: 'Sara', gender: 'female', age: 30 }]);
+    const [candidate] = FeedFactory.generateSampleFeed([
+      { name: 'Sara', gender: 'female', age: 30 },
+    ]);
     seedUser(candidate);
 
     const passResponse = await passUser(viewer.token, candidate.id);
@@ -270,7 +293,9 @@ describe('Feed routes', () => {
     userRepository.seed(user);
   }
 
-  async function registerUserAndSeed(options: RegisterOptions = {}): Promise<RegisteredUser> {
+  async function registerUserAndSeed(
+    options: RegisterOptions = {}
+  ): Promise<RegisteredUser> {
     const userData = UserFactory.create(options.userOverrides);
     const profileData = ProfileFactory.create(options.profileOverrides);
 
@@ -328,7 +353,10 @@ describe('Feed routes', () => {
     };
   }
 
-  async function getFeed(token: string, query: { limit?: number; offset?: number } = {}) {
+  async function getFeed(
+    token: string,
+    query: { limit?: number; offset?: number } = {}
+  ) {
     const params = new URLSearchParams();
     if (typeof query.limit === 'number') {
       params.set('limit', String(query.limit));

@@ -1,8 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import {
-  DomainError,
-  InternalError,
-} from '../../domain/errors/DomainError';
+import { DomainError, InternalError } from '../../domain/errors/DomainError';
 import { LookingForValue } from '../../domain/entities/LookingFor';
 import { GENDER_VALUES, Gender } from '../../domain/entities/User';
 
@@ -54,12 +51,12 @@ export type UpdateUserProfileInput = {
 
 /**
  * SupabaseUserService - Gestión de perfiles de usuario
- * 
+ *
  * ARQUITECTURA DE DATOS DESPUÉS DE MIGRACIÓN:
  * - public.users: bio, preferences, dates, city, etc. (datos del perfil)
  * - auth.users.email: email del usuario
  * - auth.users.raw_user_meta_data.display_name: nombre del usuario
- * 
+ *
  * IMPORTANTE: Solo el backend con SERVICE_ROLE_KEY puede acceder a auth.users
  */
 export class SupabaseUserService {
@@ -80,10 +77,10 @@ export class SupabaseUserService {
     try {
       // Get profile data from public.users
       const profile = await this.ensureProfileRow(userId);
-      
+
       // Get name and email from auth.users
       const authUser = await this.getAuthUser(userId);
-      
+
       return this.mapRow(profile, authUser);
     } catch (error) {
       if (error instanceof DomainError) {
@@ -96,7 +93,7 @@ export class SupabaseUserService {
 
   async updateProfile(
     userId: string,
-    input: UpdateUserProfileInput,
+    input: UpdateUserProfileInput
   ): Promise<UserProfile> {
     try {
       const profile = await this.ensureProfileRow(userId);
@@ -142,7 +139,7 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed',
+          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed'
         )
         .single();
 
@@ -154,7 +151,7 @@ export class SupabaseUserService {
         });
         throw new InternalError(
           `Failed to update user profile: ${this.formatSupabaseError(error)}`,
-          error,
+          error
         );
       }
 
@@ -164,7 +161,7 @@ export class SupabaseUserService {
 
       // Get name and email from auth.users
       const authUser = await this.getAuthUser(userId);
-      
+
       return this.mapRow(data as UserProfileRow, authUser);
     } catch (error) {
       if (error instanceof DomainError) {
@@ -189,7 +186,10 @@ export class SupabaseUserService {
         throw error;
       }
 
-      throw new InternalError('Unexpected error deactivating user account', error);
+      throw new InternalError(
+        'Unexpected error deactivating user account',
+        error
+      );
     }
   }
 
@@ -205,7 +205,7 @@ export class SupabaseUserService {
       .from('users')
       .upsert(defaults, { onConflict: 'id' })
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed',
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed'
       )
       .single();
 
@@ -217,7 +217,7 @@ export class SupabaseUserService {
       });
       throw new InternalError(
         `Failed to create user profile record: ${this.formatSupabaseError(error)}`,
-        error,
+        error
       );
     }
 
@@ -228,13 +228,11 @@ export class SupabaseUserService {
     return data as UserProfileRow;
   }
 
-  private async findProfileRow(
-    userId: string,
-  ): Promise<UserProfileRow | null> {
+  private async findProfileRow(userId: string): Promise<UserProfileRow | null> {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed',
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -246,7 +244,7 @@ export class SupabaseUserService {
       });
       throw new InternalError(
         `Failed to query user profile: ${this.formatSupabaseError(error)}`,
-        error,
+        error
       );
     }
 
@@ -262,11 +260,14 @@ export class SupabaseUserService {
       });
       throw new InternalError(
         `Unable to resolve Supabase auth user: ${this.formatSupabaseError(error)}`,
-        error,
+        error
       );
     }
 
-    const metadata = data?.user?.user_metadata as Record<string, unknown> | null;
+    const metadata = data?.user?.user_metadata as Record<
+      string,
+      unknown
+    > | null;
 
     let birthDate: string | null = null;
     if (metadata && typeof metadata.birthDate === 'string') {
@@ -307,11 +308,13 @@ export class SupabaseUserService {
 
   /**
    * Obtiene name y email desde auth.users usando service role
-   * 
+   *
    * @param userId - ID del usuario
    * @returns {name, email} - name viene de raw_user_meta_data.display_name, email de auth.users.email
    */
-  private async getAuthUser(userId: string): Promise<{ name: string; email: string }> {
+  private async getAuthUser(
+    userId: string
+  ): Promise<{ name: string; email: string }> {
     const { data, error } = await this.client.auth.admin.getUserById(userId);
     if (error) {
       console.error('[SupabaseUserService] getAuthUser failed', {
@@ -320,7 +323,7 @@ export class SupabaseUserService {
       });
       throw new InternalError(
         `Unable to get auth user: ${this.formatSupabaseError(error)}`,
-        error,
+        error
       );
     }
 
@@ -331,7 +334,7 @@ export class SupabaseUserService {
 
     const metadata = user.user_metadata as Record<string, unknown> | null;
     const email = user.email ?? '';
-    
+
     // Get display_name from raw_user_meta_data (this is where we store the user's name)
     const displayName =
       metadata && typeof metadata.display_name === 'string'
@@ -343,8 +346,10 @@ export class SupabaseUserService {
     return { name, email };
   }
 
-
-  private mapRow(row: UserProfileRow, authUser: { name: string; email: string }): UserProfile {
+  private mapRow(
+    row: UserProfileRow,
+    authUser: { name: string; email: string }
+  ): UserProfile {
     return {
       id: row.id,
       name: authUser.name, // From auth.users.raw_user_meta_data.display_name
@@ -367,7 +372,7 @@ export class SupabaseUserService {
     if (error) {
       throw new InternalError(
         `Failed to mark auth user as deleted: ${this.formatSupabaseError(error)}`,
-        error,
+        error
       );
     }
   }
@@ -381,7 +386,7 @@ export class SupabaseUserService {
     if (error) {
       throw new InternalError(
         `Failed to hide user from feed: ${this.formatSupabaseError(error)}`,
-        error,
+        error
       );
     }
   }
@@ -397,26 +402,29 @@ export class SupabaseUserService {
     if (chatsError) {
       throw new InternalError(
         `Failed to fetch chat participations: ${this.formatSupabaseError(chatsError)}`,
-        chatsError,
+        chatsError
       );
     }
 
     const chatIds =
-      chatRows?.map((row: { chat_id: string }) => row.chat_id).filter(Boolean) ?? [];
+      chatRows
+        ?.map((row: { chat_id: string }) => row.chat_id)
+        .filter(Boolean) ?? [];
 
     if (chatIds.length === 0) {
       return partnerIds;
     }
 
-    const { data: participantRows, error: participantsError } = await this.client
-      .from('chat_participants')
-      .select('chat_id, user_id')
-      .in('chat_id', chatIds);
+    const { data: participantRows, error: participantsError } =
+      await this.client
+        .from('chat_participants')
+        .select('chat_id, user_id')
+        .in('chat_id', chatIds);
 
     if (participantsError) {
       throw new InternalError(
         `Failed to resolve chat participants: ${this.formatSupabaseError(participantsError)}`,
-        participantsError,
+        participantsError
       );
     }
 
@@ -429,7 +437,10 @@ export class SupabaseUserService {
     return partnerIds;
   }
 
-  private async blockChatPartners(userId: string, partnerIds: Set<string>): Promise<void> {
+  private async blockChatPartners(
+    userId: string,
+    partnerIds: Set<string>
+  ): Promise<void> {
     if (partnerIds.size === 0) {
       return;
     }
@@ -439,23 +450,21 @@ export class SupabaseUserService {
       blocked_id: partnerId,
     }));
 
-    const { error } = await this.client
-      .from('blocked_users')
-      .upsert(rows, {
-        onConflict: 'blocker_id,blocked_id',
-        ignoreDuplicates: true,
-      });
+    const { error } = await this.client.from('blocked_users').upsert(rows, {
+      onConflict: 'blocker_id,blocked_id',
+      ignoreDuplicates: true,
+    });
 
     if (error) {
       throw new InternalError(
         `Failed to block chat partners: ${this.formatSupabaseError(error)}`,
-        error,
+        error
       );
     }
   }
 
   private resolveAvatarUrl(
-    metadata: Record<string, unknown> | null,
+    metadata: Record<string, unknown> | null
   ): string | null {
     if (!metadata) {
       return null;
@@ -525,7 +534,7 @@ export class SupabaseUserService {
    * Upload user avatar to Supabase Storage
    * Uses SERVICE_ROLE_KEY for full access to storage
    * Only deletes previous avatar AFTER successful upload
-   * 
+   *
    * @param userId - The user ID
    * @param buffer - Image file buffer
    * @param mimeType - MIME type of the image (image/jpeg or image/png)
@@ -534,18 +543,20 @@ export class SupabaseUserService {
   async uploadAvatar(
     userId: string,
     buffer: Buffer,
-    mimeType: string,
+    mimeType: string
   ): Promise<string> {
     try {
       const AVATAR_BUCKET = 'avatars';
-      
+
       // Step 1: Generate unique filename: {userId}_{timestamp}.jpg
       const timestamp = Date.now();
       const extension = mimeType === 'image/png' ? 'png' : 'jpg';
       const fileName = `${userId}_${timestamp}.${extension}`;
       const filePath = `${userId}/${fileName}`;
 
-      console.log(`[SupabaseUserService] Uploading avatar: ${filePath}, Size: ${Math.round(buffer.length / 1024)}KB`);
+      console.log(
+        `[SupabaseUserService] Uploading avatar: ${filePath}, Size: ${Math.round(buffer.length / 1024)}KB`
+      );
 
       // Step 2: Upload new avatar to Supabase Storage
       const { error } = await this.client.storage
@@ -556,10 +567,13 @@ export class SupabaseUserService {
         });
 
       if (error) {
-        console.error('[SupabaseUserService] Error uploading to Supabase Storage:', error);
+        console.error(
+          '[SupabaseUserService] Error uploading to Supabase Storage:',
+          error
+        );
         throw new InternalError(
           `Failed to upload avatar: ${this.formatSupabaseError(error)}`,
-          error,
+          error
         );
       }
 
@@ -582,10 +596,13 @@ export class SupabaseUserService {
         .eq('id', userId);
 
       if (updateError) {
-        console.error('[SupabaseUserService] Error updating avatar_url in database:', updateError);
+        console.error(
+          '[SupabaseUserService] Error updating avatar_url in database:',
+          updateError
+        );
         throw new InternalError(
           `Failed to update user avatar: ${this.formatSupabaseError(updateError)}`,
-          updateError,
+          updateError
         );
       }
 
@@ -605,44 +622,57 @@ export class SupabaseUserService {
   /**
    * Delete all avatar files for a specific user from Supabase Storage
    * EXCEPT the newly uploaded file
-   * 
+   *
    * @param userId - The user ID
    * @param excludeFilePath - The file path to exclude from deletion (the new avatar)
    */
-  private async deleteUserAvatars(userId: string, excludeFilePath: string): Promise<void> {
+  private async deleteUserAvatars(
+    userId: string,
+    excludeFilePath: string
+  ): Promise<void> {
     try {
       const AVATAR_BUCKET = 'avatars';
-      
+
       // List all files in the user's folder
       const { data: files, error: listError } = await this.client.storage
         .from(AVATAR_BUCKET)
         .list(userId);
 
       if (listError) {
-        console.warn(`[SupabaseUserService] Could not list files for user ${userId}:`, listError);
+        console.warn(
+          `[SupabaseUserService] Could not list files for user ${userId}:`,
+          listError
+        );
         return; // Continue even if we can't list files
       }
 
       if (!files || files.length === 0) {
-        console.log(`[SupabaseUserService] No existing avatars found for user ${userId}`);
+        console.log(
+          `[SupabaseUserService] No existing avatars found for user ${userId}`
+        );
         return;
       }
 
       // Filter out the newly uploaded file
-      const filesToDelete = files.filter(file => {
+      const filesToDelete = files.filter((file) => {
         const filePath = `${userId}/${file.name}`;
         return filePath !== excludeFilePath;
       });
 
       if (filesToDelete.length === 0) {
-        console.log(`[SupabaseUserService] No old avatars to delete for user ${userId}`);
+        console.log(
+          `[SupabaseUserService] No old avatars to delete for user ${userId}`
+        );
         return;
       }
 
       // Create array of file paths to delete
-      const filePaths = filesToDelete.map(file => `${userId}/${file.name}`);
-      
-      console.log(`[SupabaseUserService] Deleting ${filePaths.length} old avatar(s) for user ${userId}:`, filePaths);
+      const filePaths = filesToDelete.map((file) => `${userId}/${file.name}`);
+
+      console.log(
+        `[SupabaseUserService] Deleting ${filePaths.length} old avatar(s) for user ${userId}:`,
+        filePaths
+      );
 
       // Delete old files
       const { error: deleteError } = await this.client.storage
@@ -650,13 +680,21 @@ export class SupabaseUserService {
         .remove(filePaths);
 
       if (deleteError) {
-        console.warn(`[SupabaseUserService] Error deleting old avatars for user ${userId}:`, deleteError);
+        console.warn(
+          `[SupabaseUserService] Error deleting old avatars for user ${userId}:`,
+          deleteError
+        );
         // Don't throw error - cleanup failure shouldn't break the upload
       } else {
-        console.log(`[SupabaseUserService] Successfully deleted ${filePaths.length} old avatar(s) for user ${userId}`);
+        console.log(
+          `[SupabaseUserService] Successfully deleted ${filePaths.length} old avatar(s) for user ${userId}`
+        );
       }
     } catch (error) {
-      console.warn(`[SupabaseUserService] Unexpected error deleting old avatars for user ${userId}:`, error);
+      console.warn(
+        `[SupabaseUserService] Unexpected error deleting old avatars for user ${userId}:`,
+        error
+      );
       // Don't throw error - cleanup failure shouldn't break the upload
     }
   }
@@ -689,7 +727,7 @@ export class SupabaseUserService {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'SupabaseUserService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'SupabaseUserService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 

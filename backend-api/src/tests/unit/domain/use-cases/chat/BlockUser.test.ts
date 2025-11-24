@@ -25,7 +25,7 @@ describe('BlockUser use case', () => {
     const result = await useCase.execute(
       MATCH_USER_A,
       MATCH_USER_A,
-      '11111111-1111-1111-1111-111111111111',
+      '11111111-1111-1111-1111-111111111111'
     );
 
     expect(result.success).toBe(false);
@@ -49,7 +49,7 @@ describe('BlockUser use case', () => {
     const duplicate = await useCase.execute(
       MATCH_USER_A,
       MATCH_USER_B,
-      matchResult.data.id,
+      matchResult.data.id
     );
 
     expect(duplicate.success).toBe(false);
@@ -62,7 +62,7 @@ describe('BlockUser use case', () => {
     const result = await useCase.execute(
       MATCH_USER_A,
       MATCH_USER_B,
-      '22222222-2222-2222-2222-222222222222',
+      '22222222-2222-2222-2222-222222222222'
     );
 
     expect(result.success).toBe(false);
@@ -85,7 +85,7 @@ describe('BlockUser use case', () => {
     const result = await useCase.execute(
       STRANGER,
       MATCH_USER_B,
-      matchResult.data.id,
+      matchResult.data.id
     );
 
     expect(result.success).toBe(false);
@@ -108,13 +108,15 @@ describe('BlockUser use case', () => {
     const result = await useCase.execute(
       MATCH_USER_A,
       STRANGER,
-      matchResult.data.id,
+      matchResult.data.id
     );
 
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.code).toBe('FORBIDDEN');
-      expect(result.error.message).toBe('Target user is not part of this match');
+      expect(result.error.message).toBe(
+        'Target user is not part of this match'
+      );
     }
   });
 
@@ -131,7 +133,7 @@ describe('BlockUser use case', () => {
     const result = await useCase.execute(
       MATCH_USER_A,
       MATCH_USER_B,
-      matchResult.data.id,
+      matchResult.data.id
     );
 
     expect(result.success).toBe(true);
@@ -158,7 +160,7 @@ describe('BlockUser use case', () => {
     const result = await useCase.execute(
       MATCH_USER_A,
       MATCH_USER_B,
-      matchResult.data.id,
+      matchResult.data.id
     );
 
     expect(result.success).toBe(false);
@@ -168,4 +170,3 @@ describe('BlockUser use case', () => {
     }
   });
 });
-

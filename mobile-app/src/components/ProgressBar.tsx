@@ -6,7 +6,10 @@ interface ProgressBarProps {
   currentStep: number;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ totalSteps, currentStep }) => {
+export const ProgressBar: React.FC<ProgressBarProps> = ({
+  totalSteps,
+  currentStep,
+}) => {
   return (
     <View style={styles.container}>
       {Array.from({ length: totalSteps }, (_, index) => (
@@ -42,4 +45,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
 });
-

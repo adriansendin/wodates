@@ -9,13 +9,15 @@ export const FeedCandidateSchema = z.object({
   age: z.number().int().min(18).max(100).nullable().optional(),
   gender: GenderSchema.nullable().optional(),
   photoUrl: z.string().url().nullable().optional(),
-  location: z.object({
-    latitude: z.number(),
-    longitude: z.number(),
-    city: z.string(),
-    country: z.string(),
-  }).nullable().optional(),
+  location: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+      city: z.string(),
+      country: z.string(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export type FeedCandidate = z.infer<typeof FeedCandidateSchema>;
-

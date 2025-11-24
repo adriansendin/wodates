@@ -10,9 +10,9 @@ interface PlatformInfoProps {
  * Componente que muestra información específica de plataforma
  * Útil para indicar cuando ciertas funcionalidades no están disponibles en web
  */
-export const PlatformInfo: React.FC<PlatformInfoProps> = ({ 
-  message = "Puedes seleccionar una foto desde tu computadora",
-  style 
+export const PlatformInfo: React.FC<PlatformInfoProps> = ({
+  message = 'Puedes seleccionar una foto desde tu computadora',
+  style,
 }) => {
   if (Platform.OS !== 'web') {
     return null; // No mostrar nada en móvil

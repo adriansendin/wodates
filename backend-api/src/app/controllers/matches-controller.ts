@@ -10,11 +10,11 @@ export class MatchesController {
 
     try {
       const result = await this.matchOverviewService.list(userId);
-      
+
       if (!result.success) {
         request.log.error(
           { userId, error: result.error },
-          'GET /matches - Service returned error',
+          'GET /matches - Service returned error'
         );
         const error = result.error;
         return reply.status(error.statusCode).send({
@@ -30,7 +30,7 @@ export class MatchesController {
           matchesCount: result.data.matches.length,
           activeChatsCount: result.data.activeChatsCount,
         },
-        'GET /matches - Success',
+        'GET /matches - Success'
       );
 
       return reply.send({
@@ -46,10 +46,7 @@ export class MatchesController {
         activeChatsCount: result.data.activeChatsCount,
       });
     } catch (error) {
-      request.log.error(
-        { userId, error },
-        'GET /matches - Unexpected error',
-      );
+      request.log.error({ userId, error }, 'GET /matches - Unexpected error');
       return reply.status(500).send({
         error: 'INTERNAL_SERVER_ERROR',
         message: 'An unexpected error occurred',

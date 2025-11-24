@@ -29,7 +29,7 @@ export class FeedController {
     try {
       const userId = request.user!.id;
       const { limit = 10, offset = 0 } = FeedQuerySchema.parse(request.query);
-      
+
       const candidates = await this.feedService.getFeedCandidates(
         userId,
         limit,
@@ -56,9 +56,9 @@ export class FeedController {
     try {
       const userId = request.user!.id;
       const { targetUserId } = LikeSchema.parse(request.body);
-      
+
       const result = await this.likeUserUseCase.execute(userId, targetUserId);
-      
+
       if (result.success) {
         return reply.send({
           action: 'like',
@@ -77,9 +77,9 @@ export class FeedController {
     try {
       const userId = request.user!.id;
       const { targetUserId } = PassSchema.parse(request.body);
-      
+
       const result = await this.passUserUseCase.execute(userId, targetUserId);
-      
+
       if (result.success) {
         return reply.send({
           action: 'pass',

@@ -10,4 +10,3 @@ export interface AuthService {
   registerUser(registerRequest: RegisterRequest): Promise<AuthUser>;
   validateCredentials(email: string, password: string): Promise<AuthUser>;
 }
-

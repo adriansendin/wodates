@@ -3,21 +3,25 @@ import * as DocumentPicker from 'expo-document-picker';
 import axios from 'axios';
 import { useAuthStore } from '../../domain/stores/authStore';
 import { Result, success, failure } from '../../domain/Result';
-import {
-  DomainError,
-  UploadError,
-} from '../../domain/errors/DomainError';
+import { DomainError, UploadError } from '../../domain/errors/DomainError';
+import { getApiUrl } from '../../utils/apiConfig';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = getApiUrl();
 const MAX_FILE_SIZE_BYTES = 500 * 1024; // 500 KB
-const ALLOWED_MIME_TYPES = ['application/zip', 'application/x-zip-compressed', 'application/x-zip'];
+const ALLOWED_MIME_TYPES = [
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/x-zip',
+];
 
 /**
  * Validates a ZIP file
  * @param file - The file to validate
  * @returns Error message if invalid, null if valid
  */
-function validateZipFile(file: DocumentPicker.DocumentPickerAsset): string | null {
+function validateZipFile(
+  file: DocumentPicker.DocumentPickerAsset
+): string | null {
   // Check MIME type (accept multiple ZIP MIME types)
   if (file.mimeType && !ALLOWED_MIME_TYPES.includes(file.mimeType)) {
     return 'Archivo no válido (debe ser .zip)';
@@ -43,7 +47,9 @@ function validateZipFile(file: DocumentPicker.DocumentPickerAsset): string | nul
  * Picks a ZIP file from the device
  * @returns {Promise<Result<DocumentPicker.DocumentPickerAsset | null, DomainError>>}
  */
-export async function pickZipFile(): Promise<Result<DocumentPicker.DocumentPickerAsset | null, DomainError>> {
+export async function pickZipFile(): Promise<
+  Result<DocumentPicker.DocumentPickerAsset | null, DomainError>
+> {
   try {
     console.log('[ZipUploadService] Picking ZIP file, Platform:', Platform.OS);
     const result = await DocumentPicker.getDocumentAsync({
@@ -51,7 +57,10 @@ export async function pickZipFile(): Promise<Result<DocumentPicker.DocumentPicke
       copyToCacheDirectory: true,
     });
 
-    console.log('[ZipUploadService] DocumentPicker result:', { canceled: result.canceled, assetsCount: result.assets?.length });
+    console.log('[ZipUploadService] DocumentPicker result:', {
+      canceled: result.canceled,
+      assetsCount: result.assets?.length,
+    });
 
     if (result.canceled) {
       console.log('[ZipUploadService] User canceled file pick');
@@ -59,13 +68,13 @@ export async function pickZipFile(): Promise<Result<DocumentPicker.DocumentPicke
     }
 
     const file = result.assets[0];
-    console.log('[ZipUploadService] Selected file:', { 
-      name: file.name, 
-      size: file.size, 
-      mimeType: file.mimeType, 
-      uri: file.uri?.substring(0, 50) + '...' 
+    console.log('[ZipUploadService] Selected file:', {
+      name: file.name,
+      size: file.size,
+      mimeType: file.mimeType,
+      uri: file.uri?.substring(0, 50) + '...',
     });
-    
+
     // Validate file
     const validationError = validateZipFile(file);
     if (validationError) {
@@ -78,7 +87,10 @@ export async function pickZipFile(): Promise<Result<DocumentPicker.DocumentPicke
   } catch (error) {
     console.error('[ZipUploadService] Error picking ZIP file:', error);
     return failure(
-      new UploadError('Error al seleccionar el archivo. Inténtalo de nuevo.', error)
+      new UploadError(
+        'Error al seleccionar el archivo. Inténtalo de nuevo.',
+        error
+      )
     );
   }
 }
@@ -90,10 +102,15 @@ export async function pickZipFile(): Promise<Result<DocumentPicker.DocumentPicke
  * @returns {Promise<Result<{ uploadZipPath: string; fileSizeBytes: number }, DomainError>>}
  */
 async function uploadZipToBackend(
-  file: DocumentPicker.DocumentPickerAsset,
-): Promise<Result<{ uploadZipPath: string; fileSizeBytes: number }, DomainError>> {
+  file: DocumentPicker.DocumentPickerAsset
+): Promise<
+  Result<{ uploadZipPath: string; fileSizeBytes: number }, DomainError>
+> {
   try {
-    console.log('[ZipUploadService] Starting upload to backend, Platform:', Platform.OS);
+    console.log(
+      '[ZipUploadService] Starting upload to backend, Platform:',
+      Platform.OS
+    );
     const tokens = useAuthStore.getState().tokens;
     if (!tokens?.accessToken) {
       console.error('[ZipUploadService] No auth token available');
@@ -102,9 +119,12 @@ async function uploadZipToBackend(
 
     // Create FormData with the ZIP file
     const formData = new FormData();
-    
+
     if (Platform.OS === 'web') {
-      console.log('[ZipUploadService] Web platform - processing file URI:', file.uri?.substring(0, 50));
+      console.log(
+        '[ZipUploadService] Web platform - processing file URI:',
+        file.uri?.substring(0, 50)
+      );
       // On web, handle blob URLs or file URIs
       try {
         if (file.uri.startsWith('blob:')) {
@@ -112,35 +132,52 @@ async function uploadZipToBackend(
           // Fetch the blob URL to get the Blob
           const response = await fetch(file.uri);
           const blob = await response.blob();
-          console.log('[ZipUploadService] Blob fetched:', { size: blob.size, type: blob.type });
-          const fileObj = new File([blob], file.name || 'upload.zip', { type: 'application/zip' });
+          console.log('[ZipUploadService] Blob fetched:', {
+            size: blob.size,
+            type: blob.type,
+          });
+          const fileObj = new File([blob], file.name || 'upload.zip', {
+            type: 'application/zip',
+          });
           formData.append('file', fileObj);
         } else {
           console.log('[ZipUploadService] Fetching file URI...');
           // Try to fetch as file
           const response = await fetch(file.uri);
           const blob = await response.blob();
-          console.log('[ZipUploadService] File fetched:', { size: blob.size, type: blob.type });
-          const fileObj = new File([blob], file.name || 'upload.zip', { type: 'application/zip' });
+          console.log('[ZipUploadService] File fetched:', {
+            size: blob.size,
+            type: blob.type,
+          });
+          const fileObj = new File([blob], file.name || 'upload.zip', {
+            type: 'application/zip',
+          });
           formData.append('file', fileObj);
         }
         console.log('[ZipUploadService] File added to FormData');
       } catch (fetchError) {
-        console.error('[ZipUploadService] Error fetching file for web upload:', fetchError);
+        console.error(
+          '[ZipUploadService] Error fetching file for web upload:',
+          fetchError
+        );
         // Fallback: try to use file object directly if available (some DocumentPicker implementations expose it)
         if ((file as any).file instanceof File) {
           console.log('[ZipUploadService] Using file object directly');
           formData.append('file', (file as any).file);
         } else {
-          console.error('[ZipUploadService] No file object available, throwing error');
+          console.error(
+            '[ZipUploadService] No file object available, throwing error'
+          );
           throw new UploadError('No se pudo acceder al archivo para subir.');
         }
       }
     } else {
-      console.log('[ZipUploadService] React Native platform - using URI format');
+      console.log(
+        '[ZipUploadService] React Native platform - using URI format'
+      );
       // In React Native, provide file info in specific format
       const filename = file.name || 'upload.zip';
-      // @ts-ignore - FormData in React Native accepts this format
+      // @ts-expect-error - FormData in React Native accepts this format
       formData.append('file', {
         uri: file.uri,
         type: 'application/zip',
@@ -148,7 +185,10 @@ async function uploadZipToBackend(
       });
     }
 
-    console.log('[ZipUploadService] Sending POST request to:', `${API_URL}/storage/upload-zip`);
+    console.log(
+      '[ZipUploadService] Sending POST request to:',
+      `${API_URL}/storage/upload-zip`
+    );
     // Upload to backend API endpoint
     const response = await axios.post(
       `${API_URL}/storage/upload-zip`,
@@ -156,7 +196,7 @@ async function uploadZipToBackend(
       {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${tokens.accessToken}`,
+          Authorization: `Bearer ${tokens.accessToken}`,
         },
       }
     );
@@ -173,14 +213,18 @@ async function uploadZipToBackend(
       response: error.response?.data,
       status: error.response?.status,
     });
-    
+
     if (error.response) {
-      const message = error.response.data?.message || 'Error al subir el archivo.';
+      const message =
+        error.response.data?.message || 'Error al subir el archivo.';
       return failure(new UploadError(message, error));
     }
 
     return failure(
-      new UploadError('Error inesperado al subir el archivo. Inténtalo de nuevo.', error)
+      new UploadError(
+        'Error inesperado al subir el archivo. Inténtalo de nuevo.',
+        error
+      )
     );
   }
 }
@@ -193,7 +237,7 @@ async function uploadZipToBackend(
  */
 async function registerUpload(
   uploadZipPath: string,
-  fileSizeBytes: number,
+  fileSizeBytes: number
 ): Promise<Result<void, DomainError>> {
   try {
     const tokens = useAuthStore.getState().tokens;
@@ -201,7 +245,7 @@ async function registerUpload(
       return failure(new UploadError('No authentication token available'));
     }
 
-    const response = await axios.post(
+    await axios.post(
       `${API_URL}/storage/register-upload`,
       {
         uploadZipPath,
@@ -211,7 +255,7 @@ async function registerUpload(
       },
       {
         headers: {
-          'Authorization': `Bearer ${tokens.accessToken}`,
+          Authorization: `Bearer ${tokens.accessToken}`,
           'Content-Type': 'application/json',
         },
       }
@@ -220,28 +264,29 @@ async function registerUpload(
     return success(undefined);
   } catch (error: any) {
     console.error('[ZipUploadService] Error registering upload:', error);
-    
+
     if (error.response) {
-      const message = error.response.data?.message || 'No se pudo registrar la subida.';
+      const message =
+        error.response.data?.message || 'No se pudo registrar la subida.';
       return failure(new UploadError(message, error));
     }
 
     return failure(
-      new UploadError('Error inesperado al registrar la subida. Inténtalo de nuevo.', error)
+      new UploadError(
+        'Error inesperado al registrar la subida. Inténtalo de nuevo.',
+        error
+      )
     );
   }
 }
 
-
 /**
  * Uploads a ZIP file to Supabase Storage via backend
  * @param file - The ZIP file to upload
- * @param userId - The user ID (for registration)
  * @returns {Promise<Result<string, DomainError>>} Result with success message or error
  */
 export async function uploadZipFile(
-  file: DocumentPicker.DocumentPickerAsset,
-  userId: string,
+  file: DocumentPicker.DocumentPickerAsset
 ): Promise<Result<string, DomainError>> {
   try {
     // Step 1: Upload file to backend (backend uploads to Supabase Storage)
@@ -257,15 +302,23 @@ export async function uploadZipFile(
     if (!registerResult.success) {
       // Note: File is already uploaded, but registration failed
       // We still return success since the file is in storage
-      console.warn('[ZipUploadService] File uploaded but registration failed:', registerResult.error);
+      console.warn(
+        '[ZipUploadService] File uploaded but registration failed:',
+        registerResult.error
+      );
     }
 
     return success('Subido con éxito.');
   } catch (error) {
-    console.error('[ZipUploadService] Unexpected error uploading ZIP file:', error);
+    console.error(
+      '[ZipUploadService] Unexpected error uploading ZIP file:',
+      error
+    );
     return failure(
-      new UploadError('Error inesperado al subir el archivo. Inténtalo de nuevo.', error)
+      new UploadError(
+        'Error inesperado al subir el archivo. Inténtalo de nuevo.',
+        error
+      )
     );
   }
 }
-

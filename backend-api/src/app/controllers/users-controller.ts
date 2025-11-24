@@ -25,53 +25,44 @@ const dateSchema = z.preprocess(
   z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'birthDate must use format YYYY-MM-DD')
-    .nullable(),
+    .nullable()
 );
 
 const nullableString = (max: number) =>
-  z.preprocess(
-    (value) => {
-      if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (trimmed === '') {
-          return null;
-        }
-        return trimmed;
+  z.preprocess((value) => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        return null;
       }
-      return value;
-    },
-    z.string().min(1).max(max).nullable(),
-  );
+      return trimmed;
+    }
+    return value;
+  }, z.string().min(1).max(max).nullable());
 
 const nullableText = (max: number) =>
-  z.preprocess(
-    (value) => {
-      if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (trimmed === '') {
-          return null;
-        }
-        return trimmed;
+  z.preprocess((value) => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        return null;
       }
-      return value;
-    },
-    z.string().max(max).nullable(),
-  );
+      return trimmed;
+    }
+    return value;
+  }, z.string().max(max).nullable());
 
 const nullableEnum = <T extends readonly [string, ...string[]]>(values: T) =>
-  z.preprocess(
-    (value) => {
-      if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (trimmed === '') {
-          return null;
-        }
-        return trimmed;
+  z.preprocess((value) => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        return null;
       }
-      return value;
-    },
-    z.enum(values).nullable(),
-  );
+      return trimmed;
+    }
+    return value;
+  }, z.enum(values).nullable());
 
 const nullableInt = (min: number, max: number) =>
   z.preprocess((value) => {
@@ -122,7 +113,7 @@ const UpdateProfileSchema = z
     {
       message: 'min_age must be less than or equal to max_age',
       path: ['min_age'],
-    },
+    }
   );
 
 export class UsersController {
@@ -182,7 +173,7 @@ export class UsersController {
 
       const profile = await this.userService.updateProfile(
         authUser.id,
-        updateInput,
+        updateInput
       );
       return reply.send(profile);
     } catch (error) {
@@ -220,7 +211,7 @@ export class UsersController {
 
       // Get file from multipart request
       const data = await request.file();
-      
+
       if (!data) {
         return reply.status(400).send({
           error: 'MISSING_FILE',
@@ -253,7 +244,7 @@ export class UsersController {
       const avatarUrl = await this.userService.uploadAvatar(
         authUser.id,
         buffer,
-        data.mimetype,
+        data.mimetype
       );
 
       return reply.send({ avatarUrl });

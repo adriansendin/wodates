@@ -1,13 +1,9 @@
-import {
-  IAProvider,
-  IAResponse,
-  IAGenerateRequest,
-} from './IAProvider';
+import { IAProvider, IAResponse, IAGenerateRequest } from './IAProvider';
 import { AIConfig } from '../ai-settings';
 
 /**
  * Local Ollama implementation of IAProvider
- * 
+ *
  * Uses Ollama's local API (typically http://localhost:11434) to generate responses.
  * Handles streaming responses and reconstructs the full text before returning.
  */
@@ -31,7 +27,7 @@ export class LocalOllamaProvider implements IAProvider {
     baseUrl?: string,
     timeout?: number,
     parameters?: OllamaParameters,
-    logger?: any,
+    logger?: any
   ) {
     // Model is required and provided by config.ts from AI_MODEL environment variable
     // Supported models: phi3, llama3.2:1b, qwen2.5:1.5b
@@ -51,7 +47,7 @@ export class LocalOllamaProvider implements IAProvider {
             historyLength: request.conversationHistory.length,
             messageLength: request.lastUserMessage.length,
           },
-          'Building prompt for Ollama',
+          'Building prompt for Ollama'
         );
       }
 
@@ -64,15 +60,16 @@ export class LocalOllamaProvider implements IAProvider {
             baseUrl: this.baseUrl,
             model: this.model,
             promptLength: prompt.length,
-            promptPreview: prompt.substring(0, 200) + (prompt.length > 200 ? '...' : ''),
+            promptPreview:
+              prompt.substring(0, 200) + (prompt.length > 200 ? '...' : ''),
           },
-          '7. Ollama - Llamando API HTTP a Ollama',
+          '7. Ollama - Llamando API HTTP a Ollama'
         );
       }
 
       // Call Ollama API with streaming
       const content = await this.callOllamaAPI(
-        prompt, 
+        prompt,
         request.lastUserMessage,
         request.conversationHistory.length
       );
@@ -97,9 +94,10 @@ export class LocalOllamaProvider implements IAProvider {
           {
             model: this.model,
             responseLength: content.length,
-            responsePreview: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
+            responsePreview:
+              content.substring(0, 200) + (content.length > 200 ? '...' : ''),
           },
-          '8. Ollama - Respuesta recibida exitosamente',
+          '8. Ollama - Respuesta recibida exitosamente'
         );
       }
 
@@ -121,7 +119,7 @@ export class LocalOllamaProvider implements IAProvider {
 
   /**
    * Builds a text-based prompt for Ollama
-   * 
+   *
    * Unlike OpenAI, Ollama uses a single text prompt rather than
    * separate system/user/assistant messages.
    * Uses centralized prompt configuration from AIConfig.
@@ -165,9 +163,11 @@ export class LocalOllamaProvider implements IAProvider {
 
     // Add the last user message only if it's not already in the history
     // (to avoid duplication - the message might already be saved and included in history)
-    const lastHistoryMessage = request.conversationHistory[request.conversationHistory.length - 1];
-    const isLastMessageInHistory = lastHistoryMessage && 
-      lastHistoryMessage.role === 'user' && 
+    const lastHistoryMessage =
+      request.conversationHistory[request.conversationHistory.length - 1];
+    const isLastMessageInHistory =
+      lastHistoryMessage &&
+      lastHistoryMessage.role === 'user' &&
       lastHistoryMessage.content === request.lastUserMessage;
 
     if (!isLastMessageInHistory && request.lastUserMessage) {
@@ -181,13 +181,13 @@ export class LocalOllamaProvider implements IAProvider {
 
   /**
    * Calls Ollama API and handles streaming response
-   * 
+   *
    * Ollama returns a stream of JSON chunks (NDJSON format).
    * Each chunk has a "response" field with text and a "done" flag.
    * We accumulate all responses until done=true.
    */
   private async callOllamaAPI(
-    prompt: string, 
+    prompt: string,
     lastUserMessage?: string,
     historyLength?: number
   ): Promise<string> {
@@ -206,7 +206,7 @@ export class LocalOllamaProvider implements IAProvider {
             top_p: this.parameters.top_p,
             num_ctx: this.parameters.num_ctx,
           },
-          'Making request to Ollama API (speed-optimized)',
+          'Making request to Ollama API (speed-optimized)'
         );
       }
 
@@ -242,13 +242,22 @@ export class LocalOllamaProvider implements IAProvider {
         num_ctx: requestBody.num_ctx,
         stream: requestBody.stream,
       });
-      console.log('Prompt length:', requestBody.prompt.length, 'characters', '(includes system instructions, context, and conversation history)');
+      console.log(
+        'Prompt length:',
+        requestBody.prompt.length,
+        'characters',
+        '(includes system instructions, context, and conversation history)'
+      );
       if (historyLength !== undefined) {
         console.log('Conversation history:', historyLength, 'messages');
       }
       // Only log the last user message to avoid showing previous Doc Love messages
       if (lastUserMessage) {
-        console.log('Usuario:', lastUserMessage, `(${lastUserMessage.length} characters)`);
+        console.log(
+          'Usuario:',
+          lastUserMessage,
+          `(${lastUserMessage.length} characters)`
+        );
       }
       console.log('========================\n');
 
@@ -271,12 +280,10 @@ export class LocalOllamaProvider implements IAProvider {
               statusText: response.statusText,
               error: errorText,
             },
-            'Ollama API returned error status',
+            'Ollama API returned error status'
           );
         }
-        throw new Error(
-          `Ollama API returned ${response.status}: ${errorText}`,
-        );
+        throw new Error(`Ollama API returned ${response.status}: ${errorText}`);
       }
 
       if (!response.body) {
@@ -297,7 +304,7 @@ export class LocalOllamaProvider implements IAProvider {
       let fullResponse = '';
 
       try {
-        while (true) {
+        for (;;) {
           // Check if aborted before reading
           if (controller.signal.aborted) {
             throw new Error('Request aborted due to timeout');
@@ -331,7 +338,7 @@ export class LocalOllamaProvider implements IAProvider {
                     {
                       responseLength: fullResponse.length,
                     },
-                    'Ollama stream completed',
+                    'Ollama stream completed'
                   );
                 }
                 return fullResponse;
@@ -348,7 +355,7 @@ export class LocalOllamaProvider implements IAProvider {
               if (!(parseError instanceof SyntaxError)) {
                 console.warn(
                   '[LocalOllamaProvider] Error parsing chunk:',
-                  parseError,
+                  parseError
                 );
               }
             }
@@ -373,7 +380,7 @@ export class LocalOllamaProvider implements IAProvider {
                 timeout: this.timeout,
                 baseUrl: this.baseUrl,
               },
-              timeoutError,
+              timeoutError
             );
           }
           throw new Error(timeoutError);
@@ -384,7 +391,7 @@ export class LocalOllamaProvider implements IAProvider {
               error: error.message,
               baseUrl: this.baseUrl,
             },
-            'Error calling Ollama API',
+            'Error calling Ollama API'
           );
         }
         throw error;
@@ -394,4 +401,3 @@ export class LocalOllamaProvider implements IAProvider {
     }
   }
 }
-

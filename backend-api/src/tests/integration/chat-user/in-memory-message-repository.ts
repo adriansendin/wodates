@@ -31,7 +31,7 @@ export class InMemoryMessageRepository implements MessageRepository {
   async findByMatchId(
     matchId: string,
     limit: number,
-    before?: string,
+    before?: string
   ): Promise<Result<Message[], DomainError>> {
     let beforeTimestamp: string | undefined;
 
@@ -45,7 +45,7 @@ export class InMemoryMessageRepository implements MessageRepository {
     const filtered = this.messages
       .filter((message) => message.matchId === matchId)
       .filter((message) =>
-        beforeTimestamp ? message.createdAt < beforeTimestamp : true,
+        beforeTimestamp ? message.createdAt < beforeTimestamp : true
       )
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, limit);
@@ -64,13 +64,14 @@ export class InMemoryMessageRepository implements MessageRepository {
 
   async findUnprocessedBySenderId(
     senderId: string,
-    limit: number = 100,
+    limit: number = 100
   ): Promise<Result<Message[], DomainError>> {
     const unprocessed = this.messages
       .filter(
         (msg) =>
           msg.senderId === senderId &&
-          (msg.profileProcessedAt === null || msg.profileProcessedAt === undefined),
+          (msg.profileProcessedAt === null ||
+            msg.profileProcessedAt === undefined)
       )
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       .slice(0, limit);
@@ -88,19 +89,19 @@ export class InMemoryMessageRepository implements MessageRepository {
     return success(undefined);
   }
 
-  async markManyAsProcessed(messageIds: string[]): Promise<Result<void, DomainError>> {
+  async markManyAsProcessed(
+    messageIds: string[]
+  ): Promise<Result<void, DomainError>> {
     if (messageIds.length === 0) {
       return success(undefined);
     }
 
     const now = new Date().toISOString();
-    let foundCount = 0;
 
     for (const messageId of messageIds) {
       const message = this.messages.find((msg) => msg.id === messageId);
       if (message) {
         message.profileProcessedAt = now;
-        foundCount++;
       }
     }
 
@@ -108,4 +109,3 @@ export class InMemoryMessageRepository implements MessageRepository {
     return success(undefined);
   }
 }
-

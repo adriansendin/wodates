@@ -1,12 +1,16 @@
 import { BlockedUser } from '../../entities/BlockedUser';
 import { Result, success, failure } from '../../Result';
-import { DomainError, ConflictError, ForbiddenError } from '../../errors/DomainError';
+import {
+  DomainError,
+  ConflictError,
+  ForbiddenError,
+} from '../../errors/DomainError';
 import { BlockedUserRepository } from '../../repositories/BlockedUserRepository';
 import { MatchRepository } from '../../repositories/MatchRepository';
 
 /**
  * BlockUser use case
- * 
+ *
  * Blocks a user. The match remains in the database but is hidden from both users.
  * Once blocked, users cannot see each other in their matches list or communicate.
  * The match and all messages are preserved and can be restored if the block is removed.
@@ -28,7 +32,10 @@ export class BlockUser {
     }
 
     // Check if already blocked
-    const hasBlockedResult = await this.blockedUserRepository.hasBlocked(blockerId, blockedId);
+    const hasBlockedResult = await this.blockedUserRepository.hasBlocked(
+      blockerId,
+      blockedId
+    );
     if (isSuccess(hasBlockedResult) && hasBlockedResult.data) {
       return failure(new ConflictError('User already blocked'));
     }
@@ -45,7 +52,9 @@ export class BlockUser {
     }
 
     if (match.userId1 !== blockedId && match.userId2 !== blockedId) {
-      return failure(new ForbiddenError('Target user is not part of this match'));
+      return failure(
+        new ForbiddenError('Target user is not part of this match')
+      );
     }
 
     // Create block
@@ -66,16 +75,19 @@ export class BlockUser {
 
     // The match is preserved in the database but will be filtered out
     // by the match-overview-service based on the blocked_users table
-    
+
     return success(blockResult.data);
   }
 }
 
-function isSuccess<T, E>(result: Result<T, E>): result is import('../../Result').Success<T> {
+function isSuccess<T, E>(
+  result: Result<T, E>
+): result is import('../../Result').Success<T> {
   return result.success;
 }
 
-function isFailure<T, E>(result: Result<T, E>): result is import('../../Result').Failure<E> {
+function isFailure<T, E>(
+  result: Result<T, E>
+): result is import('../../Result').Failure<E> {
   return !result.success;
 }
-

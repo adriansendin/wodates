@@ -13,8 +13,8 @@ export class Failure<E> {
 export const success = <T>(data: T): Success<T> => new Success(data);
 export const failure = <E>(error: E): Failure<E> => new Failure(error);
 
-export const isSuccess = <T, E>(result: Result<T, E>): result is Success<T> => 
+export const isSuccess = <T, E>(result: Result<T, E>): result is Success<T> =>
   result.success;
 
-export const isFailure = <T, E>(result: Result<T, E>): result is Failure<E> => 
+export const isFailure = <T, E>(result: Result<T, E>): result is Failure<E> =>
   !result.success;

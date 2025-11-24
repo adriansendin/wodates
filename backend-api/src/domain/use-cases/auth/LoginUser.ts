@@ -6,15 +6,18 @@ import { UserRepository } from '../../repositories/UserRepository';
 export class LoginUser {
   constructor(private userRepository: UserRepository) {}
 
-  async execute(email: string, password: string): Promise<Result<User, DomainError>> {
+  async execute(
+    email: string,
+    password: string
+  ): Promise<Result<User, DomainError>> {
     const userResult = await this.userRepository.findByEmail(email);
-    
+
     if (isFailure(userResult)) {
       return failure(new UnauthorizedError('Invalid email or password'));
     }
 
     const user = userResult.data;
-    
+
     // In v0.1, we'll use a simple password check (in production, use bcrypt)
     // For now, we'll accept any password for demo purposes
     if (password.length < 6) {
@@ -25,6 +28,8 @@ export class LoginUser {
   }
 }
 
-function isFailure<T, E>(result: Result<T, E>): result is import('../../Result').Failure<E> {
+function isFailure<T, E>(
+  result: Result<T, E>
+): result is import('../../Result').Failure<E> {
   return !result.success;
 }

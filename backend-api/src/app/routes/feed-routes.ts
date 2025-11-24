@@ -18,100 +18,116 @@ export async function feedRoutes(fastify: FastifyInstance) {
     fastify.passUser
   );
 
-  fastify.get('/feed', {
-    schema: {
-      description: 'Get feed users',
-      tags: ['feed'],
-      security: [{ bearerAuth: [] }],
-      querystring: {
-        type: 'object',
-        properties: {
-          limit: { type: 'number', minimum: 1, maximum: 50, default: 10 },
-          offset: { type: 'number', minimum: 0, default: 0 },
-        },
-      },
-      response: {
-        200: {
+  fastify.get(
+    '/feed',
+    {
+      schema: {
+        description: 'Get feed users',
+        tags: ['feed'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
           type: 'object',
           properties: {
-            users: {
-              type: 'array',
-              items: {
+            limit: { type: 'number', minimum: 1, maximum: 50, default: 10 },
+            offset: { type: 'number', minimum: 0, default: 0 },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              users: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
+                    gender: { type: 'string', nullable: true },
+                    birthDate: {
+                      type: 'string',
+                      format: 'date-time',
+                      nullable: true,
+                    },
+                    age: { type: 'number', nullable: true },
+                    bio: { type: 'string', nullable: true },
+                    photoUrl: { type: 'string', nullable: true },
+                  },
+                },
+              },
+              pagination: {
                 type: 'object',
                 properties: {
-                  id: { type: 'string' },
-                  name: { type: 'string' },
-                  gender: { type: 'string', nullable: true },
-                  birthDate: { type: 'string', format: 'date-time', nullable: true },
-                  age: { type: 'number', nullable: true },
-                  bio: { type: 'string', nullable: true },
-                  photoUrl: { type: 'string', nullable: true },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                  hasMore: { type: 'boolean' },
                 },
               },
             },
-            pagination: {
-              type: 'object',
-              properties: {
-                limit: { type: 'number' },
-                offset: { type: 'number' },
-                hasMore: { type: 'boolean' },
-              },
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    feedController.getFeed.bind(feedController)
+  );
+
+  fastify.post(
+    '/likes',
+    {
+      schema: {
+        description: 'Like a user',
+        tags: ['feed'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['targetUserId'],
+          properties: {
+            targetUserId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              action: { type: 'string' },
+              result: { type: 'object' },
+              isMatch: { type: 'boolean' },
             },
           },
         },
       },
+      preHandler: fastify.authMiddleware,
     },
-    preHandler: fastify.authMiddleware,
-  }, feedController.getFeed.bind(feedController));
+    feedController.likeUser.bind(feedController)
+  );
 
-  fastify.post('/likes', {
-    schema: {
-      description: 'Like a user',
-      tags: ['feed'],
-      security: [{ bearerAuth: [] }],
-      body: {
-        type: 'object',
-        required: ['targetUserId'],
-        properties: {
-          targetUserId: { type: 'string', format: 'uuid' }
-        }
-      },
-      response: {
-        200: {
+  fastify.post(
+    '/passes',
+    {
+      schema: {
+        description: 'Pass on a user',
+        tags: ['feed'],
+        security: [{ bearerAuth: [] }],
+        body: {
           type: 'object',
+          required: ['targetUserId'],
           properties: {
-            action: { type: 'string' },
-            result: { type: 'object' },
-            isMatch: { type: 'boolean' },
+            targetUserId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              action: { type: 'string' },
+              result: { type: 'object' },
+            },
           },
         },
       },
+      preHandler: fastify.authMiddleware,
     },
-    preHandler: fastify.authMiddleware,
-  }, feedController.likeUser.bind(feedController));
-
-  fastify.post('/passes', {
-    schema: {
-      description: 'Pass on a user',
-      tags: ['feed'],
-      security: [{ bearerAuth: [] }],
-      body: {
-        type: 'object',
-        required: ['targetUserId'],
-        properties: {
-          targetUserId: { type: 'string', format: 'uuid' }
-        }
-      },
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            action: { type: 'string' },
-            result: { type: 'object' },
-          },
-        },
-      },
-    },
-    preHandler: fastify.authMiddleware,
-  }, feedController.passUser.bind(feedController));
+    feedController.passUser.bind(feedController)
+  );
 }

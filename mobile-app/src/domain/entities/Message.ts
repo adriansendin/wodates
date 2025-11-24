@@ -13,7 +13,7 @@ const DateTimeSchema = z
       const date = new Date(val);
       return !isNaN(date.getTime());
     },
-    { message: 'Invalid datetime format' },
+    { message: 'Invalid datetime format' }
   )
   .transform((val) => {
     // If it's already valid ISO 8601, return as is
@@ -34,6 +34,7 @@ export const MessageSchema = z.object({
   senderId: z.string().uuid(),
   content: z.string().min(1).max(1000),
   createdAt: DateTimeSchema,
+  profileProcessedAt: DateTimeSchema.nullable().optional(),
 });
 
 export const CreateMessageSchema = MessageSchema.omit({

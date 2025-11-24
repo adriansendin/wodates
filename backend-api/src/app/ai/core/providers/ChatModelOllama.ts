@@ -3,7 +3,7 @@ import { AIConfig } from '../../ai-settings';
 
 /**
  * Ollama implementation of ChatModel
- * 
+ *
  * Uses Ollama's local API for chat conversations.
  */
 interface OllamaParameters {
@@ -26,7 +26,7 @@ export class ChatModelOllama implements ChatModel {
     baseUrl?: string,
     timeout?: number,
     parameters?: OllamaParameters,
-    logger?: any,
+    logger?: any
   ) {
     this.model = model;
     this.baseUrl = baseUrl || 'http://localhost:11434';
@@ -44,7 +44,7 @@ export class ChatModelOllama implements ChatModel {
             historyLength: request.conversationHistory.length,
             messageLength: request.lastUserMessage.length,
           },
-          'Building prompt for Ollama chat',
+          'Building prompt for Ollama chat'
         );
       }
 
@@ -57,7 +57,7 @@ export class ChatModelOllama implements ChatModel {
             model: this.model,
             promptLength: prompt.length,
           },
-          'Calling Ollama API for chat',
+          'Calling Ollama API for chat'
         );
       }
 
@@ -112,9 +112,11 @@ export class ChatModelOllama implements ChatModel {
       prompt += `${role}: ${msg.content}\n\n`;
     }
 
-    const lastHistoryMessage = request.conversationHistory[request.conversationHistory.length - 1];
-    const isLastMessageInHistory = lastHistoryMessage && 
-      lastHistoryMessage.role === 'user' && 
+    const lastHistoryMessage =
+      request.conversationHistory[request.conversationHistory.length - 1];
+    const isLastMessageInHistory =
+      lastHistoryMessage &&
+      lastHistoryMessage.role === 'user' &&
       lastHistoryMessage.content === request.lastUserMessage;
 
     if (!isLastMessageInHistory && request.lastUserMessage) {
@@ -181,7 +183,7 @@ export class ChatModelOllama implements ChatModel {
             },
             promptLength: prompt.length,
           },
-          'Calling Ollama LLM with parameters',
+          'Calling Ollama LLM with parameters'
         );
       }
 
@@ -210,7 +212,7 @@ export class ChatModelOllama implements ChatModel {
       let fullResponse = '';
 
       try {
-        while (true) {
+        for (;;) {
           if (controller.signal.aborted) {
             throw new Error('Request aborted due to timeout');
           }
@@ -243,7 +245,10 @@ export class ChatModelOllama implements ChatModel {
               }
             } catch (parseError) {
               if (!(parseError instanceof SyntaxError)) {
-                console.warn('[ChatModelOllama] Error parsing chunk:', parseError);
+                console.warn(
+                  '[ChatModelOllama] Error parsing chunk:',
+                  parseError
+                );
               }
             }
           }
@@ -259,7 +264,9 @@ export class ChatModelOllama implements ChatModel {
 
       if (error instanceof Error) {
         if (error.name === 'AbortError' || error.message.includes('aborted')) {
-          throw new Error(`Ollama API timeout after ${this.timeout}ms. Is Ollama running at ${this.baseUrl}?`);
+          throw new Error(
+            `Ollama API timeout after ${this.timeout}ms. Is Ollama running at ${this.baseUrl}?`
+          );
         }
         throw error;
       }
@@ -268,4 +275,3 @@ export class ChatModelOllama implements ChatModel {
     }
   }
 }
-

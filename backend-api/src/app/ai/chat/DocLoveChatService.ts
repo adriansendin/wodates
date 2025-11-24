@@ -10,10 +10,10 @@ import { AIConfig } from '../ai-settings';
 
 /**
  * DocLoveChatService - Orchestrates Doc Love online chat
- * 
+ *
  * This service handles real-time chat conversations with Doc Love.
  * It builds prompts, calls ChatModel, and persists bot replies.
- * 
+ *
  * This is part of the ai/chat layer, focused on online chat orchestration.
  */
 export class DocLoveChatService {
@@ -23,13 +23,15 @@ export class DocLoveChatService {
     private messageRepository: MessageRepository,
     private matchRepository: MatchRepository,
     private userRepository?: UserRepository,
-    private logger?: any,
+    private logger?: any
   ) {}
 
   /**
    * Detects if a match/conversation is with Doc Love
    */
-  async isDocLoveConversation(matchId: string): Promise<Result<boolean, DomainError>> {
+  async isDocLoveConversation(
+    matchId: string
+  ): Promise<Result<boolean, DomainError>> {
     try {
       const matchResult = await this.matchRepository.findById(matchId);
       if (!matchResult.success) {
@@ -47,42 +49,50 @@ export class DocLoveChatService {
       return failure(
         new InternalError(
           'Failed to check if conversation is with Doc Love',
-          error,
-        ),
+          error
+        )
       );
     }
   }
 
   /**
    * Generates and saves an AI response from Doc Love
-   * 
+   *
    * This is the main method called when a user sends a message to Doc Love.
    */
   async generateAndSaveReply(
     matchId: string,
     userId: string,
-    userMessage: Message,
+    userMessage: Message
   ): Promise<Result<Message, DomainError>> {
     try {
       if (this.logger) {
-        this.logger.debug({ matchId, userId, messageId: userMessage.id }, 'Starting Doc Love reply generation');
+        this.logger.debug(
+          { matchId, userId, messageId: userMessage.id },
+          'Starting Doc Love reply generation'
+        );
       }
 
       const docLoveId = await this.docLoveHelper.getDocLoveUserId();
 
       if (userId === docLoveId) {
         if (this.logger) {
-          this.logger.warn({ matchId, userId }, 'Attempted to generate reply from Doc Love to itself');
+          this.logger.warn(
+            { matchId, userId },
+            'Attempted to generate reply from Doc Love to itself'
+          );
         }
         return failure(
-          new InternalError('Cannot generate Doc Love reply: sender is Doc Love'),
+          new InternalError(
+            'Cannot generate Doc Love reply: sender is Doc Love'
+          )
         );
       }
 
       // Get conversation history
       const historyResult = await this.getConversationHistory(
         matchId,
-        AIConfig.context.conversationHistoryLimit,
+        AIConfig.context.conversationHistoryLimit
       );
       if (!historyResult.success) {
         return failure(historyResult.error);
@@ -122,7 +132,7 @@ export class DocLoveChatService {
             userContextIncluded: !!userContext,
             activeMatchesCount: activeMatches.length,
           },
-          'Calling LLM to generate Doc Love response',
+          'Calling LLM to generate Doc Love response'
         );
       }
 
@@ -138,7 +148,7 @@ export class DocLoveChatService {
             provider: chatResponse.provider,
             model: chatResponse.model,
           },
-          'Doc Love chat response generated',
+          'Doc Love chat response generated'
         );
       }
 
@@ -156,17 +166,20 @@ export class DocLoveChatService {
       if (this.logger) {
         this.logger.info(
           { matchId, messageId: saveResult.data.id },
-          'Doc Love reply saved successfully',
+          'Doc Love reply saved successfully'
         );
       }
 
       return success(saveResult.data);
     } catch (error) {
       if (this.logger) {
-        this.logger.error({ matchId, userId, error }, 'Unexpected error in generateAndSaveReply');
+        this.logger.error(
+          { matchId, userId, error },
+          'Unexpected error in generateAndSaveReply'
+        );
       }
       return failure(
-        new InternalError('Failed to generate and save Doc Love reply', error),
+        new InternalError('Failed to generate and save Doc Love reply', error)
       );
     }
   }
@@ -176,12 +189,12 @@ export class DocLoveChatService {
    */
   private async getConversationHistory(
     matchId: string,
-    limit: number = 20,
+    limit: number = 20
   ): Promise<Result<ChatMessage[], DomainError>> {
     try {
       const messagesResult = await this.messageRepository.findByMatchId(
         matchId,
-        limit,
+        limit
       );
       if (!messagesResult.success) {
         return failure(messagesResult.error);
@@ -199,7 +212,7 @@ export class DocLoveChatService {
       return success(history);
     } catch (error) {
       return failure(
-        new InternalError('Failed to get conversation history', error),
+        new InternalError('Failed to get conversation history', error)
       );
     }
   }
@@ -208,7 +221,7 @@ export class DocLoveChatService {
    * Gets user context for chat (optional)
    */
   private async getUserContext(
-    userId: string,
+    userId: string
   ): Promise<{ name?: string; bio?: string } | undefined> {
     if (!this.userRepository) {
       return undefined;
@@ -235,7 +248,7 @@ export class DocLoveChatService {
    */
   private async getActiveMatches(
     userId: string,
-    docLoveId: string,
+    docLoveId: string
   ): Promise<
     Array<{
       matchId: string;
@@ -253,7 +266,7 @@ export class DocLoveChatService {
         (match) =>
           match.userId1 !== docLoveId &&
           match.userId2 !== docLoveId &&
-          (match.userId1 === userId || match.userId2 === userId),
+          (match.userId1 === userId || match.userId2 === userId)
       );
 
       const limitedMatches = matches.slice(0, 3);
@@ -265,11 +278,15 @@ export class DocLoveChatService {
 
           const messagesResult = await this.messageRepository.findByMatchId(
             match.id,
-            1,
+            1
           );
 
           let lastMessage: string | undefined;
-          if (messagesResult.success && messagesResult.data.length > 0 && messagesResult.data[0]) {
+          if (
+            messagesResult.success &&
+            messagesResult.data.length > 0 &&
+            messagesResult.data[0]
+          ) {
             lastMessage = messagesResult.data[0].content;
           }
 
@@ -286,7 +303,7 @@ export class DocLoveChatService {
             otherUserName,
             ...(lastMessage && { lastMessage }),
           };
-        }),
+        })
       );
 
       return activeMatches;
@@ -295,4 +312,3 @@ export class DocLoveChatService {
     }
   }
 }
-

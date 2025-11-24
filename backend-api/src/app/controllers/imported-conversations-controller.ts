@@ -31,7 +31,7 @@ export class ImportedConversationsController {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'ImportedConversationsController requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'ImportedConversationsController requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
@@ -67,7 +67,7 @@ export class ImportedConversationsController {
       // Extract userId from path and verify it matches the authenticated user
       const pathParts = body.uploadZipPath.split('/');
       const pathUserId = pathParts[1];
-      
+
       if (pathUserId !== authUser.id) {
         return reply.status(403).send({
           error: 'FORBIDDEN',
@@ -90,8 +90,11 @@ export class ImportedConversationsController {
         .single();
 
       if (error) {
-        console.error('[ImportedConversationsController] Error inserting record:', error);
-        
+        console.error(
+          '[ImportedConversationsController] Error inserting record:',
+          error
+        );
+
         // Handle unique constraint violation (duplicate upload)
         if (error.code === '23505') {
           return reply.status(409).send({
@@ -99,7 +102,7 @@ export class ImportedConversationsController {
             message: 'Este archivo ya fue subido anteriormente.',
           });
         }
-        
+
         return reply.status(500).send({
           error: 'DATABASE_ERROR',
           message: 'Failed to register upload',
@@ -142,4 +145,3 @@ export class ImportedConversationsController {
     });
   }
 }
-

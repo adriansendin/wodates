@@ -7,9 +7,18 @@ interface FeedbackBannerProps {
   onClose?: () => void;
 }
 
-export const FeedbackBanner: React.FC<FeedbackBannerProps> = ({ type, message, onClose }) => {
+export const FeedbackBanner: React.FC<FeedbackBannerProps> = ({
+  type,
+  message,
+  onClose,
+}) => {
   return (
-    <View style={[styles.container, type === 'success' ? styles.success : styles.error]}>
+    <View
+      style={[
+        styles.container,
+        type === 'success' ? styles.success : styles.error,
+      ]}
+    >
       <Text style={styles.message}>{message}</Text>
       {onClose && (
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>

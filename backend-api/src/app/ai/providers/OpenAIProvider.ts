@@ -1,14 +1,10 @@
 import OpenAI from 'openai';
-import {
-  IAProvider,
-  IAResponse,
-  IAGenerateRequest,
-} from './IAProvider';
+import { IAProvider, IAResponse, IAGenerateRequest } from './IAProvider';
 import { AIConfig } from '../ai-settings';
 
 /**
  * OpenAI implementation of IAProvider
- * 
+ *
  * Uses OpenAI's chat completions API to generate responses for Doc Love.
  */
 export class OpenAIProvider implements IAProvider {
@@ -39,7 +35,11 @@ export class OpenAIProvider implements IAProvider {
       });
       console.log('Total messages:', messages.length);
       if (systemMessage) {
-        console.log('System prompt length:', systemMessage.content.length, 'characters');
+        console.log(
+          'System prompt length:',
+          systemMessage.content.length,
+          'characters'
+        );
         console.log('System prompt (full):');
         console.log(systemMessage.content);
       }
@@ -85,9 +85,7 @@ export class OpenAIProvider implements IAProvider {
     const messages: Array<{
       role: 'system' | 'user' | 'assistant';
       content: string;
-    }> = [
-      { role: 'system', content: systemPrompt },
-    ];
+    }> = [{ role: 'system', content: systemPrompt }];
 
     // Add conversation history
     for (const msg of request.conversationHistory) {
@@ -144,4 +142,3 @@ export class OpenAIProvider implements IAProvider {
     return prompt;
   }
 }
-

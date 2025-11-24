@@ -35,7 +35,7 @@ describe('SendMessage use case', () => {
     const result = await useCase.execute(
       matchResult.data.id,
       USER_A,
-      'Hey there!',
+      'Hey there!'
     );
 
     expect(result.success).toBe(true);
@@ -71,7 +71,7 @@ describe('SendMessage use case', () => {
     const result = await useCase.execute(
       matchResult.data.id,
       STRANGER,
-      'I should not be here',
+      'I should not be here'
     );
 
     expect(result.success).toBe(false);
@@ -95,7 +95,7 @@ describe('SendMessage use case', () => {
     const result = await useCase.execute(
       matchResult.data.id,
       USER_B,
-      'This will fail',
+      'This will fail'
     );
 
     expect(result.success).toBe(false);
@@ -105,4 +105,3 @@ describe('SendMessage use case', () => {
     }
   });
 });
-

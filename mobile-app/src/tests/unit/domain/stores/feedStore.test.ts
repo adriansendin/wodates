@@ -61,7 +61,8 @@ describe('feedStore', () => {
   });
 
   it('updates loading, error and hasMore flags', () => {
-    const { setLoading, setError, setHasMore, clearFeed } = useFeedStore.getState();
+    const { setLoading, setError, setHasMore, clearFeed } =
+      useFeedStore.getState();
     setLoading(true);
     setError('timeout');
     setHasMore(false);
@@ -94,4 +95,3 @@ describe('feedStore', () => {
     });
   });
 });
-

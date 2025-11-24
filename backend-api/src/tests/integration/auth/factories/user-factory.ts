@@ -7,7 +7,9 @@ export type UserFactoryAttributes = {
 };
 
 export class UserFactory {
-  static create(overrides: Partial<UserFactoryAttributes> = {}): UserFactoryAttributes {
+  static create(
+    overrides: Partial<UserFactoryAttributes> = {}
+  ): UserFactoryAttributes {
     const id = randomUUID().split('-')[0];
 
     return {
@@ -17,4 +19,3 @@ export class UserFactory {
     };
   }
 }
-

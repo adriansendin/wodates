@@ -44,7 +44,7 @@ export async function userRoutes(fastify: FastifyInstance) {
       },
       preHandler: fastify.authMiddleware,
     },
-    controller.getProfile.bind(controller),
+    controller.getProfile.bind(controller)
   );
 
   fastify.put(
@@ -87,7 +87,7 @@ export async function userRoutes(fastify: FastifyInstance) {
       },
       preHandler: fastify.authMiddleware,
     },
-    controller.updateProfile.bind(controller),
+    controller.updateProfile.bind(controller)
   );
 
   fastify.post(
@@ -117,7 +117,7 @@ export async function userRoutes(fastify: FastifyInstance) {
       },
       preHandler: fastify.authMiddleware,
     },
-    controller.uploadAvatar.bind(controller),
+    controller.uploadAvatar.bind(controller)
   );
 
   fastify.post(
@@ -139,6 +139,6 @@ export async function userRoutes(fastify: FastifyInstance) {
       },
       preHandler: fastify.authMiddleware,
     },
-    controller.deactivateAccount.bind(controller),
+    controller.deactivateAccount.bind(controller)
   );
 }

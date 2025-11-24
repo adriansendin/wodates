@@ -43,14 +43,18 @@ export class ChatController {
       const userId = request.user!.id;
       const { matchId } = request.params as { matchId: string };
       const { content } = SendMessageSchema.parse(request.body);
-      
+
       request.log.info(
         { matchId, userId, contentLength: content.length },
-        '1. Usuario escribe mensaje - Recibido en controller',
+        '1. Usuario escribe mensaje - Recibido en controller'
       );
-      
-      const result = await this.sendMessageUseCase.execute(matchId, userId, content);
-      
+
+      const result = await this.sendMessageUseCase.execute(
+        matchId,
+        userId,
+        content
+      );
+
       if (result.success) {
         return reply.status(201).send({
           message: result.data,
@@ -67,10 +71,17 @@ export class ChatController {
     try {
       const userId = request.user!.id;
       const { matchId } = request.params as { matchId: string };
-      const { limit = 50, before } = GetMessagesQuerySchema.parse(request.query);
-      
-      const result = await this.getMessagesUseCase.execute(matchId, userId, limit, before);
-      
+      const { limit = 50, before } = GetMessagesQuerySchema.parse(
+        request.query
+      );
+
+      const result = await this.getMessagesUseCase.execute(
+        matchId,
+        userId,
+        limit,
+        before
+      );
+
       if (result.success) {
         return reply.send({
           messages: result.data,
@@ -93,9 +104,13 @@ export class ChatController {
       const userId = request.user!.id;
       const { matchId } = request.params as { matchId: string };
       const { blockedUserId } = BlockUserSchema.parse(request.body);
-      
-      const result = await this.blockUserUseCase.execute(userId, blockedUserId, matchId);
-      
+
+      const result = await this.blockUserUseCase.execute(
+        userId,
+        blockedUserId,
+        matchId
+      );
+
       if (result.success) {
         return reply.status(201).send({
           blocked: true,

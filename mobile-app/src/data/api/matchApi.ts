@@ -11,16 +11,15 @@ const MatchUserSchema = z
     id: z.string().uuid(),
     name: z.string().min(1),
     bio: z.string().nullable().optional(),
-    photoUrl: z
-      .preprocess(
-        (val) => {
-          if (val === '' || val === undefined) {
-            return null;
-          }
-          return val;
-        },
-        z.union([z.string().url(), z.null()]).optional().nullable(),
-      ),
+    photoUrl: z.preprocess(
+      (val) => {
+        if (val === '' || val === undefined) {
+          return null;
+        }
+        return val;
+      },
+      z.union([z.string().url(), z.null()]).optional().nullable()
+    ),
     birthDate: z.string().nullable().optional(),
     gender: z.string().nullable().optional(),
     isBot: z.boolean().optional(),
@@ -45,12 +44,14 @@ export class MatchApi {
   constructor(private apiClient: ApiClient) {}
 
   async getMatches(
-    token: string,
-  ): Promise<Result<{ matches: MatchOverview[]; activeChatsCount: number }, DomainError>> {
-    const response = await this.apiClient.get<{ matches: unknown; activeChatsCount: unknown }>(
-      '/matches',
-      token,
-    );
+    token: string
+  ): Promise<
+    Result<{ matches: MatchOverview[]; activeChatsCount: number }, DomainError>
+  > {
+    const response = await this.apiClient.get<{
+      matches: unknown;
+      activeChatsCount: unknown;
+    }>('/matches', token);
 
     if (!response.success) {
       return response;
@@ -68,7 +69,10 @@ export class MatchApi {
         .map((err) => `${err.path.join('.')}: ${err.message}`)
         .join('; ');
       console.error('[MatchApi] Validation error details:', errorDetails);
-      console.error('[MatchApi] Failed data:', JSON.stringify(response.data, null, 2));
+      console.error(
+        '[MatchApi] Failed data:',
+        JSON.stringify(response.data, null, 2)
+      );
       return {
         success: false,
         error: new ValidationError(`Invalid matches payload: ${errorDetails}`),

@@ -16,10 +16,10 @@ type SupabaseAuthConfig = {
 
 /**
  * SupabaseAuthService - Gestión de autenticación
- * 
+ *
  * IMPORTANTE: Este servicio almacena el nombre del usuario en:
  * auth.users.raw_user_meta_data.display_name (NO en public.users)
- * 
+ *
  * Uses the service role key to talk to the Admin API.
  */
 export class SupabaseAuthService implements AuthService {
@@ -29,20 +29,28 @@ export class SupabaseAuthService implements AuthService {
   constructor(config?: Partial<SupabaseAuthConfig>) {
     const resolvedConfig = this.resolveConfig(config);
 
-    this.adminClient = createClient(resolvedConfig.url, resolvedConfig.serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-
-    if (resolvedConfig.anonKey) {
-      this.anonClient = createClient(resolvedConfig.url, resolvedConfig.anonKey, {
+    this.adminClient = createClient(
+      resolvedConfig.url,
+      resolvedConfig.serviceRoleKey,
+      {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
-      });
+      }
+    );
+
+    if (resolvedConfig.anonKey) {
+      this.anonClient = createClient(
+        resolvedConfig.url,
+        resolvedConfig.anonKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }
+      );
     }
   }
 
@@ -64,7 +72,10 @@ export class SupabaseAuthService implements AuthService {
       });
 
       if (error) {
-        if (error.message && error.message.includes('already been registered')) {
+        if (
+          error.message &&
+          error.message.includes('already been registered')
+        ) {
           throw new ConflictError('Email already exists');
         }
 
@@ -73,7 +84,9 @@ export class SupabaseAuthService implements AuthService {
 
       const user = data.user;
       if (!user) {
-        throw new InternalError('Supabase did not return a user after creation');
+        throw new InternalError(
+          'Supabase did not return a user after creation'
+        );
       }
 
       // Step 2: Create user profile in public.users table (without name and email)
@@ -89,23 +102,27 @@ export class SupabaseAuthService implements AuthService {
     }
   }
 
-  private async createUserProfile(userId: string, registerRequest: RegisterRequest): Promise<void> {
+  private async createUserProfile(
+    userId: string,
+    registerRequest: RegisterRequest
+  ): Promise<void> {
     try {
       // Create profile in public.users without name and email (those are in auth.users)
-      const { error } = await this.adminClient
-        .from('users')
-        .insert({
-          id: userId,
-          // email and name are no longer stored in public.users
-          birthDate: registerRequest.birthDate,
-          gender: registerRequest.gender || null,
-          city: registerRequest.location || null,
-          country: registerRequest.country || 'Spain', // Default to Spain
-          looking_for: registerRequest.lookingFor || null,
-        });
+      const { error } = await this.adminClient.from('users').insert({
+        id: userId,
+        // email and name are no longer stored in public.users
+        birthDate: registerRequest.birthDate,
+        gender: registerRequest.gender || null,
+        city: registerRequest.location || null,
+        country: registerRequest.country || 'Spain', // Default to Spain
+        looking_for: registerRequest.lookingFor || null,
+      });
 
       if (error) {
-        console.error('[SupabaseAuthService] Failed to create user profile', error);
+        console.error(
+          '[SupabaseAuthService] Failed to create user profile',
+          error
+        );
         throw new InternalError('Failed to create user profile', error);
       }
     } catch (error) {
@@ -117,7 +134,10 @@ export class SupabaseAuthService implements AuthService {
     }
   }
 
-  async validateCredentials(email: string, password: string): Promise<AuthUser> {
+  async validateCredentials(
+    email: string,
+    password: string
+  ): Promise<AuthUser> {
     try {
       // First try a proper password check if we have an anon key configured.
       if (this.anonClient) {
@@ -143,7 +163,7 @@ export class SupabaseAuthService implements AuthService {
       }
 
       const matchedUser = data?.users?.find(
-        candidate => candidate.email?.toLowerCase() === email.toLowerCase(),
+        (candidate) => candidate.email?.toLowerCase() === email.toLowerCase()
       );
 
       if (!matchedUser) {
@@ -183,12 +203,14 @@ export class SupabaseAuthService implements AuthService {
 
     if (deletedAt) {
       throw new UnauthorizedError(
-        'Tu cuenta ha sido desactivada. Contacta con soporte si deseas reactivarla.',
+        'Tu cuenta ha sido desactivada. Contacta con soporte si deseas reactivarla.'
       );
     }
   }
 
-  private resolveConfig(config?: Partial<SupabaseAuthConfig>): SupabaseAuthConfig {
+  private resolveConfig(
+    config?: Partial<SupabaseAuthConfig>
+  ): SupabaseAuthConfig {
     const url = config?.url ?? process.env.SUPABASE_URL;
     const anonKey = config?.anonKey ?? process.env.SUPABASE_ANON_KEY;
     const serviceRoleKey =
@@ -196,7 +218,7 @@ export class SupabaseAuthService implements AuthService {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'SupabaseAuthService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to be configured',
+        'SupabaseAuthService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to be configured'
       );
     }
 

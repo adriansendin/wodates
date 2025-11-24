@@ -34,7 +34,9 @@ const DisplayMessageSchema = MessageSchema.extend({
   content: z.string().min(1), // Remove max(1000) restriction for display purposes
 });
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+import { getApiUrl } from '../../src/utils/apiConfig';
+
+const API_URL = getApiUrl();
 
 // Función para formatear la fecha según las especificaciones
 const formatDateSeparator = (date: Date): string => {
@@ -308,7 +310,7 @@ export default function ChatScreen() {
         tokens.accessToken,
       );
 
-      console.log('[ChatScreen] Send result:', { success: result.success, hasData: !!result.data });
+      console.log('[ChatScreen] Send result:', { success: result.success, hasData: result.success && !!result.data });
 
       if (!result.success) {
         const messageText = result.error.message || 'Could not send your message.';
@@ -426,7 +428,7 @@ export default function ChatScreen() {
 
       console.log('[ChatScreen] Step 2: Uploading ZIP file...', { fileName: pickResult.data.name, fileSize: pickResult.data.size });
       // Step 2: Upload ZIP file
-      const uploadResult = await uploadZipFile(pickResult.data, user.id);
+      const uploadResult = await uploadZipFile(pickResult.data);
       console.log('[ChatScreen] Upload result:', { success: uploadResult.success });
       
       if (!uploadResult.success) {
@@ -611,8 +613,8 @@ export default function ChatScreen() {
               returnKeyType="send"
               onKeyPress={(e) => {
                 // Handle Enter key press to send message
-                // On some platforms, Enter key might be detected as 'Enter' or 'Enter' key
-                if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                // Note: shiftKey is not available in React Native's TextInputKeyPressEventData
+                if (e.nativeEvent.key === 'Enter') {
                   if (message.trim() && !isSending && !isBlocked) {
                     e.preventDefault?.();
                     handleSendMessage();

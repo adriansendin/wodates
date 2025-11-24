@@ -31,7 +31,6 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
     setLocalMaxAge(maxAge);
   }, [minAge, maxAge]);
 
-
   // Uso de slider nativo para iOS/Android
   if (Platform.OS !== 'web') {
     return (
@@ -86,7 +85,9 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
         </View>
 
         <View style={styles.rangeDisplay}>
-          <Text style={styles.rangeText}>{`Rango: ${localMinAge} - ${localMaxAge} años`}</Text>
+          <Text
+            style={styles.rangeText}
+          >{`Rango: ${localMinAge} - ${localMaxAge} años`}</Text>
         </View>
       </View>
     );
@@ -364,4 +365,3 @@ const webStyles: { [key: string]: React.CSSProperties } = {
     padding: 0,
   },
 };
-

@@ -43,9 +43,7 @@ export class FeedFactory {
       birthDate,
       gender,
       bio: overrides.bio ?? `Bio for ${name}`,
-      photoUrl:
-        overrides.photoUrl ??
-        `https://example.com/avatars/${id}.jpg`,
+      photoUrl: overrides.photoUrl ?? `https://example.com/avatars/${id}.jpg`,
       location: overrides.location ?? {
         latitude: 40.4168,
         longitude: -3.7038,
@@ -60,7 +58,9 @@ export class FeedFactory {
   private static birthDateFromAge(age: number): string {
     const today = new Date();
     const birthYear = today.getFullYear() - age;
-    const birthDate = new Date(Date.UTC(birthYear, today.getMonth(), today.getDate()));
+    const birthDate = new Date(
+      Date.UTC(birthYear, today.getMonth(), today.getDate())
+    );
     return birthDate.toISOString();
   }
 }

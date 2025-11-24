@@ -2,7 +2,7 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
     'prettier'
@@ -29,7 +29,7 @@ module.exports = {
   env: {
     browser: true,
     es2022: true,
-    'react-native/react-native': true
+    node: true
   },
   settings: {
     react: {

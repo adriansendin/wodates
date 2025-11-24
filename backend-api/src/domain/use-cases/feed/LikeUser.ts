@@ -11,9 +11,15 @@ export class LikeUser {
     private matchRepository: MatchRepository
   ) {}
 
-  async execute(userId: string, targetUserId: string): Promise<Result<Like | Match, DomainError>> {
+  async execute(
+    userId: string,
+    targetUserId: string
+  ): Promise<Result<Like | Match, DomainError>> {
     // Check if already liked
-    const hasLikedResult = await this.likeRepository.hasLiked(userId, targetUserId);
+    const hasLikedResult = await this.likeRepository.hasLiked(
+      userId,
+      targetUserId
+    );
     if (isSuccess(hasLikedResult) && hasLikedResult.data) {
       return failure(new ConflictError('User already liked'));
     }
@@ -31,7 +37,10 @@ export class LikeUser {
     const like = likeResult.data;
 
     // Check if target user has also liked this user (mutual like = match)
-    const mutualLikeResult = await this.likeRepository.hasLiked(targetUserId, userId);
+    const mutualLikeResult = await this.likeRepository.hasLiked(
+      targetUserId,
+      userId
+    );
     if (isSuccess(mutualLikeResult) && mutualLikeResult.data) {
       // Check if both users have less than 3 active chats before creating match
       const activeChatsCounts = await this.matchRepository.getActiveChatsCount([
@@ -44,13 +53,17 @@ export class LikeUser {
 
       if (userActiveChats >= 3) {
         return failure(
-          new ConflictError('You have reached the maximum number of active chats (3)'),
+          new ConflictError(
+            'You have reached the maximum number of active chats (3)'
+          )
         );
       }
 
       if (targetUserActiveChats >= 3) {
         return failure(
-          new ConflictError('This user has reached the maximum number of active chats (3)'),
+          new ConflictError(
+            'This user has reached the maximum number of active chats (3)'
+          )
         );
       }
 
@@ -73,10 +86,14 @@ export class LikeUser {
   }
 }
 
-function isSuccess<T, E>(result: Result<T, E>): result is import('../../Result').Success<T> {
+function isSuccess<T, E>(
+  result: Result<T, E>
+): result is import('../../Result').Success<T> {
   return result.success;
 }
 
-function isFailure<T, E>(result: Result<T, E>): result is import('../../Result').Failure<E> {
+function isFailure<T, E>(
+  result: Result<T, E>
+): result is import('../../Result').Failure<E> {
   return !result.success;
 }

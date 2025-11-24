@@ -6,9 +6,15 @@ import { PassRepository } from '../../repositories/PassRepository';
 export class PassUser {
   constructor(private passRepository: PassRepository) {}
 
-  async execute(userId: string, targetUserId: string): Promise<Result<Pass, DomainError>> {
+  async execute(
+    userId: string,
+    targetUserId: string
+  ): Promise<Result<Pass, DomainError>> {
     // Check if already passed
-    const hasPassedResult = await this.passRepository.hasPassed(userId, targetUserId);
+    const hasPassedResult = await this.passRepository.hasPassed(
+      userId,
+      targetUserId
+    );
     if (isSuccess(hasPassedResult) && hasPassedResult.data) {
       return failure(new ConflictError('User already passed'));
     }
@@ -27,10 +33,14 @@ export class PassUser {
   }
 }
 
-function isSuccess<T, E>(result: Result<T, E>): result is import('../../Result').Success<T> {
+function isSuccess<T, E>(
+  result: Result<T, E>
+): result is import('../../Result').Success<T> {
   return result.success;
 }
 
-function isFailure<T, E>(result: Result<T, E>): result is import('../../Result').Failure<E> {
+function isFailure<T, E>(
+  result: Result<T, E>
+): result is import('../../Result').Failure<E> {
   return !result.success;
 }

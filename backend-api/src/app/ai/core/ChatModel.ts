@@ -1,6 +1,6 @@
 /**
  * ChatModel interface - for real-time conversational AI (Doc Love chat)
- * 
+ *
  * This interface abstracts how we call chat models for online conversations.
  * Implementations may use OpenAI, Ollama, or other providers.
  */
@@ -37,20 +37,19 @@ export interface ChatResponse {
 export interface ChatModel {
   /**
    * Generates a chat response based on conversation context
-   * 
+   *
    * @param request - Complete context of conversation and user
    * @returns Generated chat response
    */
   generateChat(request: ChatRequest): Promise<ChatResponse>;
-  
+
   /**
    * Provider name (for logging and debugging)
    */
   readonly name: string;
-  
+
   /**
    * Model name being used (for logging and debugging)
    */
   readonly model: string;
 }
-

@@ -8,5 +8,9 @@ export interface UserRepository {
   create(user: CreateUser): Promise<Result<User, DomainError>>;
   update(id: string, user: UpdateUser): Promise<Result<User, DomainError>>;
   delete(id: string): Promise<Result<void, DomainError>>;
-  findFeedUsers(userId: string, limit: number, offset: number): Promise<Result<User[], DomainError>>;
+  findFeedUsers(
+    userId: string,
+    limit: number,
+    offset: number
+  ): Promise<Result<User[], DomainError>>;
 }

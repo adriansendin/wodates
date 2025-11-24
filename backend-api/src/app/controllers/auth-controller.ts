@@ -8,7 +8,7 @@ import { SystemUserService } from '../services/system-user-service';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly systemUserService?: SystemUserService,
+    private readonly systemUserService?: SystemUserService
   ) {}
 
   async register(request: FastifyRequest, reply: FastifyReply) {
@@ -26,19 +26,19 @@ export class AuthController {
             if (result.success) {
               request.log.info(
                 { userId: user.id, matchId: result.data.id },
-                'Welcome match created with Doc Love',
+                'Welcome match created with Doc Love'
               );
             } else {
               request.log.warn(
                 { userId: user.id, error: result.error },
-                'Failed to create welcome match with Doc Love',
+                'Failed to create welcome match with Doc Love'
               );
             }
           })
           .catch((error) => {
             request.log.error(
               { userId: user.id, error },
-              'Unexpected error creating welcome match',
+              'Unexpected error creating welcome match'
             );
           });
       }
@@ -69,7 +69,10 @@ export class AuthController {
       const user = await this.authService.validateCredentials(email, password);
       const token = this.generateToken(user.id, user.email);
 
-      request.log.info({ userId: user.id, email: user.email }, 'Login successful');
+      request.log.info(
+        { userId: user.id, email: user.email },
+        'Login successful'
+      );
 
       return reply.send({
         user: this.buildResponseUser(user),
@@ -113,12 +116,14 @@ export class AuthController {
       userId,
       email,
       iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
+      exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
     };
-    
-    const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64');
+
+    const header = Buffer.from(
+      JSON.stringify({ alg: 'none', typ: 'JWT' })
+    ).toString('base64');
     const body = Buffer.from(JSON.stringify(payload)).toString('base64');
-    
+
     return `${header}.${body}.signature`;
   }
 

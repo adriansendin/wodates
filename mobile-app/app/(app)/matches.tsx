@@ -14,8 +14,9 @@ import { useMatchesStore, MatchWithUser } from '../../src/domain/stores/matchesS
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { MatchApi } from '../../src/data/api/matchApi';
+import { getApiUrl } from '../../src/utils/apiConfig';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = getApiUrl();
 
 export default function MatchesScreen() {
   const router = useRouter();

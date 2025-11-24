@@ -40,8 +40,9 @@ import {
   uploadAvatarToBackend,
 } from '../../src/data/api/imageService';
 import { getSupabaseClient } from '../../src/data/api/supabaseClient';
+import { getApiUrl } from '../../src/utils/apiConfig';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = getApiUrl();
 const AVATAR_PLACEHOLDER = require('../../assets/placeholder.png');
 
 type LookingForFormValue = LookingForOption | '';

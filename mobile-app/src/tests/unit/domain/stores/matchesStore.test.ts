@@ -8,7 +8,7 @@ const match = (
   id: string,
   createdAt: string,
   otherUserName: string,
-  lastMessageCreatedAt?: string,
+  lastMessageCreatedAt?: string
 ): MatchWithUser => ({
   id,
   userId1: '11111111-1111-1111-1111-111111111111',
@@ -50,18 +50,21 @@ describe('matchesStore', () => {
         '22222222-2222-2222-2222-222222222222',
         '2024-01-01T00:00:00.000Z',
         'Bob',
-        '2024-01-01T01:00:00.000Z',
+        '2024-01-01T01:00:00.000Z'
       ),
       match(
         '11111111-1111-1111-1111-111111111111',
         '2024-01-02T00:00:00.000Z',
         'Alice',
-        '2024-01-02T01:00:00.000Z',
+        '2024-01-02T01:00:00.000Z'
       ),
     ]);
 
     const state = useMatchesStore.getState();
-    expect(state.matches.map((item) => item.otherUser.name)).toEqual(['Alice', 'Bob']);
+    expect(state.matches.map((item) => item.otherUser.name)).toEqual([
+      'Alice',
+      'Bob',
+    ]);
   });
 
   it('adds new matches while keeping the list sorted', () => {
@@ -71,7 +74,7 @@ describe('matchesStore', () => {
         '11111111-1111-1111-1111-111111111111',
         '2024-01-01T00:00:00.000Z',
         'Alice',
-        '2024-01-01T01:00:00.000Z',
+        '2024-01-01T01:00:00.000Z'
       ),
     ]);
 
@@ -80,12 +83,15 @@ describe('matchesStore', () => {
         '33333333-3333-3333-3333-333333333333',
         '2024-01-03T00:00:00.000Z',
         'Carol',
-        '2024-01-03T02:00:00.000Z',
-      ),
+        '2024-01-03T02:00:00.000Z'
+      )
     );
 
     const state = useMatchesStore.getState();
-    expect(state.matches.map((item) => item.otherUser.name)).toEqual(['Carol', 'Alice']);
+    expect(state.matches.map((item) => item.otherUser.name)).toEqual([
+      'Carol',
+      'Alice',
+    ]);
   });
 
   it('merges data when adding an already existing match', () => {
@@ -95,7 +101,7 @@ describe('matchesStore', () => {
         '11111111-1111-1111-1111-111111111111',
         '2024-01-01T00:00:00.000Z',
         'Alice',
-        '2024-01-01T01:00:00.000Z',
+        '2024-01-01T01:00:00.000Z'
       ),
     ]);
 
@@ -104,7 +110,7 @@ describe('matchesStore', () => {
         '11111111-1111-1111-1111-111111111111',
         '2024-01-01T00:00:00.000Z',
         'Alice',
-        '2024-01-02T01:00:00.000Z',
+        '2024-01-02T01:00:00.000Z'
       ),
       unreadCount: 3,
     });
@@ -112,7 +118,9 @@ describe('matchesStore', () => {
     const state = useMatchesStore.getState();
     expect(state.matches).toHaveLength(1);
     expect(state.matches[0].unreadCount).toBe(3);
-    expect(state.matches[0].lastMessage?.createdAt).toBe('2024-01-02T01:00:00.000Z');
+    expect(state.matches[0].lastMessage?.createdAt).toBe(
+      '2024-01-02T01:00:00.000Z'
+    );
   });
 
   it('updates an existing match and keeps the ordering', () => {
@@ -122,13 +130,13 @@ describe('matchesStore', () => {
         '11111111-1111-1111-1111-111111111111',
         '2024-01-01T00:00:00.000Z',
         'Alice',
-        '2024-01-01T01:00:00.000Z',
+        '2024-01-01T01:00:00.000Z'
       ),
       match(
         '22222222-2222-2222-2222-222222222222',
         '2024-01-02T00:00:00.000Z',
         'Bob',
-        '2024-01-02T01:00:00.000Z',
+        '2024-01-02T01:00:00.000Z'
       ),
     ]);
 
@@ -149,7 +157,8 @@ describe('matchesStore', () => {
   });
 
   it('handles loading and error state as well as reset', () => {
-    const { setLoading, setError, clearError, reset } = useMatchesStore.getState();
+    const { setLoading, setError, clearError, reset } =
+      useMatchesStore.getState();
 
     setLoading(true);
     setError('something went wrong');
@@ -166,4 +175,3 @@ describe('matchesStore', () => {
     expect(state.error).toBeNull();
   });
 });
-

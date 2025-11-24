@@ -13,19 +13,19 @@ export type FeedCandidate = {
   photoUrl: string | null;
 };
 
-function isFailure<T, E>(result: Result<T, E>): result is import('../../../domain/Result').Failure<E> {
+function isFailure<T, E>(
+  result: Result<T, E>
+): result is import('../../../domain/Result').Failure<E> {
   return !result.success;
 }
 
 export class FakeFeedService {
-  constructor(
-    private readonly getFeedUsers: GetFeedUsers,
-  ) {}
+  constructor(private readonly getFeedUsers: GetFeedUsers) {}
 
   async getFeedCandidates(
     userId: string,
     limit: number = 10,
-    offset: number = 0,
+    offset: number = 0
   ): Promise<FeedCandidate[]> {
     const result = await this.getFeedUsers.execute(userId, limit, offset);
 

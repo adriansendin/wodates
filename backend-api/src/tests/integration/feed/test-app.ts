@@ -57,7 +57,7 @@ export async function createFeedTestApp(): Promise<CreateFeedTestAppResult> {
     userRepository,
     likeRepository,
     passRepository,
-    preferencesRepository,
+    preferencesRepository
   );
 
   const feedService = new FakeFeedService(getFeedUsers);

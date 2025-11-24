@@ -41,7 +41,8 @@ describe('registrationStore', () => {
   });
 
   it('navigates between steps respecting the allowed bounds', () => {
-    const { nextStep, previousStep, setCurrentStep } = useRegistrationStore.getState();
+    const { nextStep, previousStep, setCurrentStep } =
+      useRegistrationStore.getState();
 
     for (let i = 0; i < 10; i += 1) {
       nextStep();
@@ -102,4 +103,3 @@ describe('registrationStore', () => {
     });
   });
 });
-

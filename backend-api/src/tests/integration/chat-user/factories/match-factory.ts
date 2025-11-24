@@ -10,7 +10,7 @@ export type MatchFactoryAttributes = {
 
 export class MatchFactory {
   static create(
-    overrides: Partial<MatchFactoryAttributes> = {},
+    overrides: Partial<MatchFactoryAttributes> = {}
   ): MatchFactoryAttributes {
     return {
       id: overrides.id ?? randomUUID(),
@@ -29,4 +29,3 @@ export class MatchFactory {
     };
   }
 }
-

@@ -6,7 +6,10 @@ import { DomainError, ServerError } from '../../domain/errors/DomainError';
 const MESSAGES_KEY = '@wodates_messages';
 
 export class AsyncStorageChatRepository {
-  async saveMessages(matchId: string, messages: Message[]): Promise<Result<void, DomainError>> {
+  async saveMessages(
+    matchId: string,
+    messages: Message[]
+  ): Promise<Result<void, DomainError>> {
     try {
       const key = `${MESSAGES_KEY}_${matchId}`;
       await AsyncStorage.setItem(key, JSON.stringify(messages));
@@ -31,7 +34,10 @@ export class AsyncStorageChatRepository {
     }
   }
 
-  async addMessage(matchId: string, message: Message): Promise<Result<void, DomainError>> {
+  async addMessage(
+    matchId: string,
+    message: Message
+  ): Promise<Result<void, DomainError>> {
     try {
       const existingMessages = await this.getMessages(matchId);
       if (existingMessages.success) {

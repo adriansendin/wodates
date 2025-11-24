@@ -40,7 +40,7 @@ export class SupabaseUserAIProfileRepository
   }
 
   async create(
-    profile: CreateUserAIProfile,
+    profile: CreateUserAIProfile
   ): Promise<Result<UserAIProfile, DomainError>> {
     try {
       const insertData: {
@@ -70,13 +70,15 @@ export class SupabaseUserAIProfileRepository
       if (error) {
         return failure(
           new InternalError(
-            `Failed to insert AI profile: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to insert AI profile: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       if (!data) {
-        return failure(new InternalError('Supabase did not return AI profile row'));
+        return failure(
+          new InternalError('Supabase did not return AI profile row')
+        );
       }
 
       return success(this.mapRowToProfile(data));
@@ -84,13 +86,13 @@ export class SupabaseUserAIProfileRepository
       return failure(
         error instanceof DomainError
           ? error
-          : new InternalError('Unexpected error creating AI profile', error),
+          : new InternalError('Unexpected error creating AI profile', error)
       );
     }
   }
 
   async findByUserId(
-    userId: string,
+    userId: string
   ): Promise<Result<UserAIProfile | null, DomainError>> {
     try {
       const { data, error } = await this.client
@@ -102,8 +104,8 @@ export class SupabaseUserAIProfileRepository
       if (error) {
         return failure(
           new InternalError(
-            `Failed to fetch AI profile: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to fetch AI profile: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
@@ -114,14 +116,14 @@ export class SupabaseUserAIProfileRepository
       return success(this.mapRowToProfile(data));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching AI profile', error),
+        new InternalError('Unexpected error fetching AI profile', error)
       );
     }
   }
 
   async update(
     userId: string,
-    update: UpdateUserAIProfile,
+    update: UpdateUserAIProfile
   ): Promise<Result<UserAIProfile, DomainError>> {
     try {
       const updateData: {
@@ -152,8 +154,8 @@ export class SupabaseUserAIProfileRepository
       if (error) {
         return failure(
           new InternalError(
-            `Failed to update AI profile: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to update AI profile: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
@@ -166,13 +168,13 @@ export class SupabaseUserAIProfileRepository
       return failure(
         error instanceof DomainError
           ? error
-          : new InternalError('Unexpected error updating AI profile', error),
+          : new InternalError('Unexpected error updating AI profile', error)
       );
     }
   }
 
   async upsert(
-    profile: CreateUserAIProfile,
+    profile: CreateUserAIProfile
   ): Promise<Result<UserAIProfile, DomainError>> {
     try {
       // Check if exists
@@ -191,7 +193,7 @@ export class SupabaseUserAIProfileRepository
       return failure(
         error instanceof DomainError
           ? error
-          : new InternalError('Unexpected error upserting AI profile', error),
+          : new InternalError('Unexpected error upserting AI profile', error)
       );
     }
   }
@@ -226,7 +228,7 @@ export class SupabaseUserAIProfileRepository
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'SupabaseUserAIProfileRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'SupabaseUserAIProfileRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
@@ -243,11 +245,13 @@ export class SupabaseUserAIProfileRepository
       const hint = (error as { hint?: unknown }).hint;
 
       return [message, details, hint]
-        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        .filter(
+          (value): value is string =>
+            typeof value === 'string' && value.trim().length > 0
+        )
         .join(' | ');
     }
 
     return typeof error === 'string' ? error : 'Unknown Supabase error';
   }
 }
-

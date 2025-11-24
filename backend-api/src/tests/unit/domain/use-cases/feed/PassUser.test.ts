@@ -39,7 +39,9 @@ describe('PassUser use case', () => {
   });
 
   it('propagates repository errors when creating the pass fails', async () => {
-    passRepository.setCreateError(new InternalError('pass storage unavailable'));
+    passRepository.setCreateError(
+      new InternalError('pass storage unavailable')
+    );
 
     const result = await useCase.execute(USER_A, USER_B);
 
@@ -50,4 +52,3 @@ describe('PassUser use case', () => {
     }
   });
 });
-

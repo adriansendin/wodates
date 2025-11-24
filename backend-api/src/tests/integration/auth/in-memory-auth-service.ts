@@ -37,7 +37,10 @@ export class InMemoryAuthService implements AuthService {
     return user;
   }
 
-  async validateCredentials(email: string, password: string): Promise<AuthUser> {
+  async validateCredentials(
+    email: string,
+    password: string
+  ): Promise<AuthUser> {
     const emailKey = email.toLowerCase();
     const stored = this.users.get(emailKey);
 
@@ -52,4 +55,3 @@ export class InMemoryAuthService implements AuthService {
     this.users.clear();
   }
 }
-

@@ -1,5 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { BlockedUser, CreateBlockedUser } from '../../domain/entities/BlockedUser';
+import {
+  BlockedUser,
+  CreateBlockedUser,
+} from '../../domain/entities/BlockedUser';
 import { Result, success, failure } from '../../domain/Result';
 import {
   ConflictError,
@@ -32,7 +35,9 @@ export class SupabaseBlockedUserRepository implements BlockedUserRepository {
     });
   }
 
-  async create(blockedUserData: CreateBlockedUser): Promise<Result<BlockedUser, DomainError>> {
+  async create(
+    blockedUserData: CreateBlockedUser
+  ): Promise<Result<BlockedUser, DomainError>> {
     try {
       const { data, error } = await this.client
         .from('blocked_users')
@@ -50,13 +55,15 @@ export class SupabaseBlockedUserRepository implements BlockedUserRepository {
 
         return failure(
           new InternalError(
-            `Failed to block user: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to block user: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       if (!data) {
-        return failure(new InternalError('Supabase did not return blocked_users row'));
+        return failure(
+          new InternalError('Supabase did not return blocked_users row')
+        );
       }
 
       return success(this.mapBlockedUser(data));
@@ -64,14 +71,14 @@ export class SupabaseBlockedUserRepository implements BlockedUserRepository {
       return failure(
         error instanceof DomainError
           ? error
-          : new InternalError('Unexpected error blocking user', error),
+          : new InternalError('Unexpected error blocking user', error)
       );
     }
   }
 
   async hasBlocked(
     blockerId: string,
-    blockedId: string,
+    blockedId: string
   ): Promise<Result<boolean, DomainError>> {
     try {
       const { data, error } = await this.client
@@ -84,22 +91,22 @@ export class SupabaseBlockedUserRepository implements BlockedUserRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to check block status: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to check block status: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success(Boolean(data));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error checking block status', error),
+        new InternalError('Unexpected error checking block status', error)
       );
     }
   }
 
   async isBlocked(
     userId1: string,
-    userId2: string,
+    userId2: string
   ): Promise<Result<boolean, DomainError>> {
     try {
       const { data, error } = await this.client
@@ -112,20 +119,22 @@ export class SupabaseBlockedUserRepository implements BlockedUserRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to check block status: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to check block status: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success(data && data.length > 0);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error checking block status', error),
+        new InternalError('Unexpected error checking block status', error)
       );
     }
   }
 
-  async getBlockedByUser(userId: string): Promise<Result<BlockedUser[], DomainError>> {
+  async getBlockedByUser(
+    userId: string
+  ): Promise<Result<BlockedUser[], DomainError>> {
     try {
       const { data, error } = await this.client
         .from('blocked_users')
@@ -136,20 +145,23 @@ export class SupabaseBlockedUserRepository implements BlockedUserRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to get blocked users: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to get blocked users: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success((data ?? []).map((row) => this.mapBlockedUser(row)));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching blocked users', error),
+        new InternalError('Unexpected error fetching blocked users', error)
       );
     }
   }
 
-  async delete(blockerId: string, blockedId: string): Promise<Result<void, DomainError>> {
+  async delete(
+    blockerId: string,
+    blockedId: string
+  ): Promise<Result<void, DomainError>> {
     try {
       const { error } = await this.client
         .from('blocked_users')
@@ -160,15 +172,15 @@ export class SupabaseBlockedUserRepository implements BlockedUserRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to unblock user: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to unblock user: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success(undefined);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error unblocking user', error),
+        new InternalError('Unexpected error unblocking user', error)
       );
     }
   }
@@ -188,7 +200,7 @@ export class SupabaseBlockedUserRepository implements BlockedUserRepository {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'SupabaseBlockedUserRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'SupabaseBlockedUserRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
@@ -213,11 +225,12 @@ export class SupabaseBlockedUserRepository implements BlockedUserRepository {
       const hint = (error as { hint?: string }).hint;
 
       return [message, details, hint]
-        .filter((segment) => typeof segment === 'string' && segment.trim().length)
+        .filter(
+          (segment) => typeof segment === 'string' && segment.trim().length
+        )
         .join(' | ');
     }
 
     return typeof error === 'string' ? error : 'Unknown Supabase error';
   }
 }
-

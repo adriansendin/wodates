@@ -40,7 +40,7 @@ export class SupabaseMatchRepository implements MatchRepository {
       // Return existing match if present
       const existingMatchResult = await this.getMatchBetween(
         matchData.userId1,
-        matchData.userId2,
+        matchData.userId2
       );
 
       if (!existingMatchResult.success) {
@@ -62,8 +62,8 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (chatError) {
         return failure(
           new InternalError(
-            `Failed to create chat: ${this.formatSupabaseError(chatError)}`,
-          ),
+            `Failed to create chat: ${this.formatSupabaseError(chatError)}`
+          )
         );
       }
 
@@ -86,8 +86,8 @@ export class SupabaseMatchRepository implements MatchRepository {
 
         return failure(
           new InternalError(
-            `Failed to register chat participants: ${this.formatSupabaseError(participantsError)}`,
-          ),
+            `Failed to register chat participants: ${this.formatSupabaseError(participantsError)}`
+          )
         );
       }
 
@@ -106,23 +106,24 @@ export class SupabaseMatchRepository implements MatchRepository {
       return failure(
         error instanceof DomainError
           ? error
-          : new InternalError('Unexpected error creating match', error),
+          : new InternalError('Unexpected error creating match', error)
       );
     }
   }
 
   async findByUserId(userId: string): Promise<Result<Match[], DomainError>> {
     try {
-      const { data: participantRows, error: participantError } = await this.client
-        .from('chat_participants')
-        .select('chat_id')
-        .eq('user_id', userId);
+      const { data: participantRows, error: participantError } =
+        await this.client
+          .from('chat_participants')
+          .select('chat_id')
+          .eq('user_id', userId);
 
       if (participantError) {
         return failure(
           new InternalError(
-            `Failed to query chat participations: ${this.formatSupabaseError(participantError)}`,
-          ),
+            `Failed to query chat participations: ${this.formatSupabaseError(participantError)}`
+          )
         );
       }
 
@@ -142,8 +143,8 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (chatError) {
         return failure(
           new InternalError(
-            `Failed to fetch chats: ${this.formatSupabaseError(chatError)}`,
-          ),
+            `Failed to fetch chats: ${this.formatSupabaseError(chatError)}`
+          )
         );
       }
 
@@ -155,7 +156,7 @@ export class SupabaseMatchRepository implements MatchRepository {
       return success(matches);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching matches', error),
+        new InternalError('Unexpected error fetching matches', error)
       );
     }
   }
@@ -171,8 +172,8 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to fetch chat: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to fetch chat: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
@@ -184,22 +185,22 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (!match) {
         return failure(
           new InternalError(
-            'Chat does not have enough participants to be considered a match',
-          ),
+            'Chat does not have enough participants to be considered a match'
+          )
         );
       }
 
       return success(match);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching match', error),
+        new InternalError('Unexpected error fetching match', error)
       );
     }
   }
 
   async existsBetweenUsers(
     userId1: string,
-    userId2: string,
+    userId2: string
   ): Promise<Result<boolean, DomainError>> {
     const matchResult = await this.getMatchBetween(userId1, userId2);
     if (!matchResult.success) {
@@ -220,8 +221,8 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (fetchError) {
         return failure(
           new InternalError(
-            `Failed to fetch chat participants: ${this.formatSupabaseError(fetchError)}`,
-          ),
+            `Failed to fetch chat participants: ${this.formatSupabaseError(fetchError)}`
+          )
         );
       }
 
@@ -237,8 +238,8 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (participantsError) {
         return failure(
           new InternalError(
-            `Failed to delete chat participants: ${this.formatSupabaseError(participantsError)}`,
-          ),
+            `Failed to delete chat participants: ${this.formatSupabaseError(participantsError)}`
+          )
         );
       }
 
@@ -251,8 +252,8 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (messagesError) {
         return failure(
           new InternalError(
-            `Failed to delete messages: ${this.formatSupabaseError(messagesError)}`,
-          ),
+            `Failed to delete messages: ${this.formatSupabaseError(messagesError)}`
+          )
         );
       }
 
@@ -265,8 +266,8 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (chatError) {
         return failure(
           new InternalError(
-            `Failed to delete chat: ${this.formatSupabaseError(chatError)}`,
-          ),
+            `Failed to delete chat: ${this.formatSupabaseError(chatError)}`
+          )
         );
       }
 
@@ -278,26 +279,27 @@ export class SupabaseMatchRepository implements MatchRepository {
       return success(undefined);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error deleting match', error),
+        new InternalError('Unexpected error deleting match', error)
       );
     }
   }
 
   private async getMatchBetween(
     userId1: string,
-    userId2: string,
+    userId2: string
   ): Promise<Result<Match | null, DomainError>> {
     try {
-      const { data: participantRows, error: participantError } = await this.client
-        .from('chat_participants')
-        .select('chat_id')
-        .eq('user_id', userId1);
+      const { data: participantRows, error: participantError } =
+        await this.client
+          .from('chat_participants')
+          .select('chat_id')
+          .eq('user_id', userId1);
 
       if (participantError) {
         return failure(
           new InternalError(
-            `Failed to query chat participations: ${this.formatSupabaseError(participantError)}`,
-          ),
+            `Failed to query chat participations: ${this.formatSupabaseError(participantError)}`
+          )
         );
       }
 
@@ -316,8 +318,8 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (chatError) {
         return failure(
           new InternalError(
-            `Failed to fetch chats: ${this.formatSupabaseError(chatError)}`,
-          ),
+            `Failed to fetch chats: ${this.formatSupabaseError(chatError)}`
+          )
         );
       }
 
@@ -339,22 +341,22 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (!match) {
         return failure(
           new InternalError(
-            'Chat does not have enough participants to be considered a match',
-          ),
+            'Chat does not have enough participants to be considered a match'
+          )
         );
       }
 
       return success(match);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error verifying match', error),
+        new InternalError('Unexpected error verifying match', error)
       );
     }
   }
 
   private mapChatRowToMatch(
     row: ChatRow,
-    preferredUserId?: string,
+    preferredUserId?: string
   ): Match | null {
     const participants = row.chat_participants ?? [];
     if (participants.length < 2) {
@@ -377,7 +379,7 @@ export class SupabaseMatchRepository implements MatchRepository {
 
     if (!userId1 || !userId2) {
       return null; // garantía: no devolvemos match con ids vacíos
-    }    
+    }
 
     return {
       id: row.id,
@@ -394,7 +396,7 @@ export class SupabaseMatchRepository implements MatchRepository {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'SupabaseMatchRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'SupabaseMatchRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
@@ -409,7 +411,7 @@ export class SupabaseMatchRepository implements MatchRepository {
    */
   async getActiveChatsCount(userIds: string[]): Promise<Map<string, number>> {
     const result = new Map<string, number>();
-    
+
     if (userIds.length === 0) {
       return result;
     }
@@ -422,7 +424,7 @@ export class SupabaseMatchRepository implements MatchRepository {
     if (error) {
       console.error(
         `[SupabaseMatchRepository] Failed to get active_chats_count:`,
-        this.formatSupabaseError(error),
+        this.formatSupabaseError(error)
       );
       // Return map with 0 for all users on error
       for (const userId of userIds) {
@@ -461,15 +463,16 @@ export class SupabaseMatchRepository implements MatchRepository {
   private async updateActiveChatsCount(userIds: string[]): Promise<void> {
     for (const userId of userIds) {
       // Count active chats: chats where user is participant AND not blocked
-      const { data: participantRows, error: participantError } = await this.client
-        .from('chat_participants')
-        .select('chat_id')
-        .eq('user_id', userId);
+      const { data: participantRows, error: participantError } =
+        await this.client
+          .from('chat_participants')
+          .select('chat_id')
+          .eq('user_id', userId);
 
       if (participantError) {
         console.error(
           `[SupabaseMatchRepository] Failed to count chats for user ${userId}:`,
-          this.formatSupabaseError(participantError),
+          this.formatSupabaseError(participantError)
         );
         continue;
       }
@@ -496,7 +499,7 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (allParticipantsError) {
         console.error(
           `[SupabaseMatchRepository] Failed to fetch all participants for user ${userId}:`,
-          this.formatSupabaseError(allParticipantsError),
+          this.formatSupabaseError(allParticipantsError)
         );
         continue;
       }
@@ -520,7 +523,7 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (blocksError) {
         console.error(
           `[SupabaseMatchRepository] Failed to fetch blocks for user ${userId}:`,
-          this.formatSupabaseError(blocksError),
+          this.formatSupabaseError(blocksError)
         );
         continue;
       }
@@ -539,8 +542,8 @@ export class SupabaseMatchRepository implements MatchRepository {
         new Set(
           Array.from(chatParticipantsMap.values())
             .flat()
-            .filter((id) => id !== userId),
-        ),
+            .filter((id) => id !== userId)
+        )
       );
 
       const { data: userRows, error: usersError } = await this.client
@@ -551,7 +554,7 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (usersError) {
         console.error(
           `[SupabaseMatchRepository] Failed to fetch user bot status for user ${userId}:`,
-          this.formatSupabaseError(usersError),
+          this.formatSupabaseError(usersError)
         );
         continue;
       }
@@ -592,7 +595,7 @@ export class SupabaseMatchRepository implements MatchRepository {
       if (updateError) {
         console.error(
           `[SupabaseMatchRepository] Failed to update active_chats_count for user ${userId}:`,
-          this.formatSupabaseError(updateError),
+          this.formatSupabaseError(updateError)
         );
       }
     }
@@ -606,7 +609,7 @@ export class SupabaseMatchRepository implements MatchRepository {
 
       return [message, details, hint]
         .filter(
-          (segment) => typeof segment === 'string' && segment.trim().length,
+          (segment) => typeof segment === 'string' && segment.trim().length
         )
         .join(' | ');
     }

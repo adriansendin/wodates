@@ -1,6 +1,10 @@
 import { Message } from '../../entities/Message';
 import { Result, success, failure } from '../../Result';
-import { DomainError, NotFoundError, ForbiddenError } from '../../errors/DomainError';
+import {
+  DomainError,
+  NotFoundError,
+  ForbiddenError,
+} from '../../errors/DomainError';
 import { MessageRepository } from '../../repositories/MessageRepository';
 import { MatchRepository } from '../../repositories/MatchRepository';
 
@@ -28,7 +32,11 @@ export class GetMessages {
     }
 
     // Get messages
-    const messagesResult = await this.messageRepository.findByMatchId(matchId, limit, before);
+    const messagesResult = await this.messageRepository.findByMatchId(
+      matchId,
+      limit,
+      before
+    );
     if (isFailure(messagesResult)) {
       return messagesResult;
     }
@@ -37,6 +45,8 @@ export class GetMessages {
   }
 }
 
-function isFailure<T, E>(result: Result<T, E>): result is import('../../Result').Failure<E> {
+function isFailure<T, E>(
+  result: Result<T, E>
+): result is import('../../Result').Failure<E> {
   return !result.success;
 }

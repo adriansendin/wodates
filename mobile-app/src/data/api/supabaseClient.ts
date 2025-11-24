@@ -14,8 +14,11 @@ export function getSupabaseClient(): SupabaseClient {
   if (!supabaseClient) {
     // Debug: verificar que las variables se carguen
     console.log('[SupabaseClient] SUPABASE_URL:', SUPABASE_URL);
-    console.log('[SupabaseClient] SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY ? `EXISTE (${SUPABASE_ANON_KEY.length} chars)` : 'VACÍA');
-    
+    console.log(
+      '[SupabaseClient] SUPABASE_ANON_KEY:',
+      SUPABASE_ANON_KEY ? `EXISTE (${SUPABASE_ANON_KEY.length} chars)` : 'VACÍA'
+    );
+
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       throw new Error(
         'Missing Supabase configuration. Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY environment variables.'
@@ -30,11 +33,9 @@ export function getSupabaseClient(): SupabaseClient {
         detectSessionInUrl: false,
       },
     });
-    
+
     console.log('[SupabaseClient] Client created successfully');
   }
 
   return supabaseClient;
 }
-
-

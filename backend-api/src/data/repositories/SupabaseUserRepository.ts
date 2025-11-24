@@ -1,9 +1,6 @@
 import { User, CreateUser, UpdateUser } from '../../domain/entities/User';
 import { Result, success, failure } from '../../domain/Result';
-import {
-  DomainError,
-  InternalError,
-} from '../../domain/errors/DomainError';
+import { DomainError, InternalError } from '../../domain/errors/DomainError';
 import { UserRepository } from '../../domain/repositories/UserRepository';
 import { SupabaseUserService } from '../../app/services/supabase-user-service';
 
@@ -14,7 +11,7 @@ type SupabaseConfig = {
 
 /**
  * SupabaseUserRepository - Implements UserRepository using SupabaseUserService
- * 
+ *
  * This is a thin adapter that wraps SupabaseUserService to match the UserRepository interface.
  */
 export class SupabaseUserRepository implements UserRepository {
@@ -33,7 +30,7 @@ export class SupabaseUserRepository implements UserRepository {
         return failure(error);
       }
       return failure(
-        new InternalError('Unexpected error fetching user', error),
+        new InternalError('Unexpected error fetching user', error)
       );
     }
   }
@@ -42,7 +39,9 @@ export class SupabaseUserRepository implements UserRepository {
     // SupabaseUserService doesn't have findByEmail, so we'll need to implement it
     // For now, return an error
     return failure(
-      new InternalError('findByEmail not yet implemented in SupabaseUserRepository'),
+      new InternalError(
+        'findByEmail not yet implemented in SupabaseUserRepository'
+      )
     );
   }
 
@@ -50,11 +49,14 @@ export class SupabaseUserRepository implements UserRepository {
     // SupabaseUserService doesn't have create, so we'll need to implement it
     // For now, return an error
     return failure(
-      new InternalError('create not yet implemented in SupabaseUserRepository'),
+      new InternalError('create not yet implemented in SupabaseUserRepository')
     );
   }
 
-  async update(id: string, user: UpdateUser): Promise<Result<User, DomainError>> {
+  async update(
+    id: string,
+    user: UpdateUser
+  ): Promise<Result<User, DomainError>> {
     try {
       const updateInput = this.mapUpdateUserToInput(user);
       const profile = await this.userService.updateProfile(id, updateInput);
@@ -64,7 +66,7 @@ export class SupabaseUserRepository implements UserRepository {
         return failure(error);
       }
       return failure(
-        new InternalError('Unexpected error updating user', error),
+        new InternalError('Unexpected error updating user', error)
       );
     }
   }
@@ -73,19 +75,21 @@ export class SupabaseUserRepository implements UserRepository {
     // SupabaseUserService doesn't have delete, so we'll need to implement it
     // For now, return an error
     return failure(
-      new InternalError('delete not yet implemented in SupabaseUserRepository'),
+      new InternalError('delete not yet implemented in SupabaseUserRepository')
     );
   }
 
   async findFeedUsers(
     _userId: string,
     _limit: number,
-    _offset: number,
+    _offset: number
   ): Promise<Result<User[], DomainError>> {
     // SupabaseUserService doesn't have findFeedUsers, so we'll need to implement it
     // For now, return an error
     return failure(
-      new InternalError('findFeedUsers not yet implemented in SupabaseUserRepository'),
+      new InternalError(
+        'findFeedUsers not yet implemented in SupabaseUserRepository'
+      )
     );
   }
 
@@ -107,12 +111,14 @@ export class SupabaseUserRepository implements UserRepository {
     // User entity requires: id, email, name, birthDate (datetime string), gender, createdAt, updatedAt
     // Optional: bio, photoUrl, location
     const now = new Date().toISOString();
-    
+
     // Validate gender is one of the allowed values
-    const validGender = profile.gender && ['male', 'female', 'non_binary'].includes(profile.gender)
-      ? (profile.gender as 'male' | 'female' | 'non_binary')
-      : 'non_binary'; // Default fallback
-    
+    const validGender =
+      profile.gender &&
+      ['male', 'female', 'non_binary'].includes(profile.gender)
+        ? (profile.gender as 'male' | 'female' | 'non_binary')
+        : 'non_binary'; // Default fallback
+
     return {
       id: profile.id,
       email: profile.email,
@@ -121,12 +127,14 @@ export class SupabaseUserRepository implements UserRepository {
       gender: validGender, // Required field
       bio: profile.bio || undefined,
       photoUrl: profile.avatarUrl || undefined,
-      location: profile.city ? {
-        city: profile.city,
-        country: '', // Not available in profile
-        latitude: 0,
-        longitude: 0,
-      } : undefined,
+      location: profile.city
+        ? {
+            city: profile.city,
+            country: '', // Not available in profile
+            latitude: 0,
+            longitude: 0,
+          }
+        : undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -156,4 +164,3 @@ export class SupabaseUserRepository implements UserRepository {
     };
   }
 }
-

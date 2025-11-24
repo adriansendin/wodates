@@ -10,7 +10,7 @@ import { AIConfig } from '../ai-settings';
 
 /**
  * Factory functions to create AI model instances
- * 
+ *
  * These factories abstract provider creation and configuration.
  */
 
@@ -24,7 +24,7 @@ export function createChatModel(logger?: any): ChatModel {
         AIConfig.ollama.baseUrl,
         AIConfig.ollama.timeout,
         AIConfig.ollama.parameters,
-        logger,
+        logger
       );
     }
 
@@ -38,7 +38,7 @@ export function createChatModel(logger?: any): ChatModel {
 
     default:
       throw new Error(
-        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`,
+        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`
       );
   }
 }
@@ -58,7 +58,7 @@ export function createSummarizerModel(logger?: any): SummarizerModel {
           num_predict: AIConfig.ollama.parameters.num_predict || 1000,
           num_ctx: AIConfig.ollama.parameters.num_ctx || 2048,
         },
-        logger,
+        logger
       );
     }
 
@@ -69,12 +69,14 @@ export function createSummarizerModel(logger?: any): SummarizerModel {
       }
       // For now, use chat model for summarization (can be refactored later)
       // TODO: Add SummarizerModelOpenAI if needed
-      throw new Error('OpenAI summarizer not yet implemented. Use ollama for now.');
+      throw new Error(
+        'OpenAI summarizer not yet implemented. Use ollama for now.'
+      );
     }
 
     default:
       throw new Error(
-        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`,
+        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`
       );
   }
 }
@@ -84,14 +86,16 @@ export function createEmbeddingModel(logger?: any): EmbeddingModel {
 
   switch (providerName) {
     case 'ollama': {
-      // Ollama embeddings model (may differ from chat model)
-      const embeddingModel = process.env.OLLAMA_EMBEDDING_MODEL || AIConfig.ollama.model;
+      // Use dedicated embeddings configuration (separate from chat model)
+      // Uses AIModelConstants.EMBEDDING.DEFAULT_MODEL (yxchia/multilingual-e5-base)
+      // and AIModelConstants.EMBEDDING.DIMENSION (768) from ai-settings.ts
+      // Override via OLLAMA_EMBEDDING_MODEL in .env if needed
       return new EmbeddingModelOllama(
-        embeddingModel,
-        768, // Default dimension for Ollama embeddings
+        AIConfig.ollama.embeddings.model,
+        AIConfig.ollama.embeddings.dimension,
         AIConfig.ollama.baseUrl,
-        AIConfig.ollama.timeout,
-        logger,
+        AIConfig.ollama.embeddings.timeout,
+        logger
       );
     }
 
@@ -100,8 +104,9 @@ export function createEmbeddingModel(logger?: any): EmbeddingModel {
       if (!apiKey) {
         throw new Error('OPENAI_API_KEY is required when AI_PROVIDER=openai');
       }
-      const embeddingModel = process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small';
-      const dimension = process.env.OPENAI_EMBEDDING_DIMENSION 
+      const embeddingModel =
+        process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small';
+      const dimension = process.env.OPENAI_EMBEDDING_DIMENSION
         ? parseInt(process.env.OPENAI_EMBEDDING_DIMENSION, 10)
         : 1536;
       return new EmbeddingModelOpenAI(apiKey, embeddingModel, dimension);
@@ -109,8 +114,7 @@ export function createEmbeddingModel(logger?: any): EmbeddingModel {
 
     default:
       throw new Error(
-        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`,
+        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`
       );
   }
 }
-

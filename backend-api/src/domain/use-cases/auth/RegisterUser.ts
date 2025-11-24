@@ -10,7 +10,10 @@ export class RegisterUser {
     private preferencesRepository: PreferencesRepository
   ) {}
 
-  async execute(userData: CreateUser, email: string): Promise<Result<User, DomainError>> {
+  async execute(
+    userData: CreateUser,
+    email: string
+  ): Promise<Result<User, DomainError>> {
     // Check if user already exists
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser.success) {

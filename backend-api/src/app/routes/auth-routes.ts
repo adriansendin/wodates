@@ -1,4 +1,8 @@
-import { FastifyInstance, FastifyPluginAsync, FastifyPluginOptions } from 'fastify';
+import {
+  FastifyInstance,
+  FastifyPluginAsync,
+  FastifyPluginOptions,
+} from 'fastify';
 import { AuthController } from '../controllers/auth-controller';
 import { SupabaseAuthService } from '../services/supabase-auth-service';
 import { GENDER_VALUES } from '../../domain/entities/User';
@@ -20,10 +24,10 @@ type AuthRoutesOptions = FastifyPluginOptions & {
 
 export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
   fastify: FastifyInstance,
-  options: AuthRoutesOptions,
+  options: AuthRoutesOptions
 ) => {
   const authService = options?.authService ?? new SupabaseAuthService();
-  
+
   // Initialize SystemUserService for welcome matches with Doc Love
   const docLoveHelper = new DocLoveHelper();
   const likeRepository = new SupabaseLikeRepository();
@@ -31,107 +35,123 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
   const systemUserService = new SystemUserService(
     docLoveHelper,
     likeRepository,
-    matchRepository,
+    matchRepository
   );
-  
+
   const authController = new AuthController(authService, systemUserService);
 
-  fastify.post('/register', {
-    schema: {
-      description: 'Register a new user',
-      tags: ['auth'],
-      body: {
-        type: 'object',
-        required: ['email', 'password', 'name', 'birthDate', 'gender'],
-        properties: {
-          email: { type: 'string', format: 'email' },
-          password: { type: 'string', minLength: 6 },
-          name: { type: 'string', minLength: 1, maxLength: 100 },
-          birthDate: { type: 'string', format: 'date-time' },
-          gender: { type: 'string', enum: GENDER_VALUES },
-        }
-      },
-      response: {
-        201: {
+  fastify.post(
+    '/register',
+    {
+      schema: {
+        description: 'Register a new user',
+        tags: ['auth'],
+        body: {
           type: 'object',
+          required: ['email', 'password', 'name', 'birthDate', 'gender'],
           properties: {
-            user: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                email: { type: 'string' },
-                name: { type: 'string' },
+            email: { type: 'string', format: 'email' },
+            password: { type: 'string', minLength: 6 },
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            birthDate: { type: 'string', format: 'date-time' },
+            gender: { type: 'string', enum: GENDER_VALUES },
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              user: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  email: { type: 'string' },
+                  name: { type: 'string' },
+                },
               },
+              token: { type: 'string' },
             },
-            token: { type: 'string' },
           },
         },
       },
     },
-  }, authController.register.bind(authController));
+    authController.register.bind(authController)
+  );
 
-  fastify.post('/login', {
-    schema: {
-      description: 'Login user',
-      tags: ['auth'],
-      body: {
-        type: 'object',
-        required: ['email', 'password'],
-        properties: {
-          email: { type: 'string', format: 'email' },
-          password: { type: 'string', minLength: 6 }
-        }
-      },
-      response: {
-        200: {
+  fastify.post(
+    '/login',
+    {
+      schema: {
+        description: 'Login user',
+        tags: ['auth'],
+        body: {
           type: 'object',
+          required: ['email', 'password'],
           properties: {
-            user: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                email: { type: 'string' },
-                name: { type: 'string' },
+            email: { type: 'string', format: 'email' },
+            password: { type: 'string', minLength: 6 },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              user: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  email: { type: 'string' },
+                  name: { type: 'string' },
+                },
               },
+              token: { type: 'string' },
             },
-            token: { type: 'string' },
           },
         },
       },
     },
-  }, authController.login.bind(authController));
+    authController.login.bind(authController)
+  );
 
-  fastify.post('/refresh', {
-    schema: {
-      description: 'Refresh access token',
-      tags: ['auth'],
-      security: [{ bearerAuth: [] }],
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            token: { type: 'string' },
+  fastify.post(
+    '/refresh',
+    {
+      schema: {
+        description: 'Refresh access token',
+        tags: ['auth'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              token: { type: 'string' },
+            },
           },
         },
       },
+      preHandler: fastify.authMiddleware,
     },
-    preHandler: fastify.authMiddleware,
-  }, authController.refresh.bind(authController));
+    authController.refresh.bind(authController)
+  );
 
-  fastify.post('/logout', {
-    schema: {
-      description: 'Logout user',
-      tags: ['auth'],
-      security: [{ bearerAuth: [] }],
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            message: { type: 'string' },
+  fastify.post(
+    '/logout',
+    {
+      schema: {
+        description: 'Logout user',
+        tags: ['auth'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
           },
         },
       },
+      preHandler: fastify.authMiddleware,
     },
-    preHandler: fastify.authMiddleware,
-  }, authController.logout.bind(authController));
+    authController.logout.bind(authController)
+  );
 };

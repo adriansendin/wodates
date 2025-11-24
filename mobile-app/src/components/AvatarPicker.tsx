@@ -11,7 +11,10 @@ import {
   Text,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { pickImageFromGallery, takePictureWithCamera } from '../data/api/imageService';
+import {
+  pickImageFromGallery,
+  takePictureWithCamera,
+} from '../data/api/imageService';
 
 type Props = {
   uri: string | null | undefined;
@@ -59,7 +62,10 @@ export function AvatarPicker({
 
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
-        { options: ['Cancelar', 'Tomar foto', 'Elegir de galería'], cancelButtonIndex: 0 },
+        {
+          options: ['Cancelar', 'Tomar foto', 'Elegir de galería'],
+          cancelButtonIndex: 0,
+        },
         async (idx) => {
           if (idx === 1) await takePhoto();
           if (idx === 2) await pickFromGallery();
@@ -77,11 +83,20 @@ export function AvatarPicker({
 
   return (
     <View style={styles.container}>
-      <View style={[styles.avatarFrame, { width: size, height: size }]}> 
-        <View style={[styles.avatarWrapper, { width: size, height: size, borderRadius: size / 2 }]}> 
+      <View style={[styles.avatarFrame, { width: size, height: size }]}>
+        <View
+          style={[
+            styles.avatarWrapper,
+            { width: size, height: size, borderRadius: size / 2 },
+          ]}
+        >
           {/* Mostrar imagen solo si hay uri; si no, fondo gris claro */}
           {uri ? (
-            <Image source={{ uri }} style={styles.avatarImage} resizeMode="cover" />
+            <Image
+              source={{ uri }}
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
           ) : null}
         </View>
 
@@ -108,7 +123,10 @@ export function AvatarPicker({
       </View>
       {showHelperText ? (
         <Text style={styles.helperText}>
-          {helperText ?? (uri ? 'Toca el botón para cambiar la foto' : 'Añade tu foto de perfil')}
+          {helperText ??
+            (uri
+              ? 'Toca el botón para cambiar la foto'
+              : 'Añade tu foto de perfil')}
         </Text>
       ) : null}
     </View>
@@ -142,5 +160,3 @@ const styles = StyleSheet.create({
   fabIcon: { color: '#F45C5C', fontSize: 18, fontWeight: '700' },
   helperText: { marginTop: 8, fontSize: 12, color: '#777' },
 });
-
-

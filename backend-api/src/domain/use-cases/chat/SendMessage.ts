@@ -1,6 +1,10 @@
 import { Message } from '../../entities/Message';
 import { Result, success, failure } from '../../Result';
-import { DomainError, NotFoundError, ForbiddenError } from '../../errors/DomainError';
+import {
+  DomainError,
+  NotFoundError,
+  ForbiddenError,
+} from '../../errors/DomainError';
 import { MessageRepository } from '../../repositories/MessageRepository';
 import { MatchRepository } from '../../repositories/MatchRepository';
 
@@ -13,7 +17,7 @@ type DocLoveChatService = {
   generateAndSaveReply(
     matchId: string,
     userId: string,
-    userMessage: Message,
+    userMessage: Message
   ): Promise<Result<Message, DomainError>>;
 };
 
@@ -22,7 +26,7 @@ export class SendMessage {
     private messageRepository: MessageRepository,
     private matchRepository: MatchRepository,
     private docLoveChatService?: DocLoveChatService, // Optional: only for Doc Love conversations
-    private logger?: any, // Optional: logger for debugging
+    private logger?: any // Optional: logger for debugging
   ) {}
 
   async execute(
@@ -56,8 +60,13 @@ export class SendMessage {
 
     if (this.logger) {
       this.logger.info(
-        { matchId, senderId, messageId: savedMessage.id, contentLength: content.length },
-        '2. Mensaje del usuario guardado en base de datos',
+        {
+          matchId,
+          senderId,
+          messageId: savedMessage.id,
+          contentLength: content.length,
+        },
+        '2. Mensaje del usuario guardado en base de datos'
       );
     }
 
@@ -65,12 +74,14 @@ export class SendMessage {
     // and generate AI response if needed
     if (this.docLoveChatService) {
       if (this.logger) {
-        this.logger.debug({ matchId, senderId }, 'Verificando si es conversación con Doc Love');
+        this.logger.debug(
+          { matchId, senderId },
+          'Verificando si es conversación con Doc Love'
+        );
       }
 
-      const isDocLoveResult = await this.docLoveChatService.isDocLoveConversation(
-        matchId,
-      );
+      const isDocLoveResult =
+        await this.docLoveChatService.isDocLoveConversation(matchId);
 
       // Only generate AI response if:
       // 1. We successfully checked it's a Doc Love conversation
@@ -80,7 +91,7 @@ export class SendMessage {
         if (this.logger) {
           this.logger.info(
             { matchId, senderId, content },
-            '3. Conversación con Doc Love detectada - Iniciando generación de respuesta',
+            '3. Conversación con Doc Love detectada - Iniciando generación de respuesta'
           );
         }
 
@@ -88,7 +99,7 @@ export class SendMessage {
           await this.docLoveChatService.generateAndSaveReply(
             matchId,
             senderId,
-            savedMessage,
+            savedMessage
           );
 
         // Log error but don't fail the original message send
@@ -100,12 +111,15 @@ export class SendMessage {
                 senderId,
                 error: docLoveReplyResult.error,
               },
-              'Failed to generate Doc Love reply',
+              'Failed to generate Doc Love reply'
             );
           }
         } else {
           if (this.logger) {
-            this.logger.info({ matchId, senderId }, 'Doc Love reply generated and saved successfully');
+            this.logger.info(
+              { matchId, senderId },
+              'Doc Love reply generated and saved successfully'
+            );
           }
         }
         // Note: We don't return the AI message here, as the frontend
@@ -116,15 +130,20 @@ export class SendMessage {
             {
               matchId,
               senderId,
-              isDocLoveResult: isDocLoveResult.success ? isDocLoveResult.data : 'check failed',
+              isDocLoveResult: isDocLoveResult.success
+                ? isDocLoveResult.data
+                : 'check failed',
             },
-            'Not a Doc Love conversation',
+            'Not a Doc Love conversation'
           );
         }
       }
     } else {
       if (this.logger) {
-        this.logger.warn({ matchId, senderId }, 'Doc Love chat service is not available');
+        this.logger.warn(
+          { matchId, senderId },
+          'Doc Love chat service is not available'
+        );
       }
     }
 
@@ -132,6 +151,8 @@ export class SendMessage {
   }
 }
 
-function isFailure<T, E>(result: Result<T, E>): result is import('../../Result').Failure<E> {
+function isFailure<T, E>(
+  result: Result<T, E>
+): result is import('../../Result').Failure<E> {
   return !result.success;
 }

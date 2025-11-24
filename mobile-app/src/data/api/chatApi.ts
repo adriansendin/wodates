@@ -20,22 +20,22 @@ export class ChatApi {
   constructor(private apiClient: ApiClient) {}
 
   async getMessages(
-    matchId: string, 
-    limit: number = 50, 
-    before?: string, 
+    matchId: string,
+    limit: number = 50,
+    before?: string,
     token?: string
   ): Promise<Result<MessagesResponse, DomainError>> {
     const params = new URLSearchParams({
       limit: limit.toString(),
       ...(before && { before }),
     });
-    
+
     return this.apiClient.get(`/chats/${matchId}/messages?${params}`, token);
   }
 
   async sendMessage(
-    matchId: string, 
-    message: SendMessageRequest, 
+    matchId: string,
+    message: SendMessageRequest,
     token: string
   ): Promise<Result<{ message: Message }, DomainError>> {
     return this.apiClient.post(`/chats/${matchId}/messages`, message, token);

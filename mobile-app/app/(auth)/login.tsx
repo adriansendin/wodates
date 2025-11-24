@@ -7,8 +7,9 @@ import { ApiClient } from '../../src/data/api/apiClient';
 import { AuthApi } from '../../src/data/api/authApi';
 import { AuthTokens } from '../../src/domain/entities/Auth';
 import { User, Gender } from '../../src/domain/entities/User';
+import { getApiUrl } from '../../src/utils/apiConfig';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = getApiUrl();
 
 const normalizeUser = (rawUser: Record<string, unknown>): User => {
   const now = new Date().toISOString();

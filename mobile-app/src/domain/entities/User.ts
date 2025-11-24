@@ -10,12 +10,14 @@ export const UserSchema = z.object({
   gender: GenderSchema,
   bio: z.string().max(500).optional(),
   photoUrl: z.string().url().optional(),
-  location: z.object({
-    latitude: z.number(),
-    longitude: z.number(),
-    city: z.string(),
-    country: z.string(),
-  }).optional(),
+  location: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+      city: z.string(),
+      country: z.string(),
+    })
+    .optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

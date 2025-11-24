@@ -53,8 +53,8 @@ export class SupabaseLikeRepository implements LikeRepository {
 
         return failure(
           new InternalError(
-            `Failed to register like: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to register like: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
@@ -67,7 +67,7 @@ export class SupabaseLikeRepository implements LikeRepository {
       return failure(
         error instanceof DomainError
           ? error
-          : new InternalError('Unexpected error creating like', error),
+          : new InternalError('Unexpected error creating like', error)
       );
     }
   }
@@ -84,22 +84,22 @@ export class SupabaseLikeRepository implements LikeRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to query likes: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to query likes: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success((data ?? []).map((row) => this.mapLike(row)));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching likes', error),
+        new InternalError('Unexpected error fetching likes', error)
       );
     }
   }
 
   async findByUserAndTarget(
     userId: string,
-    targetUserId: string,
+    targetUserId: string
   ): Promise<Result<Like, DomainError>> {
     try {
       const { data, error } = await this.client
@@ -113,8 +113,8 @@ export class SupabaseLikeRepository implements LikeRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to query like: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to query like: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
@@ -125,14 +125,14 @@ export class SupabaseLikeRepository implements LikeRepository {
       return success(this.mapLike(data));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching like', error),
+        new InternalError('Unexpected error fetching like', error)
       );
     }
   }
 
   async hasLiked(
     userId: string,
-    targetUserId: string,
+    targetUserId: string
   ): Promise<Result<boolean, DomainError>> {
     try {
       const { data, error } = await this.client
@@ -146,15 +146,15 @@ export class SupabaseLikeRepository implements LikeRepository {
       if (error) {
         return failure(
           new InternalError(
-            `Failed to verify like: ${this.formatSupabaseError(error)}`,
-          ),
+            `Failed to verify like: ${this.formatSupabaseError(error)}`
+          )
         );
       }
 
       return success(Boolean(data));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error checking like', error),
+        new InternalError('Unexpected error checking like', error)
       );
     }
   }
@@ -175,7 +175,7 @@ export class SupabaseLikeRepository implements LikeRepository {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'SupabaseLikeRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'SupabaseLikeRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
@@ -200,7 +200,9 @@ export class SupabaseLikeRepository implements LikeRepository {
       const hint = (error as { hint?: string }).hint;
 
       return [message, details, hint]
-        .filter((segment) => typeof segment === 'string' && segment.trim().length)
+        .filter(
+          (segment) => typeof segment === 'string' && segment.trim().length
+        )
         .join(' | ');
     }
 

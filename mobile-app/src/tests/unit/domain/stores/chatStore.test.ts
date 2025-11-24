@@ -49,7 +49,12 @@ describe('chatStore', () => {
 
     const state = useChatStore.getState();
     expect(state.messages[MATCH_A]).toHaveLength(4);
-    expect(state.messages[MATCH_A]?.map((m) => m.id)).toEqual(['1', '2', '3', '4']);
+    expect(state.messages[MATCH_A]?.map((m) => m.id)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+    ]);
   });
 
   it('removes messages for a match and can reset the store', () => {
@@ -69,7 +74,8 @@ describe('chatStore', () => {
   });
 
   it('tracks loading, sending and error flags', () => {
-    const { setLoading, setSending, setError, clearError } = useChatStore.getState();
+    const { setLoading, setSending, setError, clearError } =
+      useChatStore.getState();
 
     setLoading(true);
     setSending(true);
@@ -88,4 +94,3 @@ describe('chatStore', () => {
     expect(state.error).toBeNull();
   });
 });
-

@@ -36,7 +36,7 @@ export async function storageRoutes(fastify: FastifyInstance) {
       },
       preHandler: fastify.authMiddleware,
     },
-    storageController.uploadZip.bind(storageController),
+    storageController.uploadZip.bind(storageController)
   );
 
   // Register uploaded file in imported_conversations
@@ -44,7 +44,8 @@ export async function storageRoutes(fastify: FastifyInstance) {
     '/storage/register-upload',
     {
       schema: {
-        description: 'Register an uploaded ZIP file in imported_conversations table',
+        description:
+          'Register an uploaded ZIP file in imported_conversations table',
         tags: ['storage'],
         security: [{ bearerAuth: [] }],
         body: {
@@ -72,7 +73,8 @@ export async function storageRoutes(fastify: FastifyInstance) {
       },
       preHandler: fastify.authMiddleware,
     },
-    importedConversationsController.registerUpload.bind(importedConversationsController),
+    importedConversationsController.registerUpload.bind(
+      importedConversationsController
+    )
   );
 }
-

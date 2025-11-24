@@ -53,7 +53,7 @@ export class MatchOverviewService {
     private matchRepository: MatchRepository,
     private messageRepository: MessageRepository,
     private blockedUserRepository: BlockedUserRepository,
-    config?: Partial<SupabaseConfig>,
+    config?: Partial<SupabaseConfig>
   ) {
     const resolved = this.resolveConfig(config);
     this.client = createClient(resolved.url, resolved.serviceRoleKey, {
@@ -64,14 +64,16 @@ export class MatchOverviewService {
     });
   }
 
-  async list(userId: string): Promise<Result<MatchOverviewResult, DomainError>> {
+  async list(
+    userId: string
+  ): Promise<Result<MatchOverviewResult, DomainError>> {
     const matchesResult = await this.matchRepository.findByUserId(userId);
     if (!matchesResult.success) {
       return failure(matchesResult.error);
     }
 
     const matches = matchesResult.data;
-    
+
     // Get active_chats_count for the current user
     const activeChatsCounts = await this.matchRepository.getActiveChatsCount([
       userId,
@@ -90,9 +92,12 @@ export class MatchOverviewService {
     for (const match of matches) {
       const otherUserId =
         match.userId1 === userId ? match.userId2 : match.userId1;
-      
+
       // Check if there's any block between users (bidirectional)
-      const isBlockedResult = await this.blockedUserRepository.isBlocked(userId, otherUserId);
+      const isBlockedResult = await this.blockedUserRepository.isBlocked(
+        userId,
+        otherUserId
+      );
       if (isBlockedResult.success && !isBlockedResult.data) {
         // No block exists, include this match
         filteredMatches.push(match);
@@ -123,8 +128,8 @@ export class MatchOverviewService {
     if (userError) {
       return failure(
         new InternalError(
-          `Failed to fetch match participants: ${this.formatSupabaseError(userError)}`,
-        ),
+          `Failed to fetch match participants: ${this.formatSupabaseError(userError)}`
+        )
       );
     }
 
@@ -136,7 +141,7 @@ export class MatchOverviewService {
 
     const userMap = new Map<string, UserRow>();
     (userRows as UserRow[] | null | undefined)?.forEach((row) =>
-      userMap.set(row.id, row),
+      userMap.set(row.id, row)
     );
 
     const authUserMap = new Map<string, AuthUserRow>();
@@ -157,7 +162,7 @@ export class MatchOverviewService {
       let lastMessage: Message | undefined;
       const lastMessageResult = await this.messageRepository.findByMatchId(
         match.id,
-        1,
+        1
       );
 
       if (lastMessageResult.success && lastMessageResult.data.length > 0) {
@@ -166,17 +171,18 @@ export class MatchOverviewService {
 
       overviews.push({
         ...(match as any),
-        otherUser: otherUserRow && otherAuthUser
-          ? {
-              id: otherUserRow.id,
-              name: this.extractDisplayName(otherAuthUser),
-              bio: otherUserRow.bio,
-              photoUrl: this.normalizeUrl(otherUserRow.avatar_url),
-              birthDate: otherUserRow.birthDate,
-              gender: otherUserRow.gender,
-              isBot: otherUserRow.is_bot ?? false,
-            }
-          : null,
+        otherUser:
+          otherUserRow && otherAuthUser
+            ? {
+                id: otherUserRow.id,
+                name: this.extractDisplayName(otherAuthUser),
+                bio: otherUserRow.bio,
+                photoUrl: this.normalizeUrl(otherUserRow.avatar_url),
+                birthDate: otherUserRow.birthDate,
+                gender: otherUserRow.gender,
+                isBot: otherUserRow.is_bot ?? false,
+              }
+            : null,
         lastMessage: lastMessage ?? undefined,
         unreadCount: 0,
       });
@@ -185,7 +191,7 @@ export class MatchOverviewService {
     // Sort newer matches first
     overviews.sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     return success({
@@ -197,37 +203,48 @@ export class MatchOverviewService {
   /**
    * Obtiene los datos de autenticación (name, email) para múltiples usuarios desde auth.users
    * Usa getUserById para obtener solo los usuarios necesarios de forma eficiente
-   * 
+   *
    * @param userIds - Array de IDs de usuarios a obtener
    * @returns Result con los datos de auth de los usuarios solicitados
    */
-  private async getAuthUsers(userIds: string[]): Promise<Result<AuthUserRow[], DomainError>> {
+  private async getAuthUsers(
+    userIds: string[]
+  ): Promise<Result<AuthUserRow[], DomainError>> {
     try {
       // Fetch each user individually in parallel using getUserById
       const userPromises = userIds.map(async (userId) => {
-        const { data, error } = await this.client.auth.admin.getUserById(userId);
-        
+        const { data, error } =
+          await this.client.auth.admin.getUserById(userId);
+
         if (error || !data?.user) {
-          console.warn(`[MatchOverviewService] Could not fetch auth user ${userId}`, error);
+          console.warn(
+            `[MatchOverviewService] Could not fetch auth user ${userId}`,
+            error
+          );
           return null;
         }
 
         return {
           id: data.user.id,
           email: data.user.email ?? '',
-          raw_user_meta_data: data.user.user_metadata as Record<string, unknown> | null,
+          raw_user_meta_data: data.user.user_metadata as Record<
+            string,
+            unknown
+          > | null,
         };
       });
 
       const results = await Promise.all(userPromises);
-      
+
       // Filter out null results (failed fetches)
-      const validUsers = results.filter((user): user is AuthUserRow => user !== null);
+      const validUsers = results.filter(
+        (user): user is AuthUserRow => user !== null
+      );
 
       return success(validUsers);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching auth users', error),
+        new InternalError('Unexpected error fetching auth users', error)
       );
     }
   }
@@ -261,7 +278,7 @@ export class MatchOverviewService {
 
     if (!url || !serviceRoleKey) {
       throw new Error(
-        'MatchOverviewService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
+        'MatchOverviewService requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
@@ -278,7 +295,10 @@ export class MatchOverviewService {
       const hint = (error as { hint?: unknown }).hint;
 
       return [message, details, hint]
-        .filter((segment): segment is string => typeof segment === 'string' && segment.trim().length > 0)
+        .filter(
+          (segment): segment is string =>
+            typeof segment === 'string' && segment.trim().length > 0
+        )
         .join(' | ');
     }
 

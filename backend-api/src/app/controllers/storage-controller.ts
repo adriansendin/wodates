@@ -23,7 +23,7 @@ export class StorageController {
 
       // Get file from multipart request
       const data = await request.file();
-      
+
       if (!data) {
         return reply.status(400).send({
           error: 'MISSING_FILE',
@@ -59,7 +59,7 @@ export class StorageController {
       const uploadedPath = await this.storageService.uploadZipFile(
         authUser.id,
         buffer,
-        filePath,
+        filePath
       );
 
       return reply.send({
@@ -95,4 +95,3 @@ export class StorageController {
     });
   }
 }
-

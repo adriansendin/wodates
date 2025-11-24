@@ -53,7 +53,7 @@ describe('LikeUser use case', () => {
       expect('userId1' in mutual.data && 'userId2' in mutual.data).toBe(true);
       if ('userId1' in mutual.data && 'userId2' in mutual.data) {
         expect([mutual.data.userId1, mutual.data.userId2]).toEqual(
-          expect.arrayContaining([USER_A, USER_B]),
+          expect.arrayContaining([USER_A, USER_B])
         );
       }
     }
@@ -83,4 +83,3 @@ describe('LikeUser use case', () => {
     }
   });
 });
-

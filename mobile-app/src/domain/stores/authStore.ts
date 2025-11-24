@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { User } from '../entities/User';
 import { AuthTokens } from '../entities/Auth';
-import { Result } from '../Result';
-import { DomainError } from '../errors/DomainError';
 
 interface AuthState {
   user: User | null;
@@ -33,18 +31,20 @@ export const useAuthStore = create<AuthState & AuthActions>((set) => ({
   setTokens: (tokens) => set({ tokens }),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
-  
-  login: (user, tokens) => set({ 
-    user, 
-    tokens, 
-    error: null 
-  }),
-  
-  logout: () => set({ 
-    user: null, 
-    tokens: null, 
-    error: null 
-  }),
-  
+
+  login: (user, tokens) =>
+    set({
+      user,
+      tokens,
+      error: null,
+    }),
+
+  logout: () =>
+    set({
+      user: null,
+      tokens: null,
+      error: null,
+    }),
+
   clearError: () => set({ error: null }),
 }));
