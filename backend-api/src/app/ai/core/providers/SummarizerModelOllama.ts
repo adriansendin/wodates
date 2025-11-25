@@ -3,6 +3,7 @@ import {
   SummarizerRequest,
   SummarizerResponse,
 } from '../SummarizerModel';
+import { AIConfig } from '../../ai-settings';
 
 /**
  * Ollama implementation of SummarizerModel
@@ -75,7 +76,8 @@ export class SummarizerModelOllama implements SummarizerModel {
   }
 
   private buildPrompt(request: SummarizerRequest): string {
-    let prompt = `Eres un asistente experto en análisis de personalidad y comunicación. Tu tarea es crear un resumen textual conciso y estructurado sobre un usuario basándote en sus conversaciones y perfil.\n\n`;
+    // Use centralized prompt configuration from AIConfig
+    let prompt = `${AIConfig.prompt.summarizerInstructions.introduction}\n\n`;
 
     if (request.previousSummary) {
       prompt += `RESUMEN ANTERIOR:\n${request.previousSummary}\n\n`;
@@ -142,28 +144,16 @@ export class SummarizerModelOllama implements SummarizerModel {
       }
     }
 
+    // Use centralized instructions from AIConfig
+    prompt += `\n\nINSTRUCCIONES:\n`;
     if (request.previousSummary) {
-      prompt += `\n\nINSTRUCCIONES:\n`;
-      prompt += `Actualiza el resumen anterior incorporando la nueva información. `;
-      prompt += `Mantén un formato estructurado que capture:\n`;
-      prompt += `- Estilo de comunicación y personalidad\n`;
-      prompt += `- Valores y preferencias expresadas\n`;
-      prompt += `- Patrones de comportamiento en relaciones\n`;
-      prompt += `- Lo que busca en una relación estable\n`;
-      prompt += `- Lo que rechaza o evita\n`;
-      prompt += `\nEl resumen debe ser conciso (máximo 500 palabras) pero completo.\n`;
+      prompt += AIConfig.prompt.summarizerInstructions.updateExisting;
     } else {
-      prompt += `\n\nINSTRUCCIONES:\n`;
-      prompt += `Crea un resumen estructurado que capture:\n`;
-      prompt += `- Estilo de comunicación y personalidad\n`;
-      prompt += `- Valores y preferencias expresadas\n`;
-      prompt += `- Patrones de comportamiento en relaciones\n`;
-      prompt += `- Lo que busca en una relación estable\n`;
-      prompt += `- Lo que rechaza o evita\n`;
-      prompt += `\nEl resumen debe ser conciso (máximo 500 palabras) pero completo.\n`;
+      prompt += AIConfig.prompt.summarizerInstructions.createNew;
     }
+    prompt += `\n`;
 
-    prompt += `\nRESUMEN:\n`;
+    prompt += `\nEscribe SOLO el contenido del resumen, sin títulos ni introducciones:\n`;
 
     return prompt;
   }

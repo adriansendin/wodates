@@ -18,6 +18,13 @@ export interface MessageRepository {
     limit?: number
   ): Promise<Result<Message[], DomainError>>;
   /**
+   * Finds unprocessed messages (where profile_processed_at is NULL) for a specific match/chat
+   * Returns all unprocessed messages ordered by created_at ascending (chronological order)
+   */
+  findUnprocessedByMatchId(
+    matchId: string
+  ): Promise<Result<Message[], DomainError>>;
+  /**
    * Marks a message as processed by setting profile_processed_at
    */
   markAsProcessed(messageId: string): Promise<Result<void, DomainError>>;

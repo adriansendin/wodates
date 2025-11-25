@@ -283,6 +283,25 @@ export class TestMessageRepository implements MessageRepository {
     return success(messages);
   }
 
+  async findUnprocessedByMatchId(
+    matchId: string
+  ): Promise<Result<Message[], DomainError>> {
+    const messages = Array.from(this.messages.values())
+      .filter(
+        (message) =>
+          message.matchId === matchId &&
+          (message.profileProcessedAt === null ||
+            message.profileProcessedAt === undefined)
+      )
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateA - dateB; // ascending order
+      });
+
+    return success(messages);
+  }
+
   async markAsProcessed(messageId: string): Promise<Result<void, DomainError>> {
     const message = this.messages.get(messageId);
     if (!message) {

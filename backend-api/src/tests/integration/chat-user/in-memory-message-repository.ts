@@ -79,6 +79,21 @@ export class InMemoryMessageRepository implements MessageRepository {
     return success(unprocessed);
   }
 
+  async findUnprocessedByMatchId(
+    matchId: string
+  ): Promise<Result<Message[], DomainError>> {
+    const unprocessed = this.messages
+      .filter(
+        (msg) =>
+          msg.matchId === matchId &&
+          (msg.profileProcessedAt === null ||
+            msg.profileProcessedAt === undefined)
+      )
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+    return success(unprocessed);
+  }
+
   async markAsProcessed(messageId: string): Promise<Result<void, DomainError>> {
     const message = this.messages.find((msg) => msg.id === messageId);
     if (!message) {

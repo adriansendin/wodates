@@ -79,8 +79,10 @@ export class ApiClient {
   ): Promise<Result<T, DomainError>> {
     try {
       const fullUrl = `${this.client.defaults.baseURL}${url}`;
-      console.log(`[ApiClient] POST ${fullUrl}`, { data: data ? '***' : undefined });
-      
+      console.log(`[ApiClient] POST ${fullUrl}`, {
+        data: data ? '***' : undefined,
+      });
+
       const response: AxiosResponse<T> = await this.client.post(url, data, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -91,23 +93,39 @@ export class ApiClient {
         const errorDetails = {
           message: error.message,
           code: error.code,
-          response: error.response ? {
-            status: error.response.status,
-            data: error.response.data
-          } : 'No response',
-          request: error.request ? 'Request made but no response' : 'No request made',
-          timeout: error.code === 'ECONNABORTED' ? 'Request timeout' : undefined,
-          networkError: error.code === 'ERR_NETWORK' ? 'Network error - check firewall/network' : undefined,
+          response: error.response
+            ? {
+                status: error.response.status,
+                data: error.response.data,
+              }
+            : 'No response',
+          request: error.request
+            ? 'Request made but no response'
+            : 'No request made',
+          timeout:
+            error.code === 'ECONNABORTED' ? 'Request timeout' : undefined,
+          networkError:
+            error.code === 'ERR_NETWORK'
+              ? 'Network error - check firewall/network'
+              : undefined,
         };
         console.error(`[ApiClient] POST ${fullUrl} failed:`, errorDetails);
-        
+
         // Log specific troubleshooting info for network errors
         if (!error.response && !error.request) {
-          console.error(`[ApiClient] TROUBLESHOOTING: Request never left the device. Check:`);
-          console.error(`  - Backend is running on ${this.client.defaults.baseURL}`);
+          console.error(
+            `[ApiClient] TROUBLESHOOTING: Request never left the device. Check:`
+          );
+          console.error(
+            `  - Backend is running on ${this.client.defaults.baseURL}`
+          );
           console.error(`  - Firewall allows connections on port 3000`);
           console.error(`  - iPhone and computer are on the same WiFi network`);
-          console.error(`  - IP address ${this.client.defaults.baseURL.replace('http://', '').split(':')[0]} is reachable`);
+          const baseURL = this.client.defaults.baseURL;
+          if (baseURL) {
+            const ipAddress = baseURL.replace('http://', '').split(':')[0];
+            console.error(`  - IP address ${ipAddress} is reachable`);
+          }
         }
       } else {
         console.error(`[ApiClient] POST ${fullUrl} failed:`, error);

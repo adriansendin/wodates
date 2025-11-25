@@ -20,7 +20,7 @@ export async function registerCors(fastify: FastifyInstance) {
     origin: (origin, callback) => {
       console.log(`[CORS] Checking origin: ${origin || 'none'}`);
       console.log(`[CORS] Allowed origins: ${allowedOrigins.join(', ')}`);
-      
+
       if (!origin) {
         // Allow server-to-server or curl requests with no origin
         console.log('[CORS] Allowing request with no origin');

@@ -29,8 +29,8 @@ export class LocalOllamaProvider implements IAProvider {
     parameters?: OllamaParameters,
     logger?: any
   ) {
-    // Model is required and provided by config.ts from AI_MODEL environment variable
-    // Supported models: phi3, llama3.2:1b, qwen2.5:1.5b
+    // Model is required and provided by config.ts from AI_MODEL_DOC_LOVE environment variable
+    // Supported models: phi3, llama3.2:1b, qwen2.5:1.5b, gemma3:1b
     this.model = model;
     this.baseUrl = baseUrl || 'http://localhost:11434';
     this.timeout = timeout || 60000; // 60 seconds default timeout

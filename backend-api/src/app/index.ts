@@ -33,6 +33,10 @@ import {
 import { AIConfig } from './ai/ai-settings';
 import { UserAIProfileEmbeddingService } from './ai/profile/UserAIProfileEmbeddingService';
 import { SupabaseUserAIProfileRepository } from '../data/repositories/SupabaseUserAIProfileRepository';
+import { SupabaseUserRepository } from '../data/repositories/SupabaseUserRepository';
+import { GetAllUserChats } from '../domain/use-cases/chat/GetAllUserChats';
+import { GetUnprocessedMessages } from '../domain/use-cases/chat/GetUnprocessedMessages';
+import { GenerateUserProfileFromChats } from '../domain/use-cases/chat/GenerateUserProfileFromChats';
 
 async function buildApp() {
   const logLevel =
@@ -67,7 +71,9 @@ async function buildApp() {
 
   // Log all incoming requests for debugging
   fastify.addHook('onRequest', async (request) => {
-    console.log(`[${new Date().toISOString()}] ${request.method} ${request.url} - Origin: ${request.headers.origin || 'none'}`);
+    console.log(
+      `[${new Date().toISOString()}] ${request.method} ${request.url} - Origin: ${request.headers.origin || 'none'}`
+    );
   });
 
   // Configure schema validation
@@ -173,6 +179,41 @@ async function buildApp() {
     blockedUserRepository
   );
 
+  // Initialize AI profile generation use case (if AI services are available)
+  let generateUserProfile: GenerateUserProfileFromChats | undefined;
+  try {
+    if (docLoveChatService) {
+      const userRepository = new SupabaseUserRepository();
+      const userAIProfileRepository = new SupabaseUserAIProfileRepository();
+      const docLoveHelper = new DocLoveHelper();
+      const getUnprocessedMessages = new GetUnprocessedMessages(
+        messageRepository,
+        matchRepository
+      );
+      const getAllUserChats = new GetAllUserChats(
+        matchRepository,
+        userRepository,
+        getUnprocessedMessages,
+        docLoveHelper,
+        fastify.log
+      );
+      const summarizerModel = createSummarizerModel(fastify.log);
+
+      generateUserProfile = new GenerateUserProfileFromChats(
+        getAllUserChats,
+        userAIProfileRepository,
+        userRepository,
+        summarizerModel,
+        docLoveHelper,
+        fastify.log
+      );
+    }
+  } catch (error) {
+    fastify.log.warn(
+      `Failed to initialize GenerateUserProfileFromChats: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+
   // Decorate fastify with use cases
   fastify.decorate('likeUser', likeUser);
   fastify.decorate('passUser', passUser);
@@ -180,6 +221,7 @@ async function buildApp() {
   fastify.decorate('getMessages', getMessages);
   fastify.decorate('blockUser', blockUser);
   fastify.decorate('matchOverviewService', matchOverviewService);
+  fastify.decorate('generateUserProfile', generateUserProfile);
 
   // Register routes
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });

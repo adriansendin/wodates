@@ -221,6 +221,42 @@ export class SupabaseMessageRepository implements MessageRepository {
     }
   }
 
+  async findUnprocessedByMatchId(
+    matchId: string
+  ): Promise<Result<Message[], DomainError>> {
+    try {
+      const { data, error } = await this.client
+        .from('messages')
+        .select(
+          'id, chat_id, sender_id, content, created_at, profile_processed_at'
+        )
+        .eq('chat_id', matchId)
+        .is('profile_processed_at', null)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to fetch unprocessed messages: ${this.formatSupabaseError(error)}`
+          )
+        );
+      }
+
+      if (!data) {
+        return success([]);
+      }
+
+      return success(data.map((row) => this.mapRowToMessage(row)));
+    } catch (error) {
+      return failure(
+        new InternalError(
+          'Unexpected error fetching unprocessed messages by match',
+          error
+        )
+      );
+    }
+  }
+
   async markAsProcessed(messageId: string): Promise<Result<void, DomainError>> {
     try {
       const { error } = await this.client

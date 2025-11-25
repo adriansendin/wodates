@@ -48,11 +48,19 @@ export function createSummarizerModel(logger?: any): SummarizerModel {
 
   switch (providerName) {
     case 'ollama': {
-      // Use same model but with different parameters optimized for summarization
+      // Use dedicated profile resume model (or fallback to chat model)
+      // This allows using a different, more powerful model for profile summarization
+      // Use much longer timeout for summarization (5 minutes default) as prompts can be very long
+      // Can be overridden with OLLAMA_SUMMARIZATION_TIMEOUT env var (in milliseconds)
+      const baseTimeout = AIConfig.ollama.timeout;
+      const summarizationTimeout = process.env.OLLAMA_SUMMARIZATION_TIMEOUT
+        ? parseInt(process.env.OLLAMA_SUMMARIZATION_TIMEOUT, 10)
+        : baseTimeout * 5; // Default: 5 minutes for long prompts
+
       return new SummarizerModelOllama(
-        AIConfig.ollama.model,
+        AIConfig.ollama.profileResumeModel,
         AIConfig.ollama.baseUrl,
-        AIConfig.ollama.timeout * 2, // Longer timeout for summarization
+        summarizationTimeout,
         {
           ...AIConfig.ollama.parameters,
           num_predict: AIConfig.ollama.parameters.num_predict || 1000,

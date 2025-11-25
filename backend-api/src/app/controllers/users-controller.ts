@@ -10,6 +10,7 @@ import {
   SupabaseUserService,
   UpdateUserProfileInput,
 } from '../services/supabase-user-service';
+import { GenerateUserProfileFromChats } from '../../domain/use-cases/chat/GenerateUserProfileFromChats';
 
 const dateSchema = z.preprocess(
   (value) => {
@@ -117,7 +118,10 @@ const UpdateProfileSchema = z
   );
 
 export class UsersController {
-  constructor(private readonly userService: SupabaseUserService) {}
+  constructor(
+    private readonly userService: SupabaseUserService,
+    private generateUserProfileUseCase?: GenerateUserProfileFromChats
+  ) {}
 
   async getProfile(request: FastifyRequest, reply: FastifyReply) {
     try {
@@ -248,6 +252,40 @@ export class UsersController {
       );
 
       return reply.send({ avatarUrl });
+    } catch (error) {
+      return this.handleError(reply, error);
+    }
+  }
+
+  async generateProfile(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const authUser = request.user;
+      if (!authUser) {
+        throw new UnauthorizedError('Missing authenticated user');
+      }
+
+      if (!this.generateUserProfileUseCase) {
+        return reply.status(503).send({
+          error: 'SERVICE_UNAVAILABLE',
+          message: 'Profile generation service is not available',
+        });
+      }
+
+      request.log.info(
+        { userId: authUser.id },
+        'Generating user profile from chats'
+      );
+
+      const result = await this.generateUserProfileUseCase.execute(authUser.id);
+
+      if (!result.success) {
+        return this.handleError(reply, result.error);
+      }
+
+      return reply.send({
+        summary: result.data,
+        message: 'Profile generated successfully',
+      });
     } catch (error) {
       return this.handleError(reply, error);
     }

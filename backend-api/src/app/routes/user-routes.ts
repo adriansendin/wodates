@@ -7,12 +7,16 @@ import { GENDER_VALUES } from '../../domain/entities/User';
 declare module 'fastify' {
   interface FastifyInstance {
     authMiddleware: any;
+    generateUserProfile?: any;
   }
 }
 
 export async function userRoutes(fastify: FastifyInstance) {
   const userService = new SupabaseUserService();
-  const controller = new UsersController(userService);
+  const controller = new UsersController(
+    userService,
+    fastify.generateUserProfile
+  );
   const genderEnum = [...GENDER_VALUES, null];
   const lookingForEnum = [...LOOKING_FOR_VALUES, null];
 
@@ -140,5 +144,36 @@ export async function userRoutes(fastify: FastifyInstance) {
       preHandler: fastify.authMiddleware,
     },
     controller.deactivateAccount.bind(controller)
+  );
+
+  fastify.post(
+    '/users/me/generate-profile',
+    {
+      schema: {
+        description:
+          'Generate or update user AI profile from unprocessed chats',
+        tags: ['users'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              summary: { type: 'string' },
+              message: { type: 'string' },
+            },
+            required: ['summary', 'message'],
+          },
+          503: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    controller.generateProfile.bind(controller)
   );
 }

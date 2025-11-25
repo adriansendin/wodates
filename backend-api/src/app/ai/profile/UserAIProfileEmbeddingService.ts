@@ -62,7 +62,12 @@ export class UserAIProfileEmbeddingService {
       const profile = profileResult.data;
 
       // Step 2: Check if summary exists
-      if (!profile || !profile.summary || profile.summary.trim().length === 0) {
+      if (
+        !profile ||
+        !profile.summary ||
+        !profile.summary.text ||
+        profile.summary.text.trim().length === 0
+      ) {
         if (this.logger) {
           this.logger.debug(
             { userId },
@@ -76,7 +81,7 @@ export class UserAIProfileEmbeddingService {
       let embedding: number[];
       try {
         const embeddingResponse = await this.embeddingModel.generateEmbedding({
-          text: profile.summary,
+          text: profile.summary.text,
         });
 
         embedding = embeddingResponse.embedding;
@@ -85,7 +90,7 @@ export class UserAIProfileEmbeddingService {
           this.logger.debug(
             {
               userId,
-              summaryLength: profile.summary.length,
+              summaryLength: profile.summary.text.length,
               embeddingDimension: embedding.length,
               model: embeddingResponse.model,
             },
