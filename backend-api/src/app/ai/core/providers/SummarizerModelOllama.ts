@@ -15,6 +15,9 @@ interface OllamaParameters {
   num_predict?: number;
   top_p?: number;
   num_ctx?: number;
+  seed?: number;
+  top_k?: number;
+  repeat_penalty?: number;
 }
 
 export class SummarizerModelOllama implements SummarizerModel {
@@ -62,8 +65,26 @@ export class SummarizerModelOllama implements SummarizerModel {
         throw new Error('Ollama returned empty summary');
       }
 
+      const trimmedContent = content.trim();
+
+      // Log response preview for debugging (first 500 chars)
+      if (this.logger) {
+        this.logger.debug(
+          {
+            model: this.model,
+            responseLength: trimmedContent.length,
+            responsePreview:
+              trimmedContent.length > 500
+                ? trimmedContent.substring(0, 500) + '...'
+                : trimmedContent,
+          },
+          'Raw LLM response received (plain text)'
+        );
+      }
+
+      // Return plain text summary (no JSON parsing needed)
       return {
-        summary: content.trim(),
+        summary: trimmedContent,
         provider: this.name,
         model: this.model,
       };
@@ -79,27 +100,23 @@ export class SummarizerModelOllama implements SummarizerModel {
     // Use centralized prompt configuration from AIConfig
     let prompt = `${AIConfig.prompt.summarizerInstructions.introduction}\n\n`;
 
-    if (request.previousSummary) {
-      prompt += `RESUMEN ANTERIOR:\n${request.previousSummary}\n\n`;
-      prompt += `NUEVO CONTENIDO A INCORPORAR:\n`;
-    } else {
-      prompt += `CONTENIDO A RESUMIR:\n`;
-    }
+    // Build new content section first (will be used as {{NEW_INFO}} placeholder)
+    let newInfoSection = '';
 
     // Add user profile info
     if (request.userProfile) {
-      prompt += `\nPERFIL DEL USUARIO:\n`;
+      newInfoSection += `\nPERFIL DEL USUARIO:\n`;
       if (request.userProfile.name) {
-        prompt += `- Nombre: ${request.userProfile.name}\n`;
+        newInfoSection += `- Nombre: ${request.userProfile.name}\n`;
       }
       if (request.userProfile.age) {
-        prompt += `- Edad: ${request.userProfile.age}\n`;
+        newInfoSection += `- Edad: ${request.userProfile.age}\n`;
       }
       if (request.userProfile.gender) {
-        prompt += `- Género: ${request.userProfile.gender}\n`;
+        newInfoSection += `- Género: ${request.userProfile.gender}\n`;
       }
       if (request.userProfile.bio) {
-        prompt += `- Bio: ${request.userProfile.bio}\n`;
+        newInfoSection += `- Bio: ${request.userProfile.bio}\n`;
       }
     }
 
@@ -108,24 +125,24 @@ export class SummarizerModelOllama implements SummarizerModel {
     let conversationCount = 0;
 
     if (newContent.docLoveChats && newContent.docLoveChats.length > 0) {
-      prompt += `\nCONVERSACIONES CON DOC LOVE:\n`;
+      newInfoSection += `\nCONVERSACIONES CON DOC LOVE:\n`;
       for (const chat of newContent.docLoveChats.slice(0, 5)) {
         conversationCount++;
-        prompt += `\nConversación ${conversationCount}:\n`;
+        newInfoSection += `\nConversación ${conversationCount}:\n`;
         for (const msg of chat.messages.slice(-10)) {
           const role = msg.role === 'assistant' ? 'Doc Love' : 'Usuario';
-          prompt += `${role}: ${msg.content}\n`;
+          newInfoSection += `${role}: ${msg.content}\n`;
         }
       }
     }
 
     if (newContent.userChats && newContent.userChats.length > 0) {
-      prompt += `\nCONVERSACIONES CON OTROS USUARIOS:\n`;
+      newInfoSection += `\nCONVERSACIONES CON OTROS USUARIOS:\n`;
       for (const chat of newContent.userChats.slice(0, 5)) {
         conversationCount++;
-        prompt += `\nConversación ${conversationCount}:\n`;
+        newInfoSection += `\nConversación ${conversationCount}:\n`;
         for (const msg of chat.messages.slice(-10)) {
-          prompt += `Usuario: ${msg.content}\n`;
+          newInfoSection += `Usuario: ${msg.content}\n`;
         }
       }
     }
@@ -134,26 +151,21 @@ export class SummarizerModelOllama implements SummarizerModel {
       newContent.importedConversations &&
       newContent.importedConversations.length > 0
     ) {
-      prompt += `\nCONVERSACIONES IMPORTADAS:\n`;
+      newInfoSection += `\nCONVERSACIONES IMPORTADAS:\n`;
       for (const conv of newContent.importedConversations.slice(0, 3)) {
         conversationCount++;
-        prompt += `\n${conv.source}:\n`;
+        newInfoSection += `\n${conv.source}:\n`;
         for (const msg of conv.messages.slice(-20)) {
-          prompt += `Usuario: ${msg.content}\n`;
+          newInfoSection += `Usuario: ${msg.content}\n`;
         }
       }
     }
 
-    // Use centralized instructions from AIConfig
+    // Always use createNew instructions; summaries are merged in a separate step
+    prompt += `CONTENIDO A RESUMIR:\n`;
+    prompt += newInfoSection;
     prompt += `\n\nINSTRUCCIONES:\n`;
-    if (request.previousSummary) {
-      prompt += AIConfig.prompt.summarizerInstructions.updateExisting;
-    } else {
-      prompt += AIConfig.prompt.summarizerInstructions.createNew;
-    }
-    prompt += `\n`;
-
-    prompt += `\nEscribe SOLO el contenido del resumen, sin títulos ni introducciones:\n`;
+    prompt += AIConfig.prompt.summarizerInstructions.createNew;
 
     return prompt;
   }
@@ -173,16 +185,59 @@ export class SummarizerModelOllama implements SummarizerModel {
         requestBody.temperature = this.parameters.temperature;
       }
       if (this.parameters.num_predict !== undefined) {
-        requestBody.num_predict = this.parameters.num_predict || 1000; // More tokens for summaries
+        requestBody.num_predict = this.parameters.num_predict;
       }
       if (this.parameters.top_p !== undefined) {
         requestBody.top_p = this.parameters.top_p;
       }
       if (this.parameters.num_ctx !== undefined) {
-        requestBody.num_ctx = this.parameters.num_ctx || 2048; // Larger context for summaries
+        requestBody.num_ctx = this.parameters.num_ctx;
+      }
+      if (this.parameters.seed !== undefined) {
+        requestBody.seed = this.parameters.seed;
+      }
+      if (this.parameters.top_k !== undefined) {
+        requestBody.top_k = this.parameters.top_k;
+      }
+      if (this.parameters.repeat_penalty !== undefined) {
+        requestBody.repeat_penalty = this.parameters.repeat_penalty;
       }
 
-      const response = await fetch(`${this.baseUrl}/api/generate`, {
+      const apiUrl = `${this.baseUrl}/api/generate`;
+
+      // Log parameters before LLM call
+      console.log('\n🔧 LLM CALL PARAMETERS (Summarizer - createNew)');
+      console.log('─'.repeat(60));
+      console.log(`   Model: ${this.model}`);
+      console.log(`   Temperature: ${requestBody.temperature ?? 'not set'}`);
+      console.log(`   Seed: ${requestBody.seed ?? 'not set'}`);
+      console.log(`   num_predict: ${requestBody.num_predict ?? 'not set'}`);
+      console.log(`   num_ctx: ${requestBody.num_ctx ?? 'not set'}`);
+      if (requestBody.top_p !== undefined) {
+        console.log(`   top_p: ${requestBody.top_p}`);
+      }
+      if (requestBody.top_k !== undefined) {
+        console.log(`   top_k: ${requestBody.top_k}`);
+      }
+      if (requestBody.repeat_penalty !== undefined) {
+        console.log(`   repeat_penalty: ${requestBody.repeat_penalty}`);
+      }
+      console.log(`   Prompt length: ${prompt.length} characters`);
+      console.log('─'.repeat(60));
+      console.log('');
+
+      if (this.logger) {
+        this.logger.debug(
+          {
+            url: apiUrl,
+            model: this.model,
+            promptLength: prompt.length,
+          },
+          'Calling Ollama API for summarization'
+        );
+      }
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -259,8 +314,52 @@ export class SummarizerModelOllama implements SummarizerModel {
 
       if (error instanceof Error) {
         if (error.name === 'AbortError' || error.message.includes('aborted')) {
-          throw new Error(`Ollama API timeout after ${this.timeout}ms`);
+          const errorMsg = `Ollama API timeout after ${this.timeout}ms. Is Ollama running at ${this.baseUrl}? Check: curl ${this.baseUrl}/api/tags`;
+          if (this.logger) {
+            this.logger.error(
+              {
+                url: `${this.baseUrl}/api/generate`,
+                timeout: this.timeout,
+                model: this.model,
+              },
+              errorMsg
+            );
+          }
+          throw new Error(errorMsg);
         }
+
+        // Handle fetch-specific errors
+        const isConnectionError =
+          error.message.includes('fetch failed') ||
+          error.message.includes('ECONNREFUSED') ||
+          error.message.includes('ENOTFOUND') ||
+          error.message.includes('ECONNRESET') ||
+          (error as any).code === 'ECONNREFUSED' ||
+          (error as any).code === 'ENOTFOUND';
+
+        if (isConnectionError) {
+          const causeMessage =
+            (error as any).cause?.message || (error as any).cause || '';
+          const detailedError = causeMessage
+            ? `${error.message} (cause: ${causeMessage})`
+            : error.message;
+          const errorMsg = `Failed to connect to Ollama at ${this.baseUrl}. Error: ${detailedError}. Is Ollama running? Check: curl ${this.baseUrl}/api/tags`;
+          if (this.logger) {
+            this.logger.error(
+              {
+                url: `${this.baseUrl}/api/generate`,
+                baseUrl: this.baseUrl,
+                model: this.model,
+                originalError: error.message,
+                errorCode: (error as any).code,
+                errorCause: (error as any).cause,
+              },
+              errorMsg
+            );
+          }
+          throw new Error(errorMsg);
+        }
+
         throw error;
       }
 

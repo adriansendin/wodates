@@ -69,6 +69,9 @@ async function main() {
   console.log('─'.repeat(60));
   console.log('');
 
+  // Start timing
+  const startTime = Date.now();
+
   try {
     // Get configuration
     const config = getSupabaseConfig();
@@ -103,13 +106,18 @@ async function main() {
     );
 
     // Initialize SummarizerModel
-    console.log('🤖 Initializing AI model...');
+    console.log('🤖 Initializing AI models...');
     
     // Debug: Show environment variables
-    if (process.env.AI_MODEL_PROFILE_RESUME) {
-      console.log(`   📝 AI_MODEL_PROFILE_RESUME: ${process.env.AI_MODEL_PROFILE_RESUME}`);
+    if (process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME) {
+      console.log(`   📝 AI_MODEL_PROFILE_CHATS_TO_RESUME: ${process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME}`);
     } else {
-      console.log(`   ⚠️  AI_MODEL_PROFILE_RESUME not set, using fallback`);
+      console.log(`   ⚠️  AI_MODEL_PROFILE_CHATS_TO_RESUME not set, using fallback`);
+    }
+    if (process.env.AI_MODEL_PROFILE_MERGE_RESUMES) {
+      console.log(`   📝 AI_MODEL_PROFILE_MERGE_RESUMES: ${process.env.AI_MODEL_PROFILE_MERGE_RESUMES}`);
+    } else {
+      console.log(`   ⚠️  AI_MODEL_PROFILE_MERGE_RESUMES not set, using fallback`);
     }
     if (process.env.AI_MODEL_DOC_LOVE) {
       console.log(`   📝 AI_MODEL_DOC_LOVE: ${process.env.AI_MODEL_DOC_LOVE}`);
@@ -118,7 +126,7 @@ async function main() {
     }
     
     const summarizerModel = createSummarizerModel(logger);
-    console.log(`✅ Using model: ${summarizerModel.name} (${summarizerModel.model})\n`);
+    console.log(`✅ Using model for chats to resume: ${summarizerModel.name} (${summarizerModel.model})\n`);
 
     // Initialize GenerateUserProfileFromChats use case
     const generateUserProfile = new GenerateUserProfileFromChats(
@@ -143,6 +151,11 @@ async function main() {
       if (result.error.details) {
         console.error(`   Details:`, result.error.details);
       }
+      
+      // Calculate and display elapsed time even on error
+      const endTime = Date.now();
+      const elapsedSeconds = ((endTime - startTime) / 1000).toFixed(2);
+      console.error(`\n⏱️  El proceso ha tardado ${elapsedSeconds} segundos antes de fallar`);
       process.exit(1);
     }
 
@@ -151,6 +164,11 @@ async function main() {
     if (summary === 'No unprocessed chats to analyze') {
       console.log('ℹ️  No unprocessed chats found for this user.');
       console.log('   All messages have already been processed, or the user has no chats.');
+      
+      // Calculate and display elapsed time
+      const endTime = Date.now();
+      const elapsedSeconds = ((endTime - startTime) / 1000).toFixed(2);
+      console.log(`\n⏱️  El proceso ha tardado ${elapsedSeconds} segundos`);
       return;
     }
 
@@ -162,8 +180,13 @@ async function main() {
     console.log('');
     console.log('═'.repeat(60));
     console.log('✅ Profile generated and saved successfully');
-    console.log(`   Incremental summary saved in: user_ai_profiles.summary_incremental_json`);
-    console.log(`   Consolidated summary updated in: user_ai_profiles.summary_json`);
+    console.log(`   Incremental summary saved in: user_ai_profiles.summary_incremental`);
+    console.log(`   Consolidated summary updated in: user_ai_profiles.summary`);
+    
+    // Calculate and display elapsed time
+    const endTime = Date.now();
+    const elapsedSeconds = ((endTime - startTime) / 1000).toFixed(2);
+    console.log(`\n⏱️  El proceso ha tardado ${elapsedSeconds} segundos`);
 
   } catch (error) {
     console.error('\n❌ Unexpected error:');
@@ -176,6 +199,11 @@ async function main() {
     } else {
       console.error('   Unknown error:', error);
     }
+    
+    // Calculate and display elapsed time even on unexpected error
+    const endTime = Date.now();
+    const elapsedSeconds = ((endTime - startTime) / 1000).toFixed(2);
+    console.error(`\n⏱️  El proceso ha tardado ${elapsedSeconds} segundos antes de fallar`);
     process.exit(1);
   }
 }

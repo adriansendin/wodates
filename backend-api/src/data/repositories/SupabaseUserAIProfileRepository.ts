@@ -17,14 +17,10 @@ type SupabaseConfig = {
   serviceRoleKey: string;
 };
 
-type SummaryJson = {
-  text: string;
-};
-
 type UserAIProfileRow = {
   user_id: string;
-  summary_json: SummaryJson | null;
-  summary_incremental_json: SummaryJson | null;
+  summary: string | null; // Stored as plain text
+  summary_incremental: string | null; // Stored as plain text
   summary_updated_at: string;
   summary_embedding: number[] | string | null; // Can be vector or array
 };
@@ -50,20 +46,19 @@ export class SupabaseUserAIProfileRepository
     try {
       const insertData: {
         user_id: string;
-        summary_json?: SummaryJson | null;
-        summary_incremental_json?: SummaryJson | null;
+        summary?: string | null;
+        summary_incremental?: string | null;
         summary_embedding?: string | null;
       } = {
         user_id: profile.userId,
       };
 
       if (profile.summary !== undefined) {
-        insertData.summary_json = profile.summary as SummaryJson | null;
+        insertData.summary = profile.summary || null;
       }
 
       if (profile.summaryIncremental !== undefined) {
-        insertData.summary_incremental_json =
-          profile.summaryIncremental as SummaryJson | null;
+        insertData.summary_incremental = profile.summaryIncremental || null;
       }
 
       if (profile.summaryEmbedding !== undefined) {
@@ -76,7 +71,7 @@ export class SupabaseUserAIProfileRepository
         .from('user_ai_profiles')
         .insert(insertData)
         .select(
-          'user_id, summary_json, summary_incremental_json, summary_updated_at, summary_embedding'
+          'user_id, summary, summary_incremental, summary_updated_at, summary_embedding'
         )
         .single<UserAIProfileRow>();
 
@@ -111,7 +106,7 @@ export class SupabaseUserAIProfileRepository
       const { data, error } = await this.client
         .from('user_ai_profiles')
         .select(
-          'user_id, summary_json, summary_incremental_json, summary_updated_at, summary_embedding'
+          'user_id, summary, summary_incremental, summary_updated_at, summary_embedding'
         )
         .eq('user_id', userId)
         .maybeSingle<UserAIProfileRow>();
@@ -142,8 +137,8 @@ export class SupabaseUserAIProfileRepository
   ): Promise<Result<UserAIProfile, DomainError>> {
     try {
       const updateData: {
-        summary_json?: SummaryJson | null;
-        summary_incremental_json?: SummaryJson | null;
+        summary?: string | null;
+        summary_incremental?: string | null;
         summary_embedding?: string | null;
         summary_updated_at?: string;
       } = {
@@ -151,12 +146,11 @@ export class SupabaseUserAIProfileRepository
       };
 
       if (update.summary !== undefined) {
-        updateData.summary_json = update.summary as SummaryJson | null;
+        updateData.summary = update.summary || null;
       }
 
       if (update.summaryIncremental !== undefined) {
-        updateData.summary_incremental_json =
-          update.summaryIncremental as SummaryJson | null;
+        updateData.summary_incremental = update.summaryIncremental || null;
       }
 
       if (update.summaryEmbedding !== undefined) {
@@ -170,7 +164,7 @@ export class SupabaseUserAIProfileRepository
         .update(updateData)
         .eq('user_id', userId)
         .select(
-          'user_id, summary_json, summary_incremental_json, summary_updated_at, summary_embedding'
+          'user_id, summary, summary_incremental, summary_updated_at, summary_embedding'
         )
         .single<UserAIProfileRow>();
 
@@ -237,10 +231,18 @@ export class SupabaseUserAIProfileRepository
       }
     }
 
+    // Summary fields are plain text, no parsing needed
+    const summary =
+      row.summary && row.summary.trim() !== '' ? row.summary : null;
+    const summaryIncremental =
+      row.summary_incremental && row.summary_incremental.trim() !== ''
+        ? row.summary_incremental
+        : null;
+
     return {
       userId: row.user_id,
-      summary: row.summary_json,
-      summaryIncremental: row.summary_incremental_json,
+      summary,
+      summaryIncremental,
       summaryUpdatedAt: new Date(row.summary_updated_at).toISOString(),
       summaryEmbedding: embedding,
     };

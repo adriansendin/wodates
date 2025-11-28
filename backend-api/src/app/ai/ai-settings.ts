@@ -28,7 +28,7 @@ export const AIModelConstants = {
    * - Updating database schema if dimension changes (vector(768) -> vector(NEW_DIM))
    * - Updating all code that references the dimension (768)
    */
-  //TODO: yxchia es un TRM, no un LLM. habría que cambiarlo por Alibaba GTE-multilingual-base
+  // TODO: yxchia es un TRM, no un LLM. habría que cambiarlo por Alibaba GTE-multilingual-base
   EMBEDDING: {
     DEFAULT_MODEL: 'yxchia/multilingual-e5-base',
     DIMENSION: 768, // Fixed dimension for multilingual-e5-base
@@ -85,6 +85,16 @@ export const AIConfig = {
       : 60000, // 60 seconds default
 
     /**
+     * Summarization timeout configuration
+     * Used for generating user profile summaries from chats and merging summaries
+     * Can be overridden via OLLAMA_SUMMARIZATION_TIMEOUT env var (in milliseconds)
+     * Default: 10 minutes (600000ms) for large prompts with 7B+ models
+     */
+    summarizationTimeout: process.env.OLLAMA_SUMMARIZATION_TIMEOUT
+      ? parseInt(process.env.OLLAMA_SUMMARIZATION_TIMEOUT, 10)
+      : 600000, // 10 minutes default
+
+    /**
      * Ollama API parameters
      * Optimized for speed by default
      */
@@ -104,14 +114,86 @@ export const AIConfig = {
     },
 
     /**
-     * Profile resume model configuration
-     * Separate model for generating user profile summaries from chats
+     * Summarizer-specific parameters
+     * Used for generating user profile summaries from chats
+     * Can be overridden via OLLAMA_SUMMARIZER_NUM_CTX, OLLAMA_SUMMARIZER_NUM_PREDICT, OLLAMA_SUMMARIZER_TEMPERATURE, OLLAMA_SUMMARIZER_SEED, OLLAMA_SUMMARIZER_TOP_P, OLLAMA_SUMMARIZER_TOP_K, and OLLAMA_SUMMARIZER_REPEAT_PENALTY
+     */
+    summarizerParameters: {
+      num_ctx: process.env.OLLAMA_SUMMARIZER_NUM_CTX
+        ? parseInt(process.env.OLLAMA_SUMMARIZER_NUM_CTX, 10)
+        : 2048, // Context window for profile summarization
+      num_predict: process.env.OLLAMA_SUMMARIZER_NUM_PREDICT
+        ? parseInt(process.env.OLLAMA_SUMMARIZER_NUM_PREDICT, 10)
+        : 1000, // Response length for summarization
+      temperature: process.env.OLLAMA_SUMMARIZER_TEMPERATURE
+        ? parseFloat(process.env.OLLAMA_SUMMARIZER_TEMPERATURE)
+        : 0, // Temperature for summarization (lower = more deterministic)
+      seed: process.env.OLLAMA_SUMMARIZER_SEED
+        ? parseInt(process.env.OLLAMA_SUMMARIZER_SEED, 10)
+        : 1234, // Seed for deterministic outputs (default: 1234)
+      top_p: process.env.OLLAMA_SUMMARIZER_TOP_P
+        ? parseFloat(process.env.OLLAMA_SUMMARIZER_TOP_P)
+        : 1, // Top-p sampling for summarization (default: 1)
+      top_k: process.env.OLLAMA_SUMMARIZER_TOP_K
+        ? parseInt(process.env.OLLAMA_SUMMARIZER_TOP_K, 10)
+        : 1, // Top-k sampling for summarization (default: 1)
+      repeat_penalty: process.env.OLLAMA_SUMMARIZER_REPEAT_PENALTY
+        ? parseFloat(process.env.OLLAMA_SUMMARIZER_REPEAT_PENALTY)
+        : 1.1, // Repeat penalty for summarization (default: 1.1)
+    },
+
+    /**
+     * Merge-specific parameters
+     * Used when merging consolidated summary with incremental summary
+     * Can be overridden via OLLAMA_MERGE_NUM_CTX, OLLAMA_MERGE_NUM_PREDICT, OLLAMA_MERGE_TEMPERATURE, OLLAMA_MERGE_SEED, OLLAMA_MERGE_TOP_P, OLLAMA_MERGE_TOP_K, and OLLAMA_MERGE_REPEAT_PENALTY
+     * Note: top_k and repeat_penalty use OLLAMA_MERGE_* (specific to merge operations)
+     */
+    mergeParameters: {
+      num_ctx: process.env.OLLAMA_MERGE_NUM_CTX
+        ? parseInt(process.env.OLLAMA_MERGE_NUM_CTX, 10)
+        : 4096, // Context window for merging summaries (needs more context for two profiles)
+      num_predict: process.env.OLLAMA_MERGE_NUM_PREDICT
+        ? parseInt(process.env.OLLAMA_MERGE_NUM_PREDICT, 10)
+        : 1500, // Response length for merge operations
+      temperature: process.env.OLLAMA_MERGE_TEMPERATURE
+        ? parseFloat(process.env.OLLAMA_MERGE_TEMPERATURE)
+        : 0, // Temperature for merge operations (0 = deterministic)
+      seed: process.env.OLLAMA_MERGE_SEED
+        ? parseInt(process.env.OLLAMA_MERGE_SEED, 10)
+        : 1234, // Seed for deterministic outputs (default: 1234)
+      top_p: process.env.OLLAMA_MERGE_TOP_P
+        ? parseFloat(process.env.OLLAMA_MERGE_TOP_P)
+        : 1, // Top-p sampling for merge operations (default: 1)
+      top_k: process.env.OLLAMA_MERGE_TOP_K
+        ? parseInt(process.env.OLLAMA_MERGE_TOP_K, 10)
+        : 1, // Top-k sampling for merge operations (default: 1)
+      repeat_penalty: process.env.OLLAMA_MERGE_REPEAT_PENALTY
+        ? parseFloat(process.env.OLLAMA_MERGE_REPEAT_PENALTY)
+        : 1.0, // Repeat penalty for merge operations (default: 1.0)
+    },
+
+    /**
+     * Profile chats to resume model configuration
+     * Model used for generating user profile summaries from chats
      *
-     * To override, set AI_MODEL_PROFILE_RESUME in .env
+     * To override, set AI_MODEL_PROFILE_CHATS_TO_RESUME in .env
      * Falls back to ollama.model (AI_MODEL_DOC_LOVE) if not specified
      */
-    profileResumeModel:
-      process.env.AI_MODEL_PROFILE_RESUME ||
+    profileChatsToResumeModel:
+      process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME ||
+      process.env.AI_MODEL_DOC_LOVE ||
+      'llama3.2:1b',
+
+    /**
+     * Profile merge resumes model configuration
+     * Model used for merging consolidated summary with incremental summary
+     *
+     * To override, set AI_MODEL_PROFILE_MERGE_RESUMES in .env
+     * Falls back to profileChatsToResumeModel, then to ollama.model (AI_MODEL_DOC_LOVE) if not specified
+     */
+    profileMergeResumesModel:
+      process.env.AI_MODEL_PROFILE_MERGE_RESUMES ||
+      process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME ||
       process.env.AI_MODEL_DOC_LOVE ||
       'llama3.2:1b',
 
@@ -189,189 +271,116 @@ Nunca, bajo ninguna circunstancia, hablas de ti como si fueras una persona o tuv
     /**
      * Instructions for generating user personality summaries
      * Used by SummarizerModel to create/update user AI profiles
+     *
+     * IMPORTANTE: el resultado se usará como entrada directa de un modelo de embeddings.
+     * Debe ser TEXTO PLANO en español, muy claro, estructurado por líneas/secciones fijas
+     * (una línea por sección) y sin formato técnico.
      */
     summarizerInstructions: {
       /**
        * Base introduction for the summarizer
        */
-      introduction: `Eres un asistente experto en análisis de personalidad y en generación de perfiles estructurados para sistemas de recomendación y matching. Tu tarea es transformar conversaciones y respuestas de un usuario en un perfil de texto plano, altamente estructurado y fácil de usar para modelos de embeddings. Debes ser extremadamente explícito, evitar adornos y mantener siempre el mismo formato de claves.`,
+      introduction: `Eres un analista de perfiles para matchmaking. Tu tarea es convertir conversaciones en un perfil descriptivo en texto natural, siguiendo un formato fijo. El perfil debe contener información concreta y útil para embeddings, sin ruido ni contenido adicional.`,
 
       /**
-       * Instructions for creating a new summary (when no previous summary exists)
+       * Instructions for creating a new summary (cuando no existe perfil previo)
        */
-      createNew: `Crea un perfil estructurado del usuario basándote en sus conversaciones y en la información de su perfil.
+      createNew: `
+      Analiza EXCLUSIVAMENTE el contenido literal de las conversaciones y genera un perfil en español siguiendo el formato fijo de 11 secciones. 
 
 OBJETIVO:
-Generar un texto plano optimizado para embeddings: SIN prosa, SIN párrafos narrativos, SOLO pares clave: valor en texto plano.
+Crear un perfil estrictamente descriptivo basado SOLO en hechos explícitos (frases, datos y acciones mencionadas). No debes hacer interpretaciones, suposiciones, diagnósticos, ni conclusiones psicológicas.
 
-REGLAS GENERALES:
-- Usa SIEMPRE el mismo conjunto de claves, en este orden.
-- Las claves van en minúsculas y snake_case.
-- Cada línea debe seguir el formato: clave: valor1, valor2, valor3
-- No uses viñetas, listas numeradas ni encabezados.
-- No añadas comentarios del estilo "no se ha mencionado nada sobre...".
-- Si no hay información para una clave, pon: desconocido
-- Incluye SIEMPRE toda la información explícita que el usuario haya mencionado (gustos, disgustos, hobbies, valores, trabajo, relaciones, etc.).
-- Cuando sea posible, guarda también frases textuales cortas del usuario.
-- Todos los valores que representen características (gustos, hobbies, valores, rasgos, etc.) deben ir en minúsculas y en snake_case siempre que sea posible (ej: musica_clasica, peliculas_terror, montar_a_caballo). Solo en "frases_textuales_relevantes" se permiten frases con mayúsculas y texto libre.
+REGLAS DE EXTRACCIÓN (muy importantes):
+- Usa únicamente información concreta que aparezca literalmente en los mensajes.
+- Si un dato no aparece de forma clara y explícita, NO lo incluyas.
+- Prohibido inferir estados emocionales, traumas, timidez, ansiedad o interpretación subjetiva.
+- Prohibido embellecer, suavizar o dramatizar.
+- Prohibido combinar o reinterpretar frases.
+- Si el texto dice “miedo a los payasos”, no conviertas eso en “trío payaso”, “trauma familiar”, “preocupación”, ni variaciones.
+- Si el texto dice “comida asiática”, no lo conviertas en “especialidad”, “cocina china”, ni ampliaciones.
+- Si aparece una preferencia, menciónala tal cual sin añadir contexto adicional.
+- Si una sección no tiene NINGÚN dato explícito, escribe exactamente: “sin datos”.
 
-CLAVES Y SIGNIFICADO (usa exactamente estas claves, en este orden):
+FORMATO (orden obligatorio, líneas individuales):
+Identidad básica: ...
+Estilo de comunicación: ...
+Personalidad: ...
+Gustos y preferencias: ...
+Disgustos y rechazos: ...
+Actividades y vida real: ...
+Trabajo y formación: ...
+Valores personales y relacionales: ...
+Preferencias en relaciones: ...
+Patrones de comportamiento: ...
+Frases textuales relevantes: ...
 
-1) identidad_basica:
-   - edad, género, ciudad, país, situación_vital si se mencionan.
-   - Ejemplo de valor: "39 años, hombre, vive en Valencia, España"
-   - Si no hay datos: "desconocido"
+REGLAS DE FORMATO:
+- Produce únicamente el perfil final, sin introducciones ni explicaciones.
+- Cada sección: 1–3 frases, máximo 50 palabras.
+- No uses listas, viñetas, markdown, JSON, tablas ni numeraciones.
+- En “Frases textuales relevantes”: transcribe entre 1 y 3 frases literales del usuario; si no hay, escribe “sin datos”.
 
-2) estilo_comunicacion:
-   - Cómo escribe y se expresa: tranquilo, directo, irónico, cercano, reflexivo, etc.
-   - Ejemplo: "tranquilo, cercano, transparente, reflexivo"
-   - Si no hay datos: "desconocido"
-
-3) personalidad:
-   - Rasgos de carácter y forma de ser observados o mencionados explícitamente.
-   - Ejemplo: "cariñoso, detallista, receptivo, emocionalmente_maduro"
-   - Si no hay datos: "desconocido"
-
-4) gustos_y_preferencias:
-   - TODO lo que le gusta: música, hobbies, deportes, ocio, comida, tipo de viajes, tipo de planes, etc.
-   - Ejemplo: "flamenco, musica_clasica, viajar, montar_a_caballo, peliculas_accion, peliculas_terror, salmorejo"
-   - Usa conceptos simples separados por comas.
-   - Si no hay datos: "desconocido"
-
-5) disgustos_y_rechazos:
-   - TODO lo que no le gusta o rechaza: tabaco, drama, relaciones_superficiales, etc.
-   - Ejemplo: "tabaco, relaciones_superficiales, drama"
-   - Si no hay datos: "desconocido"
-
-6) actividades_y_vida_real:
-   - Lo que hace en su día a día, trabajo, estudios, estilo de vida, formas de pasar el tiempo.
-   - Ejemplo: "equilibrio_trabajo_vida, pasear_por_la_orilla, leer, ver_documentales, escuchar_olas"
-   - Si no hay datos: "desconocido"
-
-7) trabajo_y_formacion:
-   - Profesión, sector, nivel de responsabilidad, cómo vive el trabajo (si lo menciona).
-   - Ejemplo: "trabajo_estable, responsable, comprometido, prioriza_calidad_sobre_cantidad"
-   - Si no hay datos: "desconocido"
-
-8) valores_personales_y_relacionales:
-   - Valores importantes: lealtad, sinceridad, respeto, autenticidad, libertad, etc.
-   - Incluye también qué busca en relaciones (si se menciona).
-   - Ejemplo: "autenticidad, lealtad, sinceridad, respeto, conexion_real"
-   - Si no hay datos: "desconocido"
-
-9) preferencias_relaciones:
-   - Qué tipo de relación o conexión busca, qué rechaza (relación seria, cero_drama, no_historia_a_medias, etc.).
-   - Ejemplo: "relacion_significativa, cero_drama, evita_relaciones_superficiales"
-   - Si no hay datos: "desconocido"
-
-10) patrones_comportamiento:
-    - Cómo tiende a comportarse: evita_conflictos, cuida_los_detalles, necesita_calma, etc.
-    - Ejemplo: "valora_calma, disfruta_tranquilidad_en_casa, prioriza_experiencias_sobre_novedad"
-    - Si no hay datos: "desconocido"
-
-11) frases_textuales_relevantes:
-    - Frases cortas literales del usuario que ayuden a capturar su esencia (gustos fuertes, valores, rechazos).
-    - Separa varias frases por punto y coma.
-    - Ejemplo: "me encanta el flamenco; la lealtad es fundamental para mí"
-    - Si no hay datos: "desconocido"
-
-SALIDA:
-Devuelve ÚNICAMENTE las líneas clave: valor en este orden, sin textos adicionales, sin explicaciones, sin encabezados y sin introducciones. Máximo ~500 palabras, pero prioriza claridad y concisión.`,
-
-      /**
-       * Instructions for updating an existing summary (when previous summary exists)
-       */
-      updateExisting: `Tienes un perfil estructurado previo del usuario (texto plano con claves en snake_case) y nueva información procedente de conversaciones recientes.
-
-OBJETIVO:
-Actualizar el perfil manteniendo EL MISMO FORMATO de claves y el mismo orden, incorporando TODA la información nueva, sin perder la información valiosa anterior.
-
-REGLAS:
-- Mantén exactamente las mismas claves y el mismo orden que en el perfil original:
-  identidad_basica
-  estilo_comunicacion
-  personalidad
-  gustos_y_preferencias
-  disgustos_y_rechazos
-  actividades_y_vida_real
-  trabajo_y_formacion
-  valores_personales_y_relacionales
-  preferencias_relaciones
-  patrones_comportamiento
-  frases_textuales_relevantes
-- Cada línea sigue el formato: clave: valor1, valor2, valor3
-- No añadas nuevas claves.
-- Integra la información nueva:
-  - Si un gusto/disgusto/hobby nuevo aparece, añádelo a la lista correspondiente.
-  - Deduplica valores: si algo ya está, no lo repitas.
-- Si hay contradicciones claras entre el perfil anterior y la nueva información:
-  - Prioriza la información más reciente.
-  - Si tiene sentido, puedes reemplazar un valor por otro más actualizado.
-- En "frases_textuales_relevantes":
-  - Añade nuevas frases cortas literales del usuario si aportan algo.
-  - Separa las frases por punto y coma.
-- Si una clave estaba en "desconocido" y ahora hay información, reemplaza "desconocido" por los nuevos valores.
-- Mantén todos los valores de características en minúsculas y snake_case, igual que en el perfil original. No cambies el formato (ej: no pases de "musica_clasica" a "Música clásica").
-
-IMPORTANTE:
-- No cambies el nombre de las claves.
-- No escribas explicaciones, comentarios ni encabezados.
-- NO escribas texto como "Aquí tienes" o "Perfil actualizado".
-- Devuelve SOLO el nuevo perfil completo, con todas las claves en el mismo orden, una línea por clave.`,
+Ahora genera el perfil de usuario usando SOLO información explícita encontrada en las conversaciones.
+`,
 
       /**
        * Instructions for merging two summaries (consolidated summary + incremental summary)
        * Used to merge existing consolidated summary with new incremental summary
        */
-      mergeSummaries: `Tienes DOS perfiles estructurados del mismo usuario:
-- Un resumen consolidado previo (perfil_base).
-- Un resumen incremental nuevo (perfil_incremental).
+      mergeSummaries: `
+      Funde los dos perfiles de usuario en UN solo perfil actualizado.
 
-Ambos están en texto plano, con las mismas claves en snake_case y el formato clave: valor1, valor2, valor3.
+PERFIL BASE (Información consolidada previa):
+"""
+{{PROFILE_1}}
+"""
 
-OBJETIVO:
-Fusionar ambos en UN ÚNICO perfil completo, coherente y sin duplicados, optimizado para embeddings.
+PERFIL INCREMENTAL (Nueva información reciente):
+"""
+{{PROFILE_2}}
+"""
 
-TAREAS:
-1. Respetar SIEMPRE el conjunto de claves y su orden:
-   identidad_basica
-   estilo_comunicacion
-   personalidad
-   gustos_y_preferencias
-   disgustos_y_rechazos
-   actividades_y_vida_real
-   trabajo_y_formacion
-   valores_personales_y_relacionales
-   preferencias_relaciones
-   patrones_comportamiento
-   frases_textuales_relevantes
+INSTRUCCIONES:
+Actúas como un “mergeador” estricto de información, no como un redactor creativo.
+Debes combinar el PERFIL BASE y el PERFIL INCREMENTAL en un único perfil coherente siguiendo estas reglas:
 
-2. Incluir TODA la información específica del perfil_incremental:
-   - Si el incremental añade un gusto, disgusto, hobby o valor nuevo, DEBE aparecer en el resultado final.
-   - Si el incremental contiene información más detallada o más reciente, priorízala sobre la del perfil_base.
-
-3. Combinar listas:
-   - Une los valores de perfil_base y perfil_incremental en cada clave.
-   - Elimina duplicados (mismo concepto repetido).
-   - Mantén valores en un formato simple, separados por comas.
-
-4. Contradicciones:
-   - Si una información del perfil_incremental contradice claramente a la del perfil_base, prioriza perfil_incremental.
-   - Puedes eliminar el valor anterior si ya no es válido.
-
-5. frases_textuales_relevantes:
-   - Combina frases significativas de ambos perfiles.
-   - Separa las frases por punto y coma.
-   - Elimina frases prácticamente idénticas.
-6. Formato de valores:
-   - Asegúrate de que los valores de características estén en minúsculas y snake_case (ej: musica_clasica, peliculas_terror).
-   - Solo en "frases_textuales_relevantes" se permiten frases libres con mayúsculas normales.
+REGLAS LÓGICAS:
+- Trabaja sección por sección (Identidad básica, Estilo de comunicación, etc.).
+- Usa lógica de UNIÓN:
+  * Si un dato está en el PERFIL BASE y NO es contradicho por el INCREMENTAL, MANTÉNLO.
+  * Si un dato aparece solo en el PERFIL INCREMENTAL, AÑÁDELO.
+  * Si hay contradicción directa, el PERFIL INCREMENTAL tiene prioridad.
+- No resumas eliminando detalles válidos: es mejor mantener más información que perder datos.
+- NO inventes nada: solo puedes usar información explícita de alguno de los dos perfiles.
+- No cambies el significado de los datos:
+  * No sustituyas “comida asiática” por “cocina china” si “china” no aparece en ningún texto.
+  * No conviertas “miedo a los payasos” en otras variantes si no están escritas.
+- En “Frases textuales relevantes” solo uses frases que aparezcan literalmente en alguno de los perfiles (puedes eliminar duplicados).
 
 FORMATO DE SALIDA:
-- Devuelve SOLO el perfil fusionado, con todas las claves en el mismo orden.
-- Cada línea debe seguir el formato: clave: valor1, valor2, valor3
-- No añadas explicaciones, encabezados ni texto extra.
-- Máximo ~500 palabras, pero prioriza claridad, concisión y que no falte ningún dato relevante del incremental.`,
+Debes devolver exactamente estas 11 secciones en este orden, en prosa continua:
+
+Identidad básica: ...
+Estilo de comunicación: ...
+Personalidad: ...
+Gustos y preferencias: ...
+Disgustos y rechazos: ...
+Actividades y vida real: ...
+Trabajo y formación: ...
+Valores personales y relacionales: ...
+Preferencias en relaciones: ...
+Patrones de comportamiento: ...
+Frases textuales relevantes: ...
+
+REGLAS DE FORMATO:
+- Responde únicamente con el perfil final (sin explicaciones adicionales).
+- Cada sección debe contener entre 1 y 3 frases (máx. 50 palabras por sección).
+- Si una sección no tiene datos en ninguno de los dos perfiles, escribe exactamente: "sin datos".
+- No uses JSON, markdown, listas ni viñetas.
+
+Ahora genera SOLO el perfil final fusionado siguiendo todas estas reglas.
+      `,
     },
   },
 } as const;

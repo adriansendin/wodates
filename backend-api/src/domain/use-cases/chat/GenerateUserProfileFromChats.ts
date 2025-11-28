@@ -124,10 +124,10 @@ export class GenerateUserProfileFromChats {
       const summaryResponse =
         await this.summarizerModel.generateSummary(summarizerRequest);
 
-      // Step 6: Save incremental summary
+      // Step 6: Save incremental summary (plain text)
       const upsertResult = await this.userAIProfileRepository.upsert({
         userId,
-        summaryIncremental: { text: summaryResponse.summary }, // Guardar en summaryIncremental, no en summary
+        summaryIncremental: summaryResponse.summary, // Plain text string
         summaryEmbedding: null, // Embedding will be generated separately if needed
       });
 
@@ -162,8 +162,8 @@ export class GenerateUserProfileFromChats {
         }
 
         const mergeResult = await this.mergeSummaries(
-          consolidatedSummary.text,
-          incrementalSummary.text
+          consolidatedSummary,
+          incrementalSummary
         );
 
         if (!mergeResult.success) {
@@ -180,7 +180,7 @@ export class GenerateUserProfileFromChats {
         // Save merged summary and clear incremental
         const finalUpsertResult = await this.userAIProfileRepository.upsert({
           userId,
-          summary: { text: mergeResult.data }, // Guardar resumen fusionado en summary
+          summary: mergeResult.data, // Plain text string
           summaryIncremental: null, // Limpiar summaryIncremental
           summaryEmbedding: null,
         });
@@ -218,7 +218,7 @@ export class GenerateUserProfileFromChats {
         const firstTimeUpsertResult = await this.userAIProfileRepository.upsert(
           {
             userId,
-            summary: incrementalSummary, // Copiar incremental a summary
+            summary: incrementalSummary, // Plain text string
             summaryIncremental: null, // Limpiar incremental
             summaryEmbedding: null,
           }
@@ -232,7 +232,7 @@ export class GenerateUserProfileFromChats {
           this.logger.info({ userId }, 'Profile initialized successfully');
         }
 
-        return success(incrementalSummary.text);
+        return success(incrementalSummary);
       }
 
       // No consolidated summary and no incremental (shouldn't happen, but handle gracefully)
@@ -373,9 +373,10 @@ export class GenerateUserProfileFromChats {
       );
 
       // Call LLM directly with the merge prompt
-      const mergedSummary = await this.callLLMForMerge(mergePrompt);
+      const mergedSummaryText = await this.callLLMForMerge(mergePrompt);
 
-      return success(mergedSummary);
+      // Return plain text summary (no JSON parsing needed)
+      return success(mergedSummaryText.trim());
     } catch (error) {
       return failure(
         new InternalError('Unexpected error merging summaries', error)
@@ -391,11 +392,37 @@ export class GenerateUserProfileFromChats {
     consolidatedSummary: string,
     incrementalSummary: string
   ): string {
-    let prompt = `${AIConfig.prompt.summarizerInstructions.introduction}\n\n`;
-    prompt += `${AIConfig.prompt.summarizerInstructions.mergeSummaries}\n\n`;
-    prompt += `RESUMEN CONSOLIDADO ANTERIOR:\n${consolidatedSummary}\n\n`;
-    prompt += `RESUMEN INCREMENTAL (INFORMACIÓN NUEVA):\n${incrementalSummary}\n\n`;
-    prompt += `Fusiona ambos resúmenes asegurándote de incluir TODA la información nueva del resumen incremental, especialmente gustos, disgustos y hobbies específicos mencionados.\n`;
+    // Usamos una intro más genérica o vacía para el merge para evitar confusión con "convertir conversaciones"
+    // O simplemente confiamos en que el prompt de merge es suficientemente explícito.
+    let prompt = '';
+
+    // Replace placeholders in mergeSummaries prompt
+    const mergePrompt = AIConfig.prompt.summarizerInstructions.mergeSummaries
+      .replace('{{PROFILE_1}}', consolidatedSummary)
+      .replace('{{PROFILE_2}}', incrementalSummary);
+
+    prompt += mergePrompt;
+
+    // LOGGING DEL PROMPT COMPLETO POR CONSOLA (Crucial para debug)
+    console.log('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB');
+    console.log('\n🔀 PROMPT DE MERGE (ANTES DE ENVIAR AL LLM):');
+    console.log('═'.repeat(80));
+    console.log(prompt);
+    console.log('═'.repeat(80));
+    console.log('');
+
+    // LOGGING DEL PROMPT (Crucial para debug)
+    if (this.logger) {
+      this.logger.debug(
+        {
+          consolidatedPreview: consolidatedSummary.substring(0, 100),
+          incrementalPreview: incrementalSummary.substring(0, 100),
+          fullPromptLength: prompt.length,
+        },
+        'Generando prompt de merge'
+      );
+    }
+
     return prompt;
   }
 
@@ -403,13 +430,17 @@ export class GenerateUserProfileFromChats {
    * Calls LLM API directly for merging summaries
    * Similar to SummarizerModelOllama.callOllamaAPI but for merge operations
    * Uses larger context and prediction limits for better quality
+   * Uses merge-specific temperature from AIConfig.ollama.mergeParameters.temperature
+   * Uses dedicated merge model (AI_MODEL_PROFILE_MERGE_RESUMES) instead of summarizer model
    */
   private async callLLMForMerge(prompt: string): Promise<string> {
     // Get configuration from AIConfig (same as SummarizerModel uses)
     const baseUrl = AIConfig.ollama.baseUrl;
-    const timeout = AIConfig.ollama.timeout * 2; // Longer timeout for merging
-    const parameters = AIConfig.ollama.parameters;
-    const model = this.summarizerModel.model;
+    // Use centralized summarization timeout (same as summarization operations)
+    const timeout = AIConfig.ollama.summarizationTimeout;
+    const mergeParams = AIConfig.ollama.mergeParameters;
+    // Use dedicated merge model instead of summarizer model
+    const model = AIConfig.ollama.profileMergeResumesModel;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -421,18 +452,47 @@ export class GenerateUserProfileFromChats {
         stream: true,
       };
 
-      if (parameters.temperature !== undefined) {
-        requestBody.temperature = parameters.temperature;
+      // Use merge-specific parameters from configuration
+      requestBody.temperature = mergeParams.temperature;
+      requestBody.num_predict = mergeParams.num_predict;
+      requestBody.num_ctx = mergeParams.num_ctx;
+
+      if (mergeParams.seed !== undefined) {
+        requestBody.seed = mergeParams.seed;
       }
 
-      // Use larger limits for merge operations to ensure quality
-      // Merge operations need more context and longer outputs
-      requestBody.num_predict = Math.max(parameters.num_predict || 500, 1500); // At least 1500 tokens for merged summary
-      requestBody.num_ctx = Math.max(parameters.num_ctx || 512, 4096); // At least 4096 tokens context for both summaries
-
-      if (parameters.top_p !== undefined) {
-        requestBody.top_p = parameters.top_p;
+      if (mergeParams.top_p !== undefined) {
+        requestBody.top_p = mergeParams.top_p;
       }
+
+      if (mergeParams.top_k !== undefined) {
+        requestBody.top_k = mergeParams.top_k;
+      }
+
+      if (mergeParams.repeat_penalty !== undefined) {
+        requestBody.repeat_penalty = mergeParams.repeat_penalty;
+      }
+
+      // Log parameters before LLM call
+      console.log('\n🔧 LLM CALL PARAMETERS (Merge - mergeSummaries)');
+      console.log('─'.repeat(60));
+      console.log(`   Model: ${model}`);
+      console.log(`   Temperature: ${requestBody.temperature ?? 'not set'}`);
+      console.log(`   Seed: ${requestBody.seed ?? 'not set'}`);
+      console.log(`   num_predict: ${requestBody.num_predict ?? 'not set'}`);
+      console.log(`   num_ctx: ${requestBody.num_ctx ?? 'not set'}`);
+      if (requestBody.top_p !== undefined) {
+        console.log(`   top_p: ${requestBody.top_p}`);
+      }
+      if (requestBody.top_k !== undefined) {
+        console.log(`   top_k: ${requestBody.top_k}`);
+      }
+      if (requestBody.repeat_penalty !== undefined) {
+        console.log(`   repeat_penalty: ${requestBody.repeat_penalty}`);
+      }
+      console.log(`   Prompt length: ${prompt.length} characters`);
+      console.log('─'.repeat(60));
+      console.log('');
 
       const response = await fetch(`${baseUrl}/api/generate`, {
         method: 'POST',

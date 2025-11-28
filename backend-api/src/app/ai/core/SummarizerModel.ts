@@ -1,7 +1,7 @@
 /**
  * SummarizerModel interface - for generating/updating user personality summaries
  *
- * This interface abstracts how we call models to build textual summaries
+ * This interface abstracts how we call models to build plain text summaries
  * of user personality, communication style, preferences, etc.
  *
  * Used asynchronously to build long-term user memory.
@@ -10,6 +10,7 @@
 export interface SummarizerRequest {
   /**
    * Previous summary (if exists) - for incremental updates
+   * Plain text string format
    */
   previousSummary?: string;
 
@@ -58,7 +59,7 @@ export interface SummarizerRequest {
 }
 
 export interface SummarizerResponse {
-  summary: string;
+  summary: string; // Plain text summary, not JSON
   provider: string;
   model?: string;
   tokensUsed?: number;
@@ -69,7 +70,7 @@ export interface SummarizerModel {
    * Generates or updates a user personality summary
    *
    * @param request - Content to summarize and previous summary (if any)
-   * @returns Updated summary text
+   * @returns Updated summary as plain text string
    */
   generateSummary(request: SummarizerRequest): Promise<SummarizerResponse>;
 

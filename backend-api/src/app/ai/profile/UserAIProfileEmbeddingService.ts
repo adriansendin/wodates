@@ -4,12 +4,12 @@ import { UserAIProfileRepository } from '../../../domain/repositories/UserAIProf
 /**
  * UserAIProfileEmbeddingService - Generates embeddings from existing summaries
  *
- * This service generates vector embeddings from text summaries stored in user_ai_profiles table.
+ * This service generates vector embeddings from plain text summaries stored in user_ai_profiles table.
  * Designed to be called asynchronously (via jobs/cron/webhooks) to update embeddings when summaries change.
  *
  * Architecture:
- * - Reads summary from user_ai_profiles table
- * - Generates 768-dimensional embedding using EmbeddingModel
+ * - Reads summary (text column containing plain text) from user_ai_profiles table
+ * - Generates 768-dimensional embedding using EmbeddingModel directly from summary text
  * - Updates summary_embedding and summary_updated_at columns
  * - Handles errors gracefully (logs to console, preserves existing state)
  */
@@ -62,12 +62,7 @@ export class UserAIProfileEmbeddingService {
       const profile = profileResult.data;
 
       // Step 2: Check if summary exists
-      if (
-        !profile ||
-        !profile.summary ||
-        !profile.summary.text ||
-        profile.summary.text.trim().length === 0
-      ) {
+      if (!profile || !profile.summary || profile.summary.trim().length === 0) {
         if (this.logger) {
           this.logger.debug(
             { userId },
@@ -77,11 +72,14 @@ export class UserAIProfileEmbeddingService {
         return;
       }
 
-      // Step 3: Generate embedding from summary
+      // Step 3: Generate embedding from summary plain text
       let embedding: number[];
       try {
+        // Generate embedding directly from plain text summary
+        const summaryText = profile.summary;
+
         const embeddingResponse = await this.embeddingModel.generateEmbedding({
-          text: profile.summary.text,
+          text: summaryText,
         });
 
         embedding = embeddingResponse.embedding;
@@ -90,11 +88,11 @@ export class UserAIProfileEmbeddingService {
           this.logger.debug(
             {
               userId,
-              summaryLength: profile.summary.text.length,
+              summaryTextLength: summaryText.length,
               embeddingDimension: embedding.length,
               model: embeddingResponse.model,
             },
-            'Embedding generated successfully'
+            'Embedding generated successfully from plain text summary'
           );
         }
       } catch (embeddingError) {
