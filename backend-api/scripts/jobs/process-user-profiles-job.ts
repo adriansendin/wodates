@@ -244,6 +244,12 @@ async function main() {
       console.log(`\n[${userNumber}/${userIds.length}] Processing user: ${userId}`);
 
       try {
+        // Get profile before processing to compare summary changes
+        const profileBeforeResult = await userAIProfileRepository.findByUserId(userId);
+        const summaryBefore = profileBeforeResult.success && profileBeforeResult.data 
+          ? profileBeforeResult.data.summary 
+          : null;
+        
         // Process user profile
         // Note: GenerateUserProfileFromChats will handle checking for unprocessed messages
         // and will return early if none are found, so we don't need to check again here
@@ -272,11 +278,31 @@ async function main() {
 
         console.log(`[SUCCESS] User ${userId} profile processed successfully`);
         
-        // Generate embedding from the updated summary
+        // Generate embedding from the updated summary only if summary actually changed
         try {
-          console.log(`[EMBEDDING] Generating embedding for user ${userId}...`);
-          await embeddingService.generateEmbeddingFromSummary(userId);
-          console.log(`[EMBEDDING] Embedding generated successfully for user ${userId}`);
+          // Get profile after processing to compare
+          const profileAfterResult = await userAIProfileRepository.findByUserId(userId);
+          const summaryAfter = profileAfterResult.success && profileAfterResult.data 
+            ? profileAfterResult.data.summary 
+            : null;
+          
+          // Only generate embedding if summary exists and changed
+          // Compare content, not just reference (handle null cases)
+          const summaryBeforeContent = summaryBefore?.trim() || null;
+          const summaryAfterContent = summaryAfter?.trim() || null;
+          const summaryChanged = summaryBeforeContent !== summaryAfterContent;
+          const hasConsolidatedSummary = summaryAfterContent !== null;
+          
+          if (!hasConsolidatedSummary) {
+            console.log(`[SKIP-EMBEDDING] User ${userId}: No consolidated summary yet (only incremental), skipping embedding generation`);
+          } else if (!summaryChanged && summaryBeforeContent !== null) {
+            console.log(`[SKIP-EMBEDDING] User ${userId}: Summary unchanged, skipping embedding generation`);
+          } else {
+            // Summary changed (new summary or content changed)
+            console.log(`[EMBEDDING] Summary ${summaryBeforeContent === null ? 'created' : 'changed'} for user ${userId}, generating embedding...`);
+            await embeddingService.generateEmbeddingFromSummary(userId);
+            console.log(`[EMBEDDING] Embedding generated successfully for user ${userId}`);
+          }
         } catch (embeddingError) {
           // Log error but don't fail the whole process - summary is already saved
           console.warn(`[WARN] Failed to generate embedding for user ${userId}:`, 
