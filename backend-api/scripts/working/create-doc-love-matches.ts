@@ -5,17 +5,17 @@
  * It should be run once after deploying the Doc Love integration.
  * 
  * Usage:
- *   npm run ts-node scripts/create-doc-love-matches.ts
+ *   npm run ts-node scripts/working/create-doc-love-matches.ts
  * 
  * Or with tsx:
- *   npx tsx scripts/create-doc-love-matches.ts
+ *   npx tsx scripts/working/create-doc-love-matches.ts
  */
 
 import 'dotenv/config';
-import { DocLoveHelper } from '../src/app/services/doc-love-helper';
-import { SystemUserService } from '../src/app/services/system-user-service';
-import { SupabaseLikeRepository } from '../src/data/repositories/SupabaseLikeRepository';
-import { SupabaseMatchRepository } from '../src/data/repositories/SupabaseMatchRepository';
+import { DocLoveHelper } from '../../src/app/services/doc-love-helper';
+import { SystemUserService } from '../../src/app/services/system-user-service';
+import { SupabaseLikeRepository } from '../../src/data/repositories/SupabaseLikeRepository';
+import { SupabaseMatchRepository } from '../../src/data/repositories/SupabaseMatchRepository';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 type SupabaseConfig = {

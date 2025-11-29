@@ -194,6 +194,7 @@ async function buildApp() {
         matchRepository,
         userRepository,
         getUnprocessedMessages,
+        messageRepository,
         docLoveHelper,
         fastify.log
       );

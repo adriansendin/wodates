@@ -5,15 +5,15 @@
  * for all user IDs specified in the USER_IDS array below.
  * 
  * Usage:
- *   npx tsx scripts/generate-user-embedding.ts
+ *   npx tsx scripts/working/generate-user-embedding.ts
  * 
  * To add/remove users, edit the USER_IDS array in this file.
  */
 
 import 'dotenv/config';
-import { UserAIProfileEmbeddingService } from '../src/app/ai/profile/UserAIProfileEmbeddingService';
-import { SupabaseUserAIProfileRepository } from '../src/data/repositories/SupabaseUserAIProfileRepository';
-import { createEmbeddingModel } from '../src/app/ai/core/config';
+import { UserAIProfileEmbeddingService } from '../../src/app/ai/profile/UserAIProfileEmbeddingService';
+import { SupabaseUserAIProfileRepository } from '../../src/data/repositories/SupabaseUserAIProfileRepository';
+import { createEmbeddingModel } from '../../src/app/ai/core/config';
 
 // ============================================================================
 // CONFIGURACIÓN: Edita este array con los IDs de usuarios que quieres procesar

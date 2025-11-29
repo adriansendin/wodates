@@ -5,22 +5,22 @@
  * and Doc Love) for a given user ID and generates/updates their AI profile summary.
  * 
  * Usage:
- *   npx tsx scripts/generate-user-profile.ts <userId>
+ *   npx tsx scripts/working/generate-user-profile.ts <userId>
  * 
  * Example:
- *   npx tsx scripts/generate-user-profile.ts 8e1139a4-e3ec-4e4c-964b-a98ad5417f71
+ *   npx tsx scripts/working/generate-user-profile.ts 8e1139a4-e3ec-4e4c-964b-a98ad5417f71
  */
 
 import 'dotenv/config';
-import { DocLoveHelper } from '../src/app/services/doc-love-helper';
-import { SupabaseMatchRepository } from '../src/data/repositories/SupabaseMatchRepository';
-import { SupabaseUserRepository } from '../src/data/repositories/SupabaseUserRepository';
-import { SupabaseMessageRepository } from '../src/data/repositories/SupabaseMessageRepository';
-import { SupabaseUserAIProfileRepository } from '../src/data/repositories/SupabaseUserAIProfileRepository';
-import { GetAllUserChats } from '../src/domain/use-cases/chat/GetAllUserChats';
-import { GetUnprocessedMessages } from '../src/domain/use-cases/chat/GetUnprocessedMessages';
-import { GenerateUserProfileFromChats } from '../src/domain/use-cases/chat/GenerateUserProfileFromChats';
-import { createSummarizerModel } from '../src/app/ai/core/config';
+import { DocLoveHelper } from '../../src/app/services/doc-love-helper';
+import { SupabaseMatchRepository } from '../../src/data/repositories/SupabaseMatchRepository';
+import { SupabaseUserRepository } from '../../src/data/repositories/SupabaseUserRepository';
+import { SupabaseMessageRepository } from '../../src/data/repositories/SupabaseMessageRepository';
+import { SupabaseUserAIProfileRepository } from '../../src/data/repositories/SupabaseUserAIProfileRepository';
+import { GetAllUserChats } from '../../src/domain/use-cases/chat/GetAllUserChats';
+import { GetUnprocessedMessages } from '../../src/domain/use-cases/chat/GetUnprocessedMessages';
+import { GenerateUserProfileFromChats } from '../../src/domain/use-cases/chat/GenerateUserProfileFromChats';
+import { createSummarizerModel } from '../../src/app/ai/core/config';
 
 type SupabaseConfig = {
   url: string;
@@ -52,9 +52,9 @@ async function main() {
   if (!userId) {
     console.error('❌ Error: User ID is required');
     console.error('\nUsage:');
-    console.error('  npx tsx scripts/generate-user-profile.ts <userId>');
+    console.error('  npx tsx scripts/working/generate-user-profile.ts <userId>');
     console.error('\nExample:');
-    console.error('  npx tsx scripts/generate-user-profile.ts 8e1139a4-e3ec-4e4c-964b-a98ad5417f71');
+    console.error('  npx tsx scripts/working/generate-user-profile.ts 8e1139a4-e3ec-4e4c-964b-a98ad5417f71');
     process.exit(1);
   }
 
@@ -101,6 +101,7 @@ async function main() {
       matchRepository,
       userRepository,
       getUnprocessedMessages,
+      messageRepository,
       docLoveHelper,
       logger
     );

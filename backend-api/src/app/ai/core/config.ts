@@ -43,7 +43,10 @@ export function createChatModel(logger?: any): ChatModel {
   }
 }
 
-export function createSummarizerModel(logger?: any): SummarizerModel {
+export function createSummarizerModel(
+  logger?: any,
+  modelOverride?: string
+): SummarizerModel {
   const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
 
   switch (providerName) {
@@ -52,8 +55,11 @@ export function createSummarizerModel(logger?: any): SummarizerModel {
       // This allows using a different, more powerful model for profile summarization
       // Use much longer timeout for summarization (10 minutes default) as prompts can be very long
       // Can be overridden with OLLAMA_SUMMARIZATION_TIMEOUT env var (in milliseconds)
+      // If modelOverride is provided, use it instead of the configured model
+      const modelName =
+        modelOverride || AIConfig.ollama.profileChatsToResumeModel;
       return new SummarizerModelOllama(
-        AIConfig.ollama.profileChatsToResumeModel,
+        modelName,
         AIConfig.ollama.baseUrl,
         AIConfig.ollama.summarizationTimeout, // Use centralized config
         {

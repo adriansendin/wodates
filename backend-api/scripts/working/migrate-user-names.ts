@@ -5,7 +5,7 @@
  * generando un nombre a partir de su email.
  * 
  * Uso:
- *   npx tsx scripts/migrate-user-names.ts
+ *   npx tsx scripts/working/migrate-user-names.ts
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -13,7 +13,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // Cargar variables de entorno
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -2,6 +2,7 @@ import { Result, success, failure } from '../../Result';
 import { DomainError, InternalError } from '../../errors/DomainError';
 import { MatchRepository } from '../../repositories/MatchRepository';
 import { UserRepository } from '../../repositories/UserRepository';
+import { MessageRepository } from '../../repositories/MessageRepository';
 import { GetUnprocessedMessages } from './GetUnprocessedMessages';
 
 /**
@@ -41,6 +42,7 @@ export class GetAllUserChats {
     private matchRepository: MatchRepository,
     private userRepository: UserRepository,
     private getUnprocessedMessages: GetUnprocessedMessages,
+    private messageRepository: MessageRepository,
     private docLoveHelper: { getDocLoveUserId(): Promise<string> },
     private logger?: any
   ) {}
@@ -140,26 +142,24 @@ export class GetAllUserChats {
         );
 
         // Mark messages as processed
-        // COMENTADO PARA PRUEBAS - No marcar como procesados durante testing
-        // const messageIds = unprocessedMessages.map((msg) => msg.id);
-        // const markResult = await this.messageRepository.markManyAsProcessed(
-        //   messageIds
-        // );
+        const messageIds = unprocessedMessages.map((msg) => msg.id);
+        const markResult =
+          await this.messageRepository.markManyAsProcessed(messageIds);
 
-        // if (!markResult.success) {
-        //   if (this.logger) {
-        //     this.logger.error(
-        //       {
-        //         matchId: match.id,
-        //         userId,
-        //         messageIds,
-        //         error: markResult.error,
-        //       },
-        //       'Failed to mark messages as processed, but messages were already retrieved'
-        //     );
-        //   }
-        //   // Continue anyway - messages were already retrieved and formatted
-        // }
+        if (!markResult.success) {
+          if (this.logger) {
+            this.logger.error(
+              {
+                matchId: match.id,
+                userId,
+                messageIds,
+                error: markResult.error,
+              },
+              'Failed to mark messages as processed, but messages were already retrieved'
+            );
+          }
+          // Continue anyway - messages were already retrieved and formatted
+        }
 
         // Store last message timestamp for sorting (before formatting)
         const lastMessage = unprocessedMessages[unprocessedMessages.length - 1];

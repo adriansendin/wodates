@@ -5,19 +5,19 @@
  * (with regular users and Doc Love) for a given user ID.
  * 
  * Usage:
- *   npx tsx scripts/show-user-chats.ts <userId>
+ *   npx tsx scripts/working/show-user-chats.ts <userId>
  * 
  * Example:
- *   npx tsx scripts/show-user-chats.ts 8e1139a4-e3ec-4e4c-964b-a98ad5417f71
+ *   npx tsx scripts/working/show-user-chats.ts 8e1139a4-e3ec-4e4c-964b-a98ad5417f71
  */
 
 import 'dotenv/config';
-import { DocLoveHelper } from '../src/app/services/doc-love-helper';
-import { SupabaseMatchRepository } from '../src/data/repositories/SupabaseMatchRepository';
-import { SupabaseUserRepository } from '../src/data/repositories/SupabaseUserRepository';
-import { SupabaseMessageRepository } from '../src/data/repositories/SupabaseMessageRepository';
-import { GetAllUserChats } from '../src/domain/use-cases/chat/GetAllUserChats';
-import { GetUnprocessedMessages } from '../src/domain/use-cases/chat/GetUnprocessedMessages';
+import { DocLoveHelper } from '../../src/app/services/doc-love-helper';
+import { SupabaseMatchRepository } from '../../src/data/repositories/SupabaseMatchRepository';
+import { SupabaseUserRepository } from '../../src/data/repositories/SupabaseUserRepository';
+import { SupabaseMessageRepository } from '../../src/data/repositories/SupabaseMessageRepository';
+import { GetAllUserChats } from '../../src/domain/use-cases/chat/GetAllUserChats';
+import { GetUnprocessedMessages } from '../../src/domain/use-cases/chat/GetUnprocessedMessages';
 
 type SupabaseConfig = {
   url: string;
@@ -49,9 +49,9 @@ async function main() {
   if (!userId) {
     console.error('❌ Error: User ID is required');
     console.error('\nUsage:');
-    console.error('  npx tsx scripts/show-user-chats.ts <userId>');
+    console.error('  npx tsx scripts/working/show-user-chats.ts <userId>');
     console.error('\nExample:');
-    console.error('  npx tsx scripts/show-user-chats.ts 8e1139a4-e3ec-4e4c-964b-a98ad5417f71');
+    console.error('  npx tsx scripts/working/show-user-chats.ts 8e1139a4-e3ec-4e4c-964b-a98ad5417f71');
     process.exit(1);
   }
 
@@ -86,6 +86,7 @@ async function main() {
       matchRepository,
       userRepository,
       getUnprocessedMessages,
+      messageRepository,
       docLoveHelper,
       {
         debug: (...args: any[]) => console.log('[DEBUG]', ...args),

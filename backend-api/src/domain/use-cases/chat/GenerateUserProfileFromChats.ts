@@ -23,14 +23,19 @@ import { AIConfig } from '../../../app/ai/ai-settings';
  * Note: Messages are NOT marked as processed - they are only read for analysis.
  */
 export class GenerateUserProfileFromChats {
+  private mergeModelOverride: string | undefined;
+
   constructor(
     private getAllUserChats: GetAllUserChats,
     private userAIProfileRepository: UserAIProfileRepository,
     private userRepository: UserRepository,
     private summarizerModel: SummarizerModel,
     private docLoveHelper: DocLoveHelper,
-    private logger?: any
-  ) {}
+    private logger?: any,
+    mergeModelOverride?: string
+  ) {
+    this.mergeModelOverride = mergeModelOverride;
+  }
 
   async execute(userId: string): Promise<Result<string, DomainError>> {
     try {
@@ -440,7 +445,9 @@ export class GenerateUserProfileFromChats {
     const timeout = AIConfig.ollama.summarizationTimeout;
     const mergeParams = AIConfig.ollama.mergeParameters;
     // Use dedicated merge model instead of summarizer model
-    const model = AIConfig.ollama.profileMergeResumesModel;
+    // If mergeModelOverride is provided, use it; otherwise use configured model
+    const model =
+      this.mergeModelOverride || AIConfig.ollama.profileMergeResumesModel;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);

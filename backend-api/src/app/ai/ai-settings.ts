@@ -182,7 +182,7 @@ export const AIConfig = {
     profileChatsToResumeModel:
       process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME ||
       process.env.AI_MODEL_DOC_LOVE ||
-      'llama3.2:1b',
+      'gemma3:4b',
 
     /**
      * Profile merge resumes model configuration
@@ -195,7 +195,7 @@ export const AIConfig = {
       process.env.AI_MODEL_PROFILE_MERGE_RESUMES ||
       process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME ||
       process.env.AI_MODEL_DOC_LOVE ||
-      'llama3.2:1b',
+      'gemma3:4b',
 
     /**
      * Ollama embeddings configuration
