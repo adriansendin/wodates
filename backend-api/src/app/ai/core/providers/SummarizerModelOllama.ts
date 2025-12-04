@@ -59,6 +59,12 @@ export class SummarizerModelOllama implements SummarizerModel {
         );
       }
 
+      // DISABLED: Prompts and conversations should NOT be logged to avoid exposing sensitive data
+      // Log completo del prompt antes de enviarlo al LLM
+      // console.log('[8.5.4] INICIO DEL PROMPT ANTES DE ENVIAR AL LLM');
+      // console.log(prompt);
+      // console.log('[8.5.4] FIN DEL PROMPT ANTES DE ENVIAR AL LLM');
+
       const content = await this.callOllamaAPI(prompt);
 
       if (!content || content.trim().length === 0) {
@@ -67,20 +73,21 @@ export class SummarizerModelOllama implements SummarizerModel {
 
       const trimmedContent = content.trim();
 
+      // DISABLED: Raw LLM response should NOT be logged to avoid exposing sensitive data
       // Log response preview for debugging (first 500 chars)
-      if (this.logger) {
-        this.logger.debug(
-          {
-            model: this.model,
-            responseLength: trimmedContent.length,
-            responsePreview:
-              trimmedContent.length > 500
-                ? trimmedContent.substring(0, 500) + '...'
-                : trimmedContent,
-          },
-          'Raw LLM response received (plain text)'
-        );
-      }
+      // if (this.logger) {
+      //   this.logger.debug(
+      //     {
+      //       model: this.model,
+      //       responseLength: trimmedContent.length,
+      //       responsePreview:
+      //         trimmedContent.length > 500
+      //           ? trimmedContent.substring(0, 500) + '...'
+      //           : trimmedContent,
+      //     },
+      //     'Raw LLM response received (plain text)'
+      //   );
+      // }
 
       // Return plain text summary (no JSON parsing needed)
       return {
@@ -97,11 +104,17 @@ export class SummarizerModelOllama implements SummarizerModel {
   }
 
   private buildPrompt(request: SummarizerRequest): string {
+    // DISABLED: Detailed prompt construction logs removed for cleaner production logs
+    // console.log('[8.5.3] Construyendo prompt para el LLM...');
+
     // Use centralized prompt configuration from AIConfig
     let prompt = `${AIConfig.prompt.summarizerInstructions.introduction}\n\n`;
 
     // Build new content section first (will be used as {{NEW_INFO}} placeholder)
     let newInfoSection = '';
+
+    // Get current user name (the one being profiled)
+    const currentUserName = request.userProfile?.name || 'Usuario';
 
     // Add user profile info
     if (request.userProfile) {
@@ -120,45 +133,149 @@ export class SummarizerModelOllama implements SummarizerModel {
       }
     }
 
-    // Add conversation content
+    // Add conversation content - unified handling for all chats
     const newContent = request.newContent;
     let conversationCount = 0;
 
-    if (newContent.docLoveChats && newContent.docLoveChats.length > 0) {
-      newInfoSection += `\nCONVERSACIONES CON DOC LOVE:\n`;
-      for (const chat of newContent.docLoveChats.slice(0, 5)) {
-        conversationCount++;
-        newInfoSection += `\nConversación ${conversationCount}:\n`;
-        for (const msg of chat.messages.slice(-10)) {
-          const role = msg.role === 'assistant' ? 'Doc Love' : 'Usuario';
-          newInfoSection += `${role}: ${msg.content}\n`;
-        }
-      }
-    }
-
+    // Process all user chats (now includes both Doc Love and regular users)
     if (newContent.userChats && newContent.userChats.length > 0) {
-      newInfoSection += `\nCONVERSACIONES CON OTROS USUARIOS:\n`;
-      for (const chat of newContent.userChats.slice(0, 5)) {
+      // DISABLED: Detailed conversation processing logs removed for cleaner production logs
+      // console.log(
+      //   `[8.5.3.1] Procesando ${newContent.userChats.length} conversación(es) para el prompt...`
+      // );
+      newInfoSection += `\nCONVERSACIONES:\n`;
+      // IMPORTANTE: Incluir TODAS las conversaciones, no solo las primeras 5
+      // El LLM necesita ver todas las conversaciones para generar un perfil completo
+      const allChats = newContent.userChats; // TODAS las conversaciones, sin límite
+      // DISABLED: Detailed conversation processing logs removed for cleaner production logs
+      // console.log(
+      //   `[8.5.3.1] ✅ Incluyendo ${allChats.length} conversación(es) completas en el prompt (sin límite)`
+      // );
+      for (const chat of allChats) {
         conversationCount++;
-        newInfoSection += `\nConversación ${conversationCount}:\n`;
-        for (const msg of chat.messages.slice(-10)) {
-          newInfoSection += `Usuario: ${msg.content}\n`;
+        const otherUserName = chat.otherUserName || 'Otro usuario';
+        newInfoSection += `\nConversación ${conversationCount} con ${otherUserName}:\n`;
+
+        // DISABLED: Detailed conversation logs removed for cleaner production logs
+        // Log conversation details
+        // console.log(
+        //   `[8.5.3.1.${conversationCount}] Conversación ${conversationCount} con ${otherUserName}:`
+        // );
+        // console.log(
+        //   `[8.5.3.1.${conversationCount}] Total mensajes en conversación: ${chat.messages.length}`
+        // );
+        // console.log(
+        //   `[8.5.3.1.${conversationCount}] Total mensajes que se enviarán al LLM: ${chat.messages.length} (TODOS los mensajes)`
+        // );
+        // console.log('─'.repeat(80));
+
+        // IMPORTANTE: Incluir TODOS los mensajes, no solo los últimos 10
+        // El LLM necesita ver toda la conversación para generar un perfil completo
+        const allMessages = chat.messages; // TODOS los mensajes, sin límite
+        // DISABLED: Detailed conversation processing logs removed for cleaner production logs
+        // console.log(
+        //   `[8.5.3.1.${conversationCount}] ✅ Incluyendo ${allMessages.length} mensajes completos en el prompt`
+        // );
+
+        for (let i = 0; i < allMessages.length; i++) {
+          const msg = allMessages[i];
+          if (!msg) continue; // Skip if message is undefined
+
+          // Use senderName if available, otherwise fallback to role-based naming
+          let displayName: string;
+          if (msg.senderName) {
+            // Check if this message is from the current user (being profiled)
+            // Compare normalized names (trim, case-insensitive) to handle formatting differences
+            const normalizedSenderName = msg.senderName.trim().toLowerCase();
+            const normalizedCurrentUserName = currentUserName
+              .trim()
+              .toLowerCase();
+            if (normalizedSenderName === normalizedCurrentUserName) {
+              displayName = `${msg.senderName} (MAIN)`;
+            } else {
+              displayName = msg.senderName;
+            }
+          } else {
+            // WARNING: senderName should always be present in Wodates chats
+            // If missing, we can't determine if it's from MAIN user, so use generic name
+            // DISABLED: Warning logs removed for cleaner production logs
+            // console.warn(
+            //   `[8.5.3.1.${conversationCount}] ⚠️ Message without senderName detected. Cannot mark as (MAIN).`
+            // );
+            displayName = 'Usuario';
+          }
+
+          // DISABLED: User message logs removed to avoid exposing sensitive conversation data
+          // Log primeros 5 y últimos 5 mensajes para verificación
+          // if (i < 5 || i >= allMessages.length - 5) {
+          //   const messagePreview =
+          //     msg.content.length > 100
+          //       ? msg.content.substring(0, 100) + '...'
+          //       : msg.content;
+          //   const position = i < 5 ? 'INICIO' : 'FINAL';
+          //   console.log(
+          //     `[8.5.3.1.${conversationCount}] [${position}] [${i + 1}/${allMessages.length}] ${displayName}: ${messagePreview}`
+          //   );
+          // } else if (i === 5) {
+          //   console.log(
+          //     `[8.5.3.1.${conversationCount}] ... (${allMessages.length - 10} mensajes intermedios) ...`
+          //   );
+          // }
+
+          newInfoSection += `${displayName}: ${msg.content}\n`;
         }
+        // DISABLED: Detailed conversation processing logs removed for cleaner production logs
+        // console.log('─'.repeat(80));
       }
+      // DISABLED: Detailed conversation processing logs removed for cleaner production logs
+      // console.log(`[8.5.3.1] ✅ Conversaciones procesadas en el prompt`);
     }
 
+    // Handle imported conversations (WhatsApp, etc.)
     if (
       newContent.importedConversations &&
       newContent.importedConversations.length > 0
     ) {
+      // DISABLED: Detailed imported conversation logs removed for cleaner production logs
+      // console.log(
+      //   `[8.5.3.2] Procesando ${newContent.importedConversations.length} conversación(es) importada(s)...`
+      // );
       newInfoSection += `\nCONVERSACIONES IMPORTADAS:\n`;
       for (const conv of newContent.importedConversations.slice(0, 3)) {
         conversationCount++;
         newInfoSection += `\n${conv.source}:\n`;
         for (const msg of conv.messages.slice(-20)) {
-          newInfoSection += `Usuario: ${msg.content}\n`;
+          // Use senderName if available, otherwise fallback to generic name
+          let displayName: string;
+          if (msg.senderName) {
+            // Check if this message is from the current user (being profiled)
+            // Compare normalized names (trim, case-insensitive) to handle formatting differences
+            const normalizedSenderName = msg.senderName.trim().toLowerCase();
+            const normalizedCurrentUserName = currentUserName
+              .trim()
+              .toLowerCase();
+            if (normalizedSenderName === normalizedCurrentUserName) {
+              displayName = `${msg.senderName} (MAIN)`;
+            } else {
+              displayName = msg.senderName;
+            }
+          } else {
+            // WARNING: senderName should be present in imported conversations
+            // If missing, we can't determine if it's from MAIN user, so use generic name
+            // This can happen if the WhatsApp format doesn't match the expected pattern
+            // DISABLED: Warning logs removed for cleaner production logs
+            // console.warn(
+            //   `[8.5.3.2] ⚠️ Imported conversation message without senderName detected. Cannot mark as (MAIN).`
+            // );
+            displayName = 'Usuario';
+          }
+          newInfoSection += `${displayName}: ${msg.content}\n`;
         }
       }
+      // DISABLED: Detailed imported conversation logs removed for cleaner production logs
+      // console.log(
+      //   `[8.5.3.2] ✅ Conversaciones importadas procesadas en el prompt`
+      // );
     }
 
     // Always use createNew instructions; summaries are merged in a separate step
@@ -166,6 +283,24 @@ export class SummarizerModelOllama implements SummarizerModel {
     prompt += newInfoSection;
     prompt += `\n\nINSTRUCCIONES:\n`;
     prompt += AIConfig.prompt.summarizerInstructions.createNew;
+
+    // DISABLED: Detailed prompt construction logs removed - consolidated into single log line
+    // console.log(
+    //   '[8.5.3] ✅ Prompt construido. Longitud total:',
+    //   prompt.length,
+    //   'caracteres'
+    // );
+    // DISABLED: Prompts and conversations should NOT be logged to avoid exposing sensitive data
+    // console.log('[8.5.3] 📋 CONTENIDO DE CONVERSACIONES QUE SE ENVÍA AL LLM:');
+    // console.log('═'.repeat(80));
+    // console.log(newInfoSection);
+    // console.log('═'.repeat(80));
+    // console.log(
+    //   '[8.5.3] 📋 Vista previa del prompt completo (primeros 1000 caracteres):'
+    // );
+    // console.log('─'.repeat(80));
+    // console.log(prompt.substring(0, 1000));
+    // console.log('─'.repeat(80));
 
     return prompt;
   }
@@ -205,37 +340,31 @@ export class SummarizerModelOllama implements SummarizerModel {
 
       const apiUrl = `${this.baseUrl}/api/generate`;
 
-      // Log parameters before LLM call
-      console.log('\n🔧 LLM CALL PARAMETERS (Summarizer - createNew)');
-      console.log('─'.repeat(60));
-      console.log(`   Model: ${this.model}`);
-      console.log(`   Temperature: ${requestBody.temperature ?? 'not set'}`);
-      console.log(`   Seed: ${requestBody.seed ?? 'not set'}`);
-      console.log(`   num_predict: ${requestBody.num_predict ?? 'not set'}`);
-      console.log(`   num_ctx: ${requestBody.num_ctx ?? 'not set'}`);
-      if (requestBody.top_p !== undefined) {
-        console.log(`   top_p: ${requestBody.top_p}`);
-      }
-      if (requestBody.top_k !== undefined) {
-        console.log(`   top_k: ${requestBody.top_k}`);
-      }
-      if (requestBody.repeat_penalty !== undefined) {
-        console.log(`   repeat_penalty: ${requestBody.repeat_penalty}`);
-      }
-      console.log(`   Prompt length: ${prompt.length} characters`);
-      console.log('─'.repeat(60));
-      console.log('');
+      // Consolidated log: LLM call parameters in single line
+      const params = [
+        `Model: ${this.model}`,
+        `Temp: ${requestBody.temperature ?? 'not set'}`,
+        `Seed: ${requestBody.seed ?? 'not set'}`,
+        `num_predict: ${requestBody.num_predict ?? 'not set'}`,
+        `num_ctx: ${requestBody.num_ctx ?? 'not set'}`,
+        requestBody.top_p !== undefined ? `top_p: ${requestBody.top_p}` : null,
+        requestBody.top_k !== undefined ? `top_k: ${requestBody.top_k}` : null,
+        requestBody.repeat_penalty !== undefined ? `repeat_penalty: ${requestBody.repeat_penalty}` : null,
+        `Prompt length: ${prompt.length} chars`
+      ].filter(Boolean).join(', ');
+      console.log(`🔧 LLM CALL (Summarizer - createNew): ${params}`);
 
-      if (this.logger) {
-        this.logger.debug(
-          {
-            url: apiUrl,
-            model: this.model,
-            promptLength: prompt.length,
-          },
-          'Calling Ollama API for summarization'
-        );
-      }
+      // DISABLED: Detailed DEBUG logs removed to avoid exposing sensitive data
+      // if (this.logger) {
+      //   this.logger.debug(
+      //     {
+      //       url: apiUrl,
+      //       model: this.model,
+      //       promptLength: prompt.length,
+      //     },
+      //     'Calling Ollama API for summarization'
+      //   );
+      // }
 
       const response = await fetch(apiUrl, {
         method: 'POST',

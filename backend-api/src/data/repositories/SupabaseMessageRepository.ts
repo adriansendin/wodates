@@ -257,6 +257,140 @@ export class SupabaseMessageRepository implements MessageRepository {
     }
   }
 
+  async findChatFromFirstUnprocessedMessage(
+    matchId: string,
+    userId: string
+  ): Promise<Result<Message[], DomainError>> {
+    try {
+      // Step 0: FIRST check if this user has ANY unprocessed messages written by them
+      // If the user hasn't written any new messages, we shouldn't process anything
+      const { data: hasUnprocessed, error: checkError } = await this.client
+        .from('messages')
+        .select('id')
+        .eq('chat_id', matchId)
+        .eq('sender_id', userId)
+        .is('profile_processed_at', null)
+        .limit(1)
+        .maybeSingle<{ id: string }>();
+
+      if (checkError) {
+        return failure(
+          new InternalError(
+            `Failed to check for unprocessed messages: ${this.formatSupabaseError(checkError)}`
+          )
+        );
+      }
+
+      // If the user has no unprocessed messages written by them, return empty array
+      // This ensures we only process when the user has actually written something new
+      if (!hasUnprocessed) {
+        return success([]);
+      }
+
+      // Step 1: Find the LAST processed message for this user in this match
+      // This gives us the cutoff point: we need ALL messages AFTER this point
+      const { data: lastProcessed, error: lastProcessedError } =
+        await this.client
+          .from('messages')
+          .select('created_at')
+          .eq('chat_id', matchId)
+          .eq('sender_id', userId)
+          .not('profile_processed_at', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle<{ created_at: string }>();
+
+      if (lastProcessedError) {
+        return failure(
+          new InternalError(
+            `Failed to find last processed message: ${this.formatSupabaseError(lastProcessedError)}`
+          )
+        );
+      }
+
+      let cutoffDate: string | null = null;
+
+      if (lastProcessed) {
+        // Use the timestamp of the last processed message as cutoff
+        // We'll get ALL messages AFTER this timestamp (from both users)
+        cutoffDate = lastProcessed.created_at;
+      } else {
+        // No processed messages found - get the first unprocessed message timestamp
+        const { data: firstUnprocessed, error: firstError } = await this.client
+          .from('messages')
+          .select('created_at')
+          .eq('chat_id', matchId)
+          .eq('sender_id', userId)
+          .is('profile_processed_at', null)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle<{ created_at: string }>();
+
+        if (firstError) {
+          return failure(
+            new InternalError(
+              `Failed to find first unprocessed message: ${this.formatSupabaseError(firstError)}`
+            )
+          );
+        }
+
+        // This should not happen since we already checked above, but handle it anyway
+        if (!firstUnprocessed) {
+          return success([]);
+        }
+
+        cutoffDate = firstUnprocessed.created_at;
+      }
+
+      // Step 2: Get all messages from the cutoff date onwards (from both users)
+      // This ensures we get the full conversation context, including messages from
+      // the other user that happened after (or at the same time as) the last processed message
+      // We use >= to include messages with the same timestamp, then filter out already processed ones
+      const { data, error } = await this.client
+        .from('messages')
+        .select(
+          'id, chat_id, sender_id, content, created_at, profile_processed_at'
+        )
+        .eq('chat_id', matchId)
+        .gte('created_at', cutoffDate) // Use >= to include messages at the same timestamp
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to fetch chat messages: ${this.formatSupabaseError(error)}`
+          )
+        );
+      }
+
+      if (!data) {
+        return success([]);
+      }
+
+      // Filter out messages from this user that have already been processed
+      // But keep messages from other users even if they have the same timestamp
+      // This ensures we get the full conversation context, including messages from
+      // the other user that happened after (or at the same time as) the last processed message
+      const filteredMessages = data.filter((row) => {
+        // If it's a message from this user and it's already processed, exclude it
+        if (row.sender_id === userId && row.profile_processed_at !== null) {
+          return false;
+        }
+        // Otherwise, include it (messages from other users or unprocessed messages from this user)
+        return true;
+      });
+
+      return success(filteredMessages.map((row) => this.mapRowToMessage(row)));
+    } catch (error) {
+      return failure(
+        new InternalError(
+          'Unexpected error fetching chat from first unprocessed message',
+          error
+        )
+      );
+    }
+  }
+
   async markAsProcessed(messageId: string): Promise<Result<void, DomainError>> {
     try {
       const { error } = await this.client

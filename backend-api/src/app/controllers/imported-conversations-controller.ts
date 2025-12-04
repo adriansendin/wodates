@@ -55,9 +55,16 @@ export class ImportedConversationsController {
 
       const body = RegisterUploadSchema.parse(request.body ?? {});
 
-      // Validate path format
-      const pathPattern = /^external_conversations\/[^/]+\/[^/]+\/upload\.zip$/;
-      if (!pathPattern.test(body.uploadZipPath)) {
+      // Validate path format - supports both old format (external_conversations/...)
+      // and new format ({userId}/{uuid}/upload.zip)
+      const oldPathPattern =
+        /^external_conversations\/[^/]+\/[^/]+\/upload\.zip$/;
+      const newPathPattern = /^[^/]+\/[^/]+\/upload\.zip$/;
+
+      if (
+        !oldPathPattern.test(body.uploadZipPath) &&
+        !newPathPattern.test(body.uploadZipPath)
+      ) {
         return reply.status(400).send({
           error: 'INVALID_PATH',
           message: 'Invalid upload path format.',
@@ -66,7 +73,10 @@ export class ImportedConversationsController {
 
       // Extract userId from path and verify it matches the authenticated user
       const pathParts = body.uploadZipPath.split('/');
-      const pathUserId = pathParts[1];
+      // For old format: external_conversations/{userId}/..., pathParts[1] is userId
+      // For new format: {userId}/..., pathParts[0] is userId
+      const pathUserId =
+        pathParts[0] === 'external_conversations' ? pathParts[1] : pathParts[0];
 
       if (pathUserId !== authUser.id) {
         return reply.status(403).send({

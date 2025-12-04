@@ -25,6 +25,20 @@ export interface MessageRepository {
     matchId: string
   ): Promise<Result<Message[], DomainError>>;
   /**
+   * Finds the first unprocessed message for a user in a match, then returns all messages
+   * from that point forward (including messages from both users, processed or not).
+   * This ensures the LLM has full context of the conversation from the user's first
+   * unprocessed message onwards.
+   *
+   * @param matchId - The match/chat ID
+   * @param userId - The user ID to find the first unprocessed message for
+   * @returns All messages from the first unprocessed message of the user onwards, ordered chronologically
+   */
+  findChatFromFirstUnprocessedMessage(
+    matchId: string,
+    userId: string
+  ): Promise<Result<Message[], DomainError>>;
+  /**
    * Marks a message as processed by setting profile_processed_at
    */
   markAsProcessed(messageId: string): Promise<Result<void, DomainError>>;

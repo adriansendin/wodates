@@ -9,10 +9,13 @@ import { MessageRepository } from '../../repositories/MessageRepository';
 import { MatchRepository } from '../../repositories/MatchRepository';
 
 /**
- * GetUnprocessedMessages - Gets unprocessed messages for a match
+ * GetUnprocessedMessages - Gets chat messages from the first unprocessed message of a user
  *
- * Reuses the validation logic from GetMessages but fetches only
- * messages where profile_processed_at IS NULL, ordered chronologically.
+ * This use case:
+ * 1. Validates that the match exists and user is part of it
+ * 2. Finds the first unprocessed message for the user in the match
+ * 3. Returns all messages from that point forward (including messages from both users,
+ *    processed or not) to provide full context for the LLM
  */
 export class GetUnprocessedMessages {
   constructor(
@@ -35,9 +38,13 @@ export class GetUnprocessedMessages {
       return failure(new ForbiddenError('User is not part of this match'));
     }
 
-    // Get unprocessed messages (ordered chronologically, no limit)
+    // Get all messages from the first unprocessed message of the user onwards
+    // This includes messages from both users (processed or not) for full context
     const messagesResult =
-      await this.messageRepository.findUnprocessedByMatchId(matchId);
+      await this.messageRepository.findChatFromFirstUnprocessedMessage(
+        matchId,
+        userId
+      );
     if (isFailure(messagesResult)) {
       return messagesResult;
     }

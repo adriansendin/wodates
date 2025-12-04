@@ -29,7 +29,7 @@ export class StorageService {
    * Uses SERVICE_ROLE_KEY for direct upload (same pattern as avatar upload)
    * @param _userId - The user ID
    * @param buffer - File buffer
-   * @param filePath - The file path within the bucket
+   * @param filePath - The file path within the bucket (without bucket name prefix)
    * @returns The storage path of the uploaded file
    */
   async uploadZipFile(
@@ -38,7 +38,7 @@ export class StorageService {
     filePath: string
   ): Promise<string> {
     try {
-      const BUCKET = 'external_conversations';
+      const BUCKET = 'external_chats';
 
       console.log(
         `[StorageService] Uploading ZIP: ${filePath}, Size: ${Math.round(buffer.length / 1024)}KB`

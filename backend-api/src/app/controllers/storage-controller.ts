@@ -1,13 +1,18 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { randomUUID, createHash } from 'crypto';
 import {
   DomainError,
   UnauthorizedError,
 } from '../../domain/errors/DomainError';
 import { StorageService } from '../services/storage-service';
+import { ExternalChatFilesService } from '../services/external-chat-files-service';
 
 export class StorageController {
-  constructor(private readonly storageService: StorageService) {}
+  constructor(
+    private readonly storageService: StorageService,
+    private readonly externalChatFilesService: ExternalChatFilesService
+  ) {}
 
   /**
    * Uploads a ZIP file to Supabase Storage
@@ -44,16 +49,22 @@ export class StorageController {
       if (data.file.bytesRead > MAX_FILE_SIZE) {
         return reply.status(400).send({
           error: 'FILE_TOO_LARGE',
-          message: 'File size must be less than 500 KB.',
+          message: 'Máximo permitido: 500 KB.\nNo subas contenido multimedia',
         });
       }
 
       // Convert stream to buffer
       const buffer = await data.toBuffer();
 
-      // Generate unique file path
-      const uuid = crypto.randomUUID();
-      const filePath = `external_conversations/${authUser.id}/${uuid}/upload.zip`;
+      // Generate unique file path (without bucket name prefix to avoid duplication)
+      const uuid = randomUUID();
+      const filePath = `${authUser.id}/${uuid}/upload.zip`;
+
+      // Calculate checksum (SHA256)
+      const checksum = createHash('sha256').update(buffer).digest('hex');
+
+      // Get original filename if available
+      const originalFilename = data.filename || null;
 
       // Upload to Supabase Storage
       const uploadedPath = await this.storageService.uploadZipFile(
@@ -62,9 +73,21 @@ export class StorageController {
         filePath
       );
 
+      // Register in external_chat_files table
+      const fileRecord = await this.externalChatFilesService.create({
+        userId: authUser.id,
+        filePath: uploadedPath,
+        ...(originalFilename && { originalFilename }),
+        fileSize: buffer.length,
+        checksum,
+        status: 'uploaded',
+      });
+
       return reply.send({
+        id: fileRecord.id,
         uploadZipPath: uploadedPath,
         fileSizeBytes: buffer.length,
+        createdAt: fileRecord.createdAt,
       });
     } catch (error) {
       return this.handleError(reply, error);

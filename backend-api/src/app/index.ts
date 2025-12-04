@@ -37,6 +37,7 @@ import { SupabaseUserRepository } from '../data/repositories/SupabaseUserReposit
 import { GetAllUserChats } from '../domain/use-cases/chat/GetAllUserChats';
 import { GetUnprocessedMessages } from '../domain/use-cases/chat/GetUnprocessedMessages';
 import { GenerateUserProfileFromChats } from '../domain/use-cases/chat/GenerateUserProfileFromChats';
+import { startJobScheduler } from './jobs/scheduler';
 
 async function buildApp() {
   const logLevel =
@@ -236,6 +237,11 @@ async function buildApp() {
   fastify.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
   });
+
+  // Start job scheduler (only in non-test environments)
+  if (process.env.NODE_ENV !== 'test') {
+    startJobScheduler();
+  }
 
   return fastify;
 }

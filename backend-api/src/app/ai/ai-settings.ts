@@ -121,16 +121,16 @@ export const AIConfig = {
     summarizerParameters: {
       num_ctx: process.env.OLLAMA_SUMMARIZER_NUM_CTX
         ? parseInt(process.env.OLLAMA_SUMMARIZER_NUM_CTX, 10)
-        : 2048, // Context window for profile summarization
+        : 32768, // Context window for profile summarization
       num_predict: process.env.OLLAMA_SUMMARIZER_NUM_PREDICT
         ? parseInt(process.env.OLLAMA_SUMMARIZER_NUM_PREDICT, 10)
-        : 1000, // Response length for summarization
+        : 1500, // Response length for summarization
       temperature: process.env.OLLAMA_SUMMARIZER_TEMPERATURE
         ? parseFloat(process.env.OLLAMA_SUMMARIZER_TEMPERATURE)
         : 0, // Temperature for summarization (lower = more deterministic)
       seed: process.env.OLLAMA_SUMMARIZER_SEED
         ? parseInt(process.env.OLLAMA_SUMMARIZER_SEED, 10)
-        : 1234, // Seed for deterministic outputs (default: 1234)
+        : 12345, // Seed for deterministic outputs (default: 1234)
       top_p: process.env.OLLAMA_SUMMARIZER_TOP_P
         ? parseFloat(process.env.OLLAMA_SUMMARIZER_TOP_P)
         : 1, // Top-p sampling for summarization (default: 1)
@@ -139,7 +139,7 @@ export const AIConfig = {
         : 1, // Top-k sampling for summarization (default: 1)
       repeat_penalty: process.env.OLLAMA_SUMMARIZER_REPEAT_PENALTY
         ? parseFloat(process.env.OLLAMA_SUMMARIZER_REPEAT_PENALTY)
-        : 1.1, // Repeat penalty for summarization (default: 1.1)
+        : 1.05, // Repeat penalty for summarization (default: 1.1)
     },
 
     /**
@@ -160,7 +160,7 @@ export const AIConfig = {
         : 0, // Temperature for merge operations (0 = deterministic)
       seed: process.env.OLLAMA_MERGE_SEED
         ? parseInt(process.env.OLLAMA_MERGE_SEED, 10)
-        : 1234, // Seed for deterministic outputs (default: 1234)
+        : 12345, // Seed for deterministic outputs (default: 1234)
       top_p: process.env.OLLAMA_MERGE_TOP_P
         ? parseFloat(process.env.OLLAMA_MERGE_TOP_P)
         : 1, // Top-p sampling for merge operations (default: 1)
@@ -279,49 +279,119 @@ Nunca, bajo ninguna circunstancia, hablas de ti como si fueras una persona o tuv
     summarizerInstructions: {
       /**
        * Base introduction for the summarizer
+       * Note: Empty since createNew prompt is self-contained with its own ROL section
        */
-      introduction: `Eres un analista de perfiles para matchmaking. Tu tarea es convertir conversaciones en un perfil descriptivo en texto natural, siguiendo un formato fijo. El perfil debe contener información concreta y útil para embeddings, sin ruido ni contenido adicional.`,
+      introduction: ``,
 
       /**
        * Instructions for creating a new summary (cuando no existe perfil previo)
        */
       createNew: `
-      Analiza EXCLUSIVAMENTE el contenido literal de las conversaciones y genera un perfil en español siguiendo el formato fijo de 11 secciones. 
+ROL:
+
+Eres un asistente experto en extracción factual y síntesis limpia para generar perfiles estructurados destinados a embeddings. Tu labor es convertir conversaciones tipo chat en información clara, normalizada y sin interpretaciones. No debes inventar ni inferir; solo transformar en texto estándar lo que está explícitamente dicho.
+
+CONTEXTO:
+
+Se te proporcionarán chats tipo WhatsApp con varios interlocutores. Solo uno de ellos lleva la marca "(MAIN)" tras su nombre. Ese es el usuario del que debes crear el perfil. El resto de participantes (usuarios o bots como Doc Love) sirven únicamente como contexto conversacional y deben ser ignorados para la extracción de datos.
 
 OBJETIVO:
-Crear un perfil estrictamente descriptivo basado SOLO en hechos explícitos (frases, datos y acciones mencionadas). No debes hacer interpretaciones, suposiciones, diagnósticos, ni conclusiones psicológicas.
 
-REGLAS DE EXTRACCIÓN (muy importantes):
-- Usa únicamente información concreta que aparezca literalmente en los mensajes.
-- Si un dato no aparece de forma clara y explícita, NO lo incluyas.
-- Prohibido inferir estados emocionales, traumas, timidez, ansiedad o interpretación subjetiva.
-- Prohibido embellecer, suavizar o dramatizar.
-- Prohibido combinar o reinterpretar frases.
-- Si el texto dice “miedo a los payasos”, no conviertas eso en “trío payaso”, “trauma familiar”, “preocupación”, ni variaciones.
-- Si el texto dice “comida asiática”, no lo conviertas en “especialidad”, “cocina china”, ni ampliaciones.
-- Si aparece una preferencia, menciónala tal cual sin añadir contexto adicional.
-- Si una sección no tiene NINGÚN dato explícito, escribe exactamente: “sin datos”.
+Construir un perfil estructurado en español, compuesto de 11 secciones fijas, usando únicamente datos explícitos expresados por el usuario marcado como "(MAIN)". El resultado será usado para generar embeddings para matching entre usuarios, por lo que debe ser limpio, directo y sin ruido.
 
-FORMATO (orden obligatorio, líneas individuales):
+REGLA PRINCIPAL:
+
+Extrae SOLO información de los mensajes escritos por el usuario marcado como "(MAIN)".
+
+Ignora por completo:
+
+- Lo que digan otros participantes.
+
+- Lo que otros digan SOBRE el usuario.
+
+- Cualquier dato no escrito explícitamente por el MAIN.
+
+- Cualquier tipo de interpretación psicológica, emocional o subjetiva.
+
+REGLAS DE EXTRACCIÓN:
+
+- Usa exclusivamente información clara y literal que el MAIN haya expresado.
+
+- Convierte esa información en frases limpias, correctas y normalizadas (sin faltas ni errores), manteniendo el mismo significado.
+
+- No interpretes ni deduzcas cosas no dichas.
+
+- No embellezcas, no suavices, no intensifiques, no transformes preferencias.
+
+- No mezcles frases para crear significados nuevos.
+
+- Si el MAIN dice "me gusta la comida asiática", escribe "Le gusta la comida asiática". No añadas nada más.
+
+- Si el MAIN menciona acciones ("el otro día haciendo escalada"), puedes registrarlo como un hecho ("Practica escalada" o "Menciona que hace escalada").
+
+- Elimina completamente los mensajes del MAIN que sean ruido conversacional:
+
+  "jajaja", "vale", "ok", "sí/no" sin contexto, "repite la pregunta", "eso suena raro", etc.
+
+- Si el MAIN habla de otras personas, incluye únicamente lo que eso dice sobre él/ella (por ejemplo, que tiene amigos), pero nunca perfiles a la otra persona.
+
+- En la sección final de "Frases textuales relevantes", las frases deben copiarse literalmente tal como aparezcan (con errores incluidos si los tuviera).
+
+SECCIONES (ORDEN OBLIGATORIO):
+
+El perfil debe contener exactamente estas 11 líneas, en este orden, con este encabezado exacto:
+
 Identidad básica: ...
+
 Estilo de comunicación: ...
+
 Personalidad: ...
+
 Gustos y preferencias: ...
+
 Disgustos y rechazos: ...
+
 Actividades y vida real: ...
+
 Trabajo y formación: ...
+
 Valores personales y relacionales: ...
+
 Preferencias en relaciones: ...
+
 Patrones de comportamiento: ...
+
 Frases textuales relevantes: ...
 
 REGLAS DE FORMATO:
-- Produce únicamente el perfil final, sin introducciones ni explicaciones.
-- Cada sección: 1–3 frases, máximo 50 palabras.
-- No uses listas, viñetas, markdown, JSON, tablas ni numeraciones.
-- En “Frases textuales relevantes”: transcribe entre 1 y 3 frases literales del usuario; si no hay, escribe “sin datos”.
 
-Ahora genera el perfil de usuario usando SOLO información explícita encontrada en las conversaciones.
+- Produce únicamente el perfil final, sin explicaciones ni texto adicional.
+
+- Cada sección debe tener de 1 a 3 frases, máximo 50 palabras por sección.
+
+- No uses listas, ni viñetas, ni markdown, ni tablas, ni JSON.
+
+- Si una sección NO tiene datos explícitos del MAIN, escribe exactamente: "sin datos".
+
+- "Frases textuales relevantes" debe contener de 1 a 3 frases literales del MAIN; si no existen, escribe "sin datos".
+
+INSTRUCCIONES DE TRABAJO:
+
+1. Identifica todos los mensajes del usuario marcado como "(MAIN)".
+
+2. Extrae solo información factual, relevante y explícita.
+
+3. Normaliza ortografía y estilo manteniendo significado literal.
+
+3. Descarta mensajes sin contenido útil (ruido).
+
+4. Construye las 10 primeras secciones con frases limpias, claras y sin interpretaciones.
+
+5. Copia entre 1 y 3 frases literales del MAIN en la última sección.
+
+6. Si no hay información para alguna sección, usa "sin datos".
+
+Ahora genera el perfil EXACTAMENTE con ese formato usando SOLO la información explícita de los mensajes del usuario marcado como "(MAIN)".
 `,
 
       /**

@@ -97,6 +97,10 @@ export class GenerateUserProfileFromChats {
       }
 
       // Step 4: Transform chats to SummarizerRequest format
+      // DISABLED: Detailed transformation logs removed for cleaner production logs
+      // console.log(
+      //   '[8.5.1] Transformando conversaciones a formato SummarizerRequest...'
+      // );
       const userData: { name?: string; bio?: string; birthDate?: string } = {};
       if (user.name !== undefined) {
         userData.name = user.name;
@@ -114,6 +118,20 @@ export class GenerateUserProfileFromChats {
         userData,
         undefined // No pasar previousSummary - generar resumen nuevo cada vez
       );
+
+      // Verificar que todas las conversaciones y mensajes se incluyeron
+      const totalMessages =
+        summarizerRequest.newContent.userChats?.reduce(
+          (sum, chat) => sum + chat.messages.length,
+          0
+        ) || 0;
+      // DISABLED: Detailed transformation logs removed for cleaner production logs
+      // console.log(
+      //   `[8.5.1] ✅ Transformación completada. Conversaciones procesadas: ${chats.length}`
+      // );
+      // console.log(
+      //   `[8.5.1] ✅ Total mensajes que se pasarán al LLM: ${totalMessages} (TODOS los mensajes de todas las conversaciones)`
+      // );
 
       // Step 5: Generate summary using SummarizerModel
       if (this.logger) {
@@ -254,6 +272,8 @@ export class GenerateUserProfileFromChats {
 
   /**
    * Transforms ProcessedChatSummary[] to SummarizerRequest format
+   * Now unified: all chats (Doc Love and regular users) are treated the same way
+   * Preserves senderName so LLM can distinguish who said what
    */
   private transformChatsToSummarizerRequest(
     chats: ProcessedChatSummary[],
@@ -261,57 +281,56 @@ export class GenerateUserProfileFromChats {
     user: { name?: string; bio?: string; birthDate?: string },
     previousSummary?: string
   ): SummarizerRequest {
-    const docLoveChats: Array<{
-      messages: Array<{
-        role: 'user' | 'assistant';
-        content: string;
-        timestamp: Date;
-      }>;
-    }> = [];
+    // DISABLED: Detailed transformation logs removed for cleaner production logs
+    // console.log(
+    //   '[8.5.2] Unificando conversaciones (Doc Love y usuarios regulares)...'
+    // );
 
+    // Unified structure: all chats go into userChats with senderName preserved
     const userChats: Array<{
       otherUserId: string;
+      otherUserName?: string;
       messages: Array<{
         role: 'user';
         content: string;
         timestamp: Date;
+        senderName?: string;
       }>;
     }> = [];
 
-    // Separate Doc Love chats from regular user chats
+    // Process all chats uniformly (no distinction between Doc Love and regular users)
     for (const chat of chats) {
-      if (chat.isDocLove) {
-        // For Doc Love chats, include both user and assistant messages
-        const messages = chat.messages.map((msg) => {
-          const isFromDocLove = msg.senderName === 'Doc Love';
-          return {
-            role: (isFromDocLove ? 'assistant' : 'user') as
-              | 'user'
-              | 'assistant',
-            content: msg.content,
-            timestamp: this.parseTimestamp(msg.timestamp),
-          };
-        });
-        docLoveChats.push({ messages });
-      } else {
-        // For regular user chats, only include messages from the user (not from the other person)
-        // The SummarizerModel expects only user messages in userChats
-        const userMessages = chat.messages
-          .filter((msg) => msg.senderName === user.name) // Only messages from the user
-          .map((msg) => ({
-            role: 'user' as const,
-            content: msg.content,
-            timestamp: this.parseTimestamp(msg.timestamp),
-          }));
+      // DISABLED: Detailed conversation processing logs removed for cleaner production logs
+      // console.log(
+      //   `[8.5.2.1] Procesando conversación con ${chat.otherUserName} (${chat.isDocLove ? 'Doc Love' : 'usuario regular'})`
+      // );
 
-        if (userMessages.length > 0) {
-          userChats.push({
-            otherUserId: chat.otherUserId,
-            messages: userMessages,
-          });
-        }
+      // Include ALL messages (from both users) in chronological order
+      // Preserve senderName so LLM can distinguish who said what
+      const allMessages = chat.messages.map((msg) => ({
+        role: 'user' as const,
+        content: msg.content,
+        timestamp: this.parseTimestamp(msg.timestamp),
+        senderName: msg.senderName, // Preserve sender name
+      }));
+
+      if (allMessages.length > 0) {
+        userChats.push({
+          otherUserId: chat.otherUserId,
+          otherUserName: chat.otherUserName,
+          messages: allMessages,
+        });
+        // DISABLED: Detailed conversation processing logs removed for cleaner production logs
+        // console.log(
+        //   `[8.5.2.1] ✅ Conversación procesada: ${allMessages.length} mensajes`
+        // );
       }
     }
+
+    // DISABLED: Detailed transformation logs removed for cleaner production logs
+    // console.log(
+    //   `[8.5.2] ✅ Total conversaciones unificadas: ${userChats.length}`
+    // );
 
     // Calculate age from birthDate if available
     let age: number | undefined;
@@ -329,9 +348,7 @@ export class GenerateUserProfileFromChats {
     }
 
     const newContent: SummarizerRequest['newContent'] = {};
-    if (docLoveChats.length > 0) {
-      newContent.docLoveChats = docLoveChats;
-    }
+    // All chats now go into userChats (unified structure)
     if (userChats.length > 0) {
       newContent.userChats = userChats;
     }
@@ -409,12 +426,13 @@ export class GenerateUserProfileFromChats {
     prompt += mergePrompt;
 
     // LOGGING DEL PROMPT COMPLETO POR CONSOLA (Crucial para debug)
-    console.log('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB');
-    console.log('\n🔀 PROMPT DE MERGE (ANTES DE ENVIAR AL LLM):');
-    console.log('═'.repeat(80));
-    console.log(prompt);
-    console.log('═'.repeat(80));
-    console.log('');
+    // DISABLED: Prompts and conversations should NOT be logged to avoid exposing sensitive data
+    // console.log('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB');
+    // console.log('\n🔀 PROMPT DE MERGE (ANTES DE ENVIAR AL LLM):');
+    // console.log('═'.repeat(80));
+    // console.log(prompt);
+    // console.log('═'.repeat(80));
+    // console.log('');
 
     // LOGGING DEL PROMPT (Crucial para debug)
     if (this.logger) {
@@ -480,26 +498,19 @@ export class GenerateUserProfileFromChats {
         requestBody.repeat_penalty = mergeParams.repeat_penalty;
       }
 
-      // Log parameters before LLM call
-      console.log('\n🔧 LLM CALL PARAMETERS (Merge - mergeSummaries)');
-      console.log('─'.repeat(60));
-      console.log(`   Model: ${model}`);
-      console.log(`   Temperature: ${requestBody.temperature ?? 'not set'}`);
-      console.log(`   Seed: ${requestBody.seed ?? 'not set'}`);
-      console.log(`   num_predict: ${requestBody.num_predict ?? 'not set'}`);
-      console.log(`   num_ctx: ${requestBody.num_ctx ?? 'not set'}`);
-      if (requestBody.top_p !== undefined) {
-        console.log(`   top_p: ${requestBody.top_p}`);
-      }
-      if (requestBody.top_k !== undefined) {
-        console.log(`   top_k: ${requestBody.top_k}`);
-      }
-      if (requestBody.repeat_penalty !== undefined) {
-        console.log(`   repeat_penalty: ${requestBody.repeat_penalty}`);
-      }
-      console.log(`   Prompt length: ${prompt.length} characters`);
-      console.log('─'.repeat(60));
-      console.log('');
+      // Consolidated log: LLM call parameters in single line
+      const params = [
+        `Model: ${model}`,
+        `Temp: ${requestBody.temperature ?? 'not set'}`,
+        `Seed: ${requestBody.seed ?? 'not set'}`,
+        `num_predict: ${requestBody.num_predict ?? 'not set'}`,
+        `num_ctx: ${requestBody.num_ctx ?? 'not set'}`,
+        requestBody.top_p !== undefined ? `top_p: ${requestBody.top_p}` : null,
+        requestBody.top_k !== undefined ? `top_k: ${requestBody.top_k}` : null,
+        requestBody.repeat_penalty !== undefined ? `repeat_penalty: ${requestBody.repeat_penalty}` : null,
+        `Prompt length: ${prompt.length} chars`
+      ].filter(Boolean).join(', ');
+      console.log(`🔧 LLM CALL (Merge - mergeSummaries): ${params}`);
 
       const response = await fetch(`${baseUrl}/api/generate`, {
         method: 'POST',

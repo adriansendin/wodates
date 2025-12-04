@@ -26,6 +26,7 @@ export interface SummarizerRequest {
         role: 'user' | 'assistant';
         content: string;
         timestamp: Date;
+        senderName?: string; // Name of the sender (for display in prompt)
       }>;
     }>;
 
@@ -34,7 +35,13 @@ export interface SummarizerRequest {
      */
     userChats?: Array<{
       otherUserId: string;
-      messages: Array<{ role: 'user'; content: string; timestamp: Date }>;
+      otherUserName?: string; // Name of the other user (for display in prompt)
+      messages: Array<{
+        role: 'user';
+        content: string;
+        timestamp: Date;
+        senderName?: string; // Name of the sender (for display in prompt)
+      }>;
     }>;
 
     /**
@@ -42,7 +49,12 @@ export interface SummarizerRequest {
      */
     importedConversations?: Array<{
       source: string;
-      messages: Array<{ role: 'user'; content: string; timestamp: Date }>;
+      messages: Array<{
+        role: 'user';
+        content: string;
+        timestamp: Date;
+        senderName?: string; // Name of the sender (for display in prompt and marking MAIN)
+      }>;
     }>;
   };
 

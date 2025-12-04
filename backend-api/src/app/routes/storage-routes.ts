@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { StorageController } from '../controllers/storage-controller';
 import { StorageService } from '../services/storage-service';
+import { ExternalChatFilesService } from '../services/external-chat-files-service';
 import { ImportedConversationsController } from '../controllers/imported-conversations-controller';
 
 declare module 'fastify' {
@@ -11,7 +12,11 @@ declare module 'fastify' {
 
 export async function storageRoutes(fastify: FastifyInstance) {
   const storageService = new StorageService();
-  const storageController = new StorageController(storageService);
+  const externalChatFilesService = new ExternalChatFilesService();
+  const storageController = new StorageController(
+    storageService,
+    externalChatFilesService
+  );
   const importedConversationsController = new ImportedConversationsController();
 
   // Upload ZIP file (same pattern as avatar upload)
@@ -27,10 +32,12 @@ export async function storageRoutes(fastify: FastifyInstance) {
           200: {
             type: 'object',
             properties: {
+              id: { type: 'string', format: 'uuid' },
               uploadZipPath: { type: 'string' },
               fileSizeBytes: { type: 'number' },
+              createdAt: { type: 'string', format: 'date-time' },
             },
-            required: ['uploadZipPath', 'fileSizeBytes'],
+            required: ['id', 'uploadZipPath', 'fileSizeBytes', 'createdAt'],
           },
         },
       },
