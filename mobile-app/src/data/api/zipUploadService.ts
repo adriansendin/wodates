@@ -29,7 +29,7 @@ function validateZipFile(
 
   // Check file size
   if (file.size && file.size > MAX_FILE_SIZE_BYTES) {
-    return 'Máximo permitido: 500 KB';
+    return 'Máximo permitido: 500 KB.\nNo subas contenido multimedia';
   }
 
   // Check file extension (fallback if MIME type is not available)
@@ -97,6 +97,7 @@ export async function pickZipFile(): Promise<
 
 /**
  * Uploads a ZIP file to the backend API, which handles Supabase Storage upload
+ * and automatically registers it in external_chat_files table
  * Same pattern as avatar upload
  * @param file - The ZIP file to upload
  * @returns {Promise<Result<{ uploadZipPath: string; fileSizeBytes: number }, DomainError>>}
@@ -161,9 +162,13 @@ async function uploadZipToBackend(
           fetchError
         );
         // Fallback: try to use file object directly if available (some DocumentPicker implementations expose it)
-        if ((file as any).file instanceof File) {
+        interface FileWithFile extends DocumentPicker.DocumentPickerAsset {
+          file?: File;
+        }
+        const fileWithFile = file as FileWithFile;
+        if (fileWithFile.file instanceof File) {
           console.log('[ZipUploadService] Using file object directly');
-          formData.append('file', (file as any).file);
+          formData.append('file', fileWithFile.file);
         } else {
           console.error(
             '[ZipUploadService] No file object available, throwing error'
@@ -202,79 +207,32 @@ async function uploadZipToBackend(
     );
 
     console.log('[ZipUploadService] Upload successful:', response.data);
+    // Backend now returns id and createdAt, but we keep the same return structure for compatibility
     return success({
       uploadZipPath: response.data.uploadZipPath,
       fileSizeBytes: response.data.fileSizeBytes,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[ZipUploadService] Error uploading ZIP:', error);
-    console.error('[ZipUploadService] Error details:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-    });
 
-    if (error.response) {
-      const message =
-        error.response.data?.message || 'Error al subir el archivo.';
-      return failure(new UploadError(message, error));
+    if (axios.isAxiosError(error)) {
+      console.error('[ZipUploadService] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+
+      if (error.response) {
+        const message =
+          error.response.data?.message || 'Error al subir el archivo.';
+        return failure(new UploadError(message, error));
+      }
     }
 
     return failure(
       new UploadError(
         'Error inesperado al subir el archivo. Inténtalo de nuevo.',
-        error
-      )
-    );
-  }
-}
-
-/**
- * Registers the uploaded file in the imported_conversations table
- * @param uploadZipPath - The path of the uploaded file
- * @param fileSizeBytes - The size of the file in bytes
- * @returns {Promise<Result<void, DomainError>>}
- */
-async function registerUpload(
-  uploadZipPath: string,
-  fileSizeBytes: number
-): Promise<Result<void, DomainError>> {
-  try {
-    const tokens = useAuthStore.getState().tokens;
-    if (!tokens?.accessToken) {
-      return failure(new UploadError('No authentication token available'));
-    }
-
-    await axios.post(
-      `${API_URL}/storage/register-upload`,
-      {
-        uploadZipPath,
-        fileSizeBytes,
-        source: 'whatsapp',
-        ingress: 'doclove',
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${tokens.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    return success(undefined);
-  } catch (error: any) {
-    console.error('[ZipUploadService] Error registering upload:', error);
-
-    if (error.response) {
-      const message =
-        error.response.data?.message || 'No se pudo registrar la subida.';
-      return failure(new UploadError(message, error));
-    }
-
-    return failure(
-      new UploadError(
-        'Error inesperado al registrar la subida. Inténtalo de nuevo.',
-        error
+        error instanceof Error ? error : new Error(String(error))
       )
     );
   }
@@ -285,27 +243,20 @@ async function registerUpload(
  * @param file - The ZIP file to upload
  * @returns {Promise<Result<string, DomainError>>} Result with success message or error
  */
+/**
+ * Uploads a ZIP file to Supabase Storage via backend
+ * The backend automatically registers the file in external_chat_files table
+ * @param file - The ZIP file to upload
+ * @returns {Promise<Result<string, DomainError>>} Result with success message or error
+ */
 export async function uploadZipFile(
   file: DocumentPicker.DocumentPickerAsset
 ): Promise<Result<string, DomainError>> {
   try {
-    // Step 1: Upload file to backend (backend uploads to Supabase Storage)
+    // Upload file to backend (backend uploads to Supabase Storage and registers in external_chat_files)
     const uploadResult = await uploadZipToBackend(file);
     if (!uploadResult.success) {
       return failure(uploadResult.error);
-    }
-
-    const { uploadZipPath, fileSizeBytes } = uploadResult.data;
-
-    // Step 2: Register upload in database
-    const registerResult = await registerUpload(uploadZipPath, fileSizeBytes);
-    if (!registerResult.success) {
-      // Note: File is already uploaded, but registration failed
-      // We still return success since the file is in storage
-      console.warn(
-        '[ZipUploadService] File uploaded but registration failed:',
-        registerResult.error
-      );
     }
 
     return success('Subido con éxito.');

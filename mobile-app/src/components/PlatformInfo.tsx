@@ -1,9 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 
 interface PlatformInfoProps {
   message?: string;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 /**

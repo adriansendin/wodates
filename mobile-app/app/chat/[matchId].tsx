@@ -138,6 +138,9 @@ export default function ChatScreen() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isUploadingZip, setIsUploadingZip] = useState(false);
+  const [showUploadSuccessModal, setShowUploadSuccessModal] = useState(false);
+  const [showUploadErrorModal, setShowUploadErrorModal] = useState(false);
+  const [uploadErrorMessage, setUploadErrorMessage] = useState<string>('');
   const flatListRef = useRef<FlatList<Message>>(null);
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -403,7 +406,6 @@ export default function ChatScreen() {
       return;
     }
 
-    setIsUploadingZip(true);
     clearError();
 
     try {
@@ -414,7 +416,8 @@ export default function ChatScreen() {
       
       if (!pickResult.success) {
         console.error('[ChatScreen] Pick failed:', pickResult.error);
-        Alert.alert('Error', pickResult.error.message);
+        setUploadErrorMessage(pickResult.error.message);
+        setShowUploadErrorModal(true);
         setError(pickResult.error.message);
         return;
       }
@@ -422,32 +425,36 @@ export default function ChatScreen() {
       if (!pickResult.data) {
         // User cancelled
         console.log('[ChatScreen] User cancelled file pick');
-        setIsUploadingZip(false);
         return;
       }
 
+      // Now start uploading - set loading state
+      setIsUploadingZip(true);
       console.log('[ChatScreen] Step 2: Uploading ZIP file...', { fileName: pickResult.data.name, fileSize: pickResult.data.size });
       // Step 2: Upload ZIP file
       const uploadResult = await uploadZipFile(pickResult.data);
       console.log('[ChatScreen] Upload result:', { success: uploadResult.success });
       
+      setIsUploadingZip(false); // Hide loading
+      
       if (!uploadResult.success) {
         console.error('[ChatScreen] Upload failed:', uploadResult.error);
-        Alert.alert('Error', uploadResult.error.message);
+        setUploadErrorMessage(uploadResult.error.message);
+        setShowUploadErrorModal(true);
         setError(uploadResult.error.message);
         return;
       }
 
       // Step 3: Show success message
       console.log('[ChatScreen] Upload successful!');
-      Alert.alert('Éxito', uploadResult.data);
+      setShowUploadSuccessModal(true);
     } catch (error) {
       console.error('[ChatScreen] Error uploading ZIP:', error);
-      const errorMessage = 'No se pudo subir. Inténtalo de nuevo.';
-      Alert.alert('Error', errorMessage);
-      setError(errorMessage);
-    } finally {
+      const errorMessage = error instanceof Error ? error.message : 'No se pudo subir. Inténtalo de nuevo.';
       setIsUploadingZip(false);
+      setUploadErrorMessage(errorMessage);
+      setShowUploadErrorModal(true);
+      setError(errorMessage);
     }
   }, [user?.id, isUploadingZip, isBlocked, clearError, setError]);
 
@@ -702,6 +709,69 @@ export default function ChatScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Upload Success Modal */}
+      <Modal
+        visible={showUploadSuccessModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowUploadSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Ionicons name="checkmark-circle" size={64} color="#4caf50" style={styles.successIcon} />
+            <Text style={styles.modalTitle}>¡Archivo subido!</Text>
+            <Text style={styles.modalText}>
+              Tu archivo se ha subido correctamente.
+            </Text>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonConfirm]}
+              onPress={() => setShowUploadSuccessModal(false)}
+            >
+              <Text style={styles.modalButtonTextConfirm}>Aceptar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Upload Error Modal */}
+      <Modal
+        visible={showUploadErrorModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowUploadErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Ionicons name="close-circle" size={64} color="#f44336" style={styles.successIcon} />
+            <Text style={styles.modalTitle}>Error al subir archivo</Text>
+            <View style={styles.modalTextContainer}>
+              {uploadErrorMessage ? (
+                uploadErrorMessage.includes('Máximo permitido') ? (
+                  <>
+                    <Text style={styles.modalText}>Máximo permitido: 500 KB.</Text>
+                    <Text style={styles.modalText}>No subas contenido multimedia</Text>
+                  </>
+                ) : (
+                  <Text style={styles.modalText}>
+                    {uploadErrorMessage}
+                  </Text>
+                )
+              ) : (
+                <Text style={styles.modalText}>
+                  No se pudo subir el archivo. Inténtalo de nuevo.
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonConfirm]}
+              onPress={() => setShowUploadErrorModal(false)}
+            >
+              <Text style={styles.modalButtonTextConfirm}>Aceptar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -879,10 +949,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
+  modalTextContainer: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
   modalText: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 24,
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -947,5 +1020,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
     maxWidth: 180,
+  },
+  successIcon: {
+    marginBottom: 16,
+    alignSelf: 'center',
   },
 });

@@ -97,7 +97,12 @@ async function processAllUsers() {
     process.exit(1);
   }
 
-  console.log(`\n🚀 Starting batch processing for ${USER_IDS.length} user(s)\n`);
+  // Start timing
+  const startTime = performance.now();
+  const startDate = new Date();
+
+  console.log(`\n🚀 Starting batch processing for ${USER_IDS.length} user(s)`);
+  console.log(`⏰ Start time: ${startDate.toISOString()}\n`);
 
   let successCount = 0;
   let errorCount = 0;
@@ -121,6 +126,13 @@ async function processAllUsers() {
     }
   }
 
+  // End timing
+  const endTime = performance.now();
+  const endDate = new Date();
+  const totalTimeMs = endTime - startTime;
+  const totalTimeSeconds = (totalTimeMs / 1000).toFixed(2);
+  const averageTimePerUserMs = successCount > 0 ? (totalTimeMs / successCount).toFixed(2) : '0.00';
+
   // Summary
   console.log('\n' + '='.repeat(60));
   console.log('📊 SUMMARY');
@@ -128,6 +140,11 @@ async function processAllUsers() {
   console.log(`Total users processed: ${USER_IDS.length}`);
   console.log(`✅ Successful: ${successCount}`);
   console.log(`❌ Failed: ${errorCount}`);
+  console.log('─'.repeat(60));
+  console.log(`⏰ Start time: ${startDate.toISOString()}`);
+  console.log(`⏰ End time: ${endDate.toISOString()}`);
+  console.log(`⏱️  Total execution time: ${totalTimeSeconds}s (${totalTimeMs.toFixed(2)}ms)`);
+  console.log(`⏱️  Average time per user: ${averageTimePerUserMs}ms`);
   console.log('='.repeat(60) + '\n');
 
   if (errorCount > 0) {

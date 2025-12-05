@@ -288,11 +288,11 @@ export async function uploadAvatarToBackend(
     console.log('[ImageService] Upload successful:', avatarUrl);
 
     return success(avatarUrl);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[ImageService] Unexpected error uploading avatar:', error);
 
     // Handle axios error format
-    if (error.response) {
+    if (axios.isAxiosError(error) && error.response) {
       const message =
         error.response.data?.message || 'Error al subir la imagen.';
       return failure(new UploadError(message, error));
@@ -301,7 +301,7 @@ export async function uploadAvatarToBackend(
     return failure(
       new UploadError(
         'Error inesperado al subir la imagen. Inténtalo de nuevo.',
-        error
+        error instanceof Error ? error : new Error(String(error))
       )
     );
   }

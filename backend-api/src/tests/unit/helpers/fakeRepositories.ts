@@ -302,6 +302,101 @@ export class TestMessageRepository implements MessageRepository {
     return success(messages);
   }
 
+  async findChatFromFirstUnprocessedMessage(
+    matchId: string,
+    userId: string
+  ): Promise<Result<Message[], DomainError>> {
+    // Step 0: FIRST check if this user has ANY unprocessed messages written by them
+    // If the user hasn't written any new messages, we shouldn't process anything
+    const hasUnprocessed = Array.from(this.messages.values()).some(
+      (message) =>
+        message.matchId === matchId &&
+        message.senderId === userId &&
+        (message.profileProcessedAt === null ||
+          message.profileProcessedAt === undefined)
+    );
+
+    // If the user has no unprocessed messages written by them, return empty array
+    if (!hasUnprocessed) {
+      return success([]);
+    }
+
+    // Find the LAST processed message for this user in this match
+    // This gives us the cutoff point: we need ALL messages AFTER this point
+    const lastProcessed = Array.from(this.messages.values())
+      .filter(
+        (message) =>
+          message.matchId === matchId &&
+          message.senderId === userId &&
+          message.profileProcessedAt !== null &&
+          message.profileProcessedAt !== undefined
+      )
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA; // descending order
+      })[0];
+
+    let cutoffDate: string | null = null;
+
+    if (lastProcessed) {
+      cutoffDate = lastProcessed.createdAt;
+    } else {
+      // No processed messages found - get the first unprocessed message timestamp
+      const firstUnprocessed = Array.from(this.messages.values())
+        .filter(
+          (message) =>
+            message.matchId === matchId &&
+            message.senderId === userId &&
+            (message.profileProcessedAt === null ||
+              message.profileProcessedAt === undefined)
+        )
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return dateA - dateB; // ascending order
+        })[0];
+
+      // This should not happen since we already checked above, but handle it anyway
+      if (!firstUnprocessed) {
+        return success([]);
+      }
+
+      cutoffDate = firstUnprocessed.createdAt;
+    }
+
+    // Get all messages from the cutoff date onwards (from both users)
+    const allMessages = Array.from(this.messages.values())
+      .filter(
+        (message) =>
+          message.matchId === matchId &&
+          new Date(message.createdAt).getTime() >=
+            new Date(cutoffDate!).getTime()
+      )
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateA - dateB; // ascending order
+      });
+
+    // Filter out messages from this user that have already been processed
+    // But keep messages from other users even if they have the same timestamp
+    const filteredMessages = allMessages.filter((message) => {
+      // If it's a message from this user and it's already processed, exclude it
+      if (
+        message.senderId === userId &&
+        message.profileProcessedAt !== null &&
+        message.profileProcessedAt !== undefined
+      ) {
+        return false;
+      }
+      // Otherwise, include it (messages from other users or unprocessed messages from this user)
+      return true;
+    });
+
+    return success(filteredMessages);
+  }
+
   async markAsProcessed(messageId: string): Promise<Result<void, DomainError>> {
     const message = this.messages.get(messageId);
     if (!message) {

@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 // Only used on native platforms (ios/android)
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 
@@ -8,7 +15,7 @@ interface AgeRangePickerProps {
   maxAge: number;
   onRangeChange: (min: number, max: number) => void;
   disabled?: boolean;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 const MIN_AGE = 18;

@@ -141,10 +141,22 @@ export class GetAllUserChats {
           })
         );
 
-        // Mark messages as processed
-        const messageIds = unprocessedMessages.map((msg) => msg.id);
-        const markResult =
-          await this.messageRepository.markManyAsProcessed(messageIds);
+        // Mark messages as processed - ONLY messages sent by the current user that are not yet processed
+        // This ensures that when processing user B, their messages won't be marked as processed
+        const userMessageIds = unprocessedMessages
+          .filter(
+            (msg) => msg.senderId === userId && msg.profileProcessedAt === null
+          )
+          .map((msg) => msg.id);
+
+        let markResult;
+        if (userMessageIds.length > 0) {
+          markResult =
+            await this.messageRepository.markManyAsProcessed(userMessageIds);
+        } else {
+          // No messages to mark as processed (all user's messages already processed or no user messages)
+          markResult = { success: true };
+        }
 
         if (!markResult.success) {
           if (this.logger) {
@@ -152,7 +164,7 @@ export class GetAllUserChats {
               {
                 matchId: match.id,
                 userId,
-                messageIds,
+                messageIds: userMessageIds,
                 error: markResult.error,
               },
               'Failed to mark messages as processed, but messages were already retrieved'

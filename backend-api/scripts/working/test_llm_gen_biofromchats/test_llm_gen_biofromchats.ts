@@ -5,14 +5,19 @@
  * 1. Displays all unprocessed chats for the user (once at the beginning)
  * 2. For each LLM model in the predefined list:
  *    - Executes the profile generation process 5 times
+ *    - BEFORE each execution, resets messages as unprocessed (SET profile_processed_at = NULL WHERE sender_id = ...)
+ *      This ensures all executions process the same data for valid comparison
  *    - After the 5th execution, resets the summary field (SET summary = NULL WHERE user_id = ...)
  *    - This allows testing the merge functionality between summary and summary_incremental
  *    - Executions 2-5 will perform merge operations (since summary will have content)
  * 
- * All logs are saved to a single text file for easy comparison and evaluation.
+ * IMPORTANT: Messages are reset before each execution to ensure all 5 executions process the same data.
+ * This is critical for valid performance comparison between executions.
+ * 
+ * All logs are saved to a single text file in the same directory for easy comparison and evaluation.
  * 
  * Usage:
- *   npx tsx scripts/working/test_llm_gen_biofromchats.ts
+ *   npx tsx scripts/working/test_llm_gen_biofromchats/test_llm_gen_biofromchats.ts
  * 
  * Note: User ID and model list are hardcoded in this script.
  */
@@ -22,22 +27,21 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
-import { DocLoveHelper } from '../../src/app/services/doc-love-helper';
-import { SupabaseMatchRepository } from '../../src/data/repositories/SupabaseMatchRepository';
-import { SupabaseUserRepository } from '../../src/data/repositories/SupabaseUserRepository';
-import { SupabaseMessageRepository } from '../../src/data/repositories/SupabaseMessageRepository';
-import { SupabaseUserAIProfileRepository } from '../../src/data/repositories/SupabaseUserAIProfileRepository';
-import { GetAllUserChats } from '../../src/domain/use-cases/chat/GetAllUserChats';
-import { GetUnprocessedMessages } from '../../src/domain/use-cases/chat/GetUnprocessedMessages';
-import { GenerateUserProfileFromChats } from '../../src/domain/use-cases/chat/GenerateUserProfileFromChats';
-import { createSummarizerModel } from '../../src/app/ai/core/config';
+import { DocLoveHelper } from '../../../src/app/services/doc-love-helper';
+import { SupabaseMatchRepository } from '../../../src/data/repositories/SupabaseMatchRepository';
+import { SupabaseUserRepository } from '../../../src/data/repositories/SupabaseUserRepository';
+import { SupabaseMessageRepository } from '../../../src/data/repositories/SupabaseMessageRepository';
+import { SupabaseUserAIProfileRepository } from '../../../src/data/repositories/SupabaseUserAIProfileRepository';
+import { GetAllUserChats } from '../../../src/domain/use-cases/chat/GetAllUserChats';
+import { GetUnprocessedMessages } from '../../../src/domain/use-cases/chat/GetUnprocessedMessages';
+import { GenerateUserProfileFromChats } from '../../../src/domain/use-cases/chat/GenerateUserProfileFromChats';
+import { createSummarizerModel } from '../../../src/app/ai/core/config';
 
 // List of LLM models to test
 const MODELS = [
-  'qwen2.5:7b',
-  'gemma:7b',
-  'qwen2.5:3b',
+  'gemma3:1b',
   'gemma3:4b',
+  'ministral-3:3b',
 ];
 
 
@@ -82,6 +86,58 @@ async function executeResetSummaryQuery(config: SupabaseConfig, userId: string, 
     writeToLog('[OK] [v2] Successfully executed UPDATE query');
   } catch (error) {
     writeToLog(`[ERROR] [v2] Failed to execute UPDATE query: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  }
+}
+
+async function executeResetMessagesQuery(config: SupabaseConfig, userId: string, writeToLog: (msg: string) => void): Promise<void> {
+  try {
+    writeToLog(`\n[RESET] [v2] Resetting messages as unprocessed: UPDATE public.messages SET profile_processed_at = NULL WHERE sender_id = '${userId}'`);
+    const client = createClient(config.url, config.serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // First, count how many messages will be affected
+    const { count, error: countError } = await client
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('sender_id', userId)
+      .not('profile_processed_at', 'is', null);
+
+    if (countError) {
+      writeToLog(`[ERROR] [v2] Error counting messages: ${countError.message}`);
+      throw countError;
+    }
+
+    const messagesToReset = count || 0;
+
+    if (messagesToReset === 0) {
+      writeToLog('[INFO] [v2] No processed messages found to reset (all messages are already unprocessed)');
+      return;
+    }
+
+    writeToLog(`[INFO] [v2] Found ${messagesToReset} processed message(s) to reset`);
+
+    // Reset profile_processed_at to NULL for all messages sent by this user
+    const { data, error } = await client
+      .from('messages')
+      .update({ profile_processed_at: null })
+      .eq('sender_id', userId)
+      .not('profile_processed_at', 'is', null)
+      .select('id');
+
+    if (error) {
+      writeToLog(`[ERROR] [v2] Error resetting messages: ${error.message}`);
+      throw error;
+    }
+
+    const resetCount = data?.length || 0;
+    writeToLog(`[OK] [v2] Successfully reset ${resetCount} message(s) as unprocessed`);
+  } catch (error) {
+    writeToLog(`[ERROR] [v2] Failed to reset messages: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
 }
@@ -336,7 +392,7 @@ async function main() {
   // Hardcoded user ID
   const userId = '8e1139a4-e3ec-4e4c-964b-a98ad5417f71';
 
-  // Create log file with fixed name
+  // Create log file with fixed name (in the same directory as the script)
   const logFileName = 'test_llm_gen_biofromchats.txt';
   const logFilePath = path.join(__dirname, logFileName);
   const logStream = fs.createWriteStream(logFilePath, { 
@@ -376,6 +432,7 @@ async function main() {
   writeToLog(`[START] [v2] Starting batch profile generation for user: ${userId}`);
   writeToLog(`[INFO] [v2] Will test ${MODELS.length} models: ${MODELS.join(', ')}`);
   writeToLog(`[EXEC] [v2] Each model will be executed 5 times`);
+  writeToLog(`[INFO] [v2] Messages will be reset as unprocessed BEFORE each execution (ensures all executions process same data)`);
   writeToLog(`[INFO] [v2] Summary will be reset only after the 5th execution of each model (to test merge functionality)`);
   writeToLog('─'.repeat(80));
   writeToLog('');
@@ -406,6 +463,7 @@ async function main() {
       writeToLog(`\n${'█'.repeat(80)}`);
       writeToLog(`[STATS] [v2] Model ${modelNumber}/${MODELS.length}: ${modelName}`);
       writeToLog(`[EXEC] [v2] Will execute ${executionsPerModel} times`);
+      writeToLog(`[INFO] [v2] Messages will be reset BEFORE each execution (ensures valid comparison)`);
       writeToLog(`[INFO] [v2] Summary will be reset only after execution ${executionsPerModel}`);
       writeToLog(`${'█'.repeat(80)}`);
 
@@ -417,6 +475,16 @@ async function main() {
         writeToLog(`\n${'─'.repeat(80)}`);
         writeToLog(`[EXEC] [v2] Execution ${execution}/${executionsPerModel} for model ${modelName}`);
         writeToLog(`${'─'.repeat(80)}`);
+
+        // CRITICAL: Reset messages as unprocessed BEFORE each execution
+        // This ensures all executions process the same data for valid comparison
+        writeToLog(`\n[RESET] [v2] Resetting messages as unprocessed before execution ${execution}/${executionsPerModel}...`);
+        try {
+          await executeResetMessagesQuery(config, userId, writeToLog);
+        } catch (resetError) {
+          writeToLog(`[WARN] [v2] Warning: Could not reset messages before execution ${execution}, but continuing...`);
+          // Continue anyway - if messages are already unprocessed, that's fine
+        }
 
         try {
           await executeProfileGenerationForModel(modelName, userId, config, writeToLog, logFilePath);
