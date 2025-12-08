@@ -119,12 +119,6 @@ export class GenerateUserProfileFromChats {
         undefined // No pasar previousSummary - generar resumen nuevo cada vez
       );
 
-      // Verificar que todas las conversaciones y mensajes se incluyeron
-      const totalMessages =
-        summarizerRequest.newContent.userChats?.reduce(
-          (sum, chat) => sum + chat.messages.length,
-          0
-        ) || 0;
       // DISABLED: Detailed transformation logs removed for cleaner production logs
       // console.log(
       //   `[8.5.1] ✅ Transformación completada. Conversaciones procesadas: ${chats.length}`
@@ -507,9 +501,13 @@ export class GenerateUserProfileFromChats {
         `num_ctx: ${requestBody.num_ctx ?? 'not set'}`,
         requestBody.top_p !== undefined ? `top_p: ${requestBody.top_p}` : null,
         requestBody.top_k !== undefined ? `top_k: ${requestBody.top_k}` : null,
-        requestBody.repeat_penalty !== undefined ? `repeat_penalty: ${requestBody.repeat_penalty}` : null,
-        `Prompt length: ${prompt.length} chars`
-      ].filter(Boolean).join(', ');
+        requestBody.repeat_penalty !== undefined
+          ? `repeat_penalty: ${requestBody.repeat_penalty}`
+          : null,
+        `Prompt length: ${prompt.length} chars`,
+      ]
+        .filter(Boolean)
+        .join(', ');
       console.log(`🔧 LLM CALL (Merge - mergeSummaries): ${params}`);
 
       const response = await fetch(`${baseUrl}/api/generate`, {

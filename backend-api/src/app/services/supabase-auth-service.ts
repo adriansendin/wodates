@@ -150,6 +150,13 @@ export class SupabaseAuthService implements AuthService {
           this.ensureUserIsActive(data.user);
           return this.mapUser(data.user);
         }
+
+        if (error) {
+          console.error(
+            '[SupabaseAuthService] signInWithPassword error:',
+            error
+          );
+        }
       }
 
       // Fallback: just confirm the user exists in Supabase Auth.
@@ -159,6 +166,7 @@ export class SupabaseAuthService implements AuthService {
       });
 
       if (error) {
+        console.error('[SupabaseAuthService] listUsers error:', error);
         throw new UnauthorizedError('Invalid email or password');
       }
 

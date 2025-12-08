@@ -349,9 +349,13 @@ export class SummarizerModelOllama implements SummarizerModel {
         `num_ctx: ${requestBody.num_ctx ?? 'not set'}`,
         requestBody.top_p !== undefined ? `top_p: ${requestBody.top_p}` : null,
         requestBody.top_k !== undefined ? `top_k: ${requestBody.top_k}` : null,
-        requestBody.repeat_penalty !== undefined ? `repeat_penalty: ${requestBody.repeat_penalty}` : null,
-        `Prompt length: ${prompt.length} chars`
-      ].filter(Boolean).join(', ');
+        requestBody.repeat_penalty !== undefined
+          ? `repeat_penalty: ${requestBody.repeat_penalty}`
+          : null,
+        `Prompt length: ${prompt.length} chars`,
+      ]
+        .filter(Boolean)
+        .join(', ');
       console.log(`🔧 LLM CALL (Summarizer - createNew): ${params}`);
 
       // DISABLED: Detailed DEBUG logs removed to avoid exposing sensitive data

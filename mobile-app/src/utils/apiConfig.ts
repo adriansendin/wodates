@@ -29,23 +29,38 @@ export function getApiUrl(): string {
     `http://localhost:${port}`
   );
 
-  // On web, always use localhost instead of IP addresses
-  // This avoids CORS and network issues in browsers
+  // On web, check if we're accessing from localhost or from network IP
+  // If accessing from network IP (like iPhone), use the IP address
+  // If accessing from localhost, use localhost for the API
   try {
-    if (Platform.OS === 'web') {
-      console.log(
-        `[getApiUrl] Web platform detected: ${configuredUrl} -> ${localhostUrl}`
+    if (Platform.OS === 'web' || typeof window !== 'undefined') {
+      // Check if the current page is being accessed via IP address
+      const currentHost =
+        typeof window !== 'undefined' ? window.location.hostname : '';
+      const isAccessingViaIP = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(
+        currentHost
       );
-      return localhostUrl;
+
+      if (isAccessingViaIP) {
+        // Accessing from network IP (like iPhone), use IP address for API
+        console.log(
+          `[getApiUrl] Web platform detected, accessing via IP ${currentHost}, using IP for API: ${configuredUrl}`
+        );
+        return configuredUrl;
+      } else {
+        // Accessing from localhost, use localhost for API
+        console.log(
+          `[getApiUrl] Web platform detected, accessing via localhost, using localhost for API: ${localhostUrl}`
+        );
+        return localhostUrl;
+      }
     }
   } catch (error) {
-    // Platform might not be available, check if we're in a browser environment
-    if (typeof window !== 'undefined') {
-      console.log(
-        `[getApiUrl] Browser environment detected (Platform unavailable): ${configuredUrl} -> ${localhostUrl}`
-      );
-      return localhostUrl;
-    }
+    // If we can't determine, default to using configured URL (safer for network access)
+    console.warn(
+      `[getApiUrl] Could not determine access method, using configured URL: ${configuredUrl}`
+    );
+    return configuredUrl;
   }
 
   // On iOS/Android, check if running in simulator/emulator

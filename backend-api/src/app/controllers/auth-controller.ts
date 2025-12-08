@@ -66,6 +66,8 @@ export class AuthController {
 
       const { email, password } = LoginSchema.parse(request.body);
 
+      request.log.info({ email }, 'Validating credentials');
+
       const user = await this.authService.validateCredentials(email, password);
       const token = this.generateToken(user.id, user.email);
 

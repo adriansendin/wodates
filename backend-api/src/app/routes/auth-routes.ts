@@ -26,7 +26,14 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
   fastify: FastifyInstance,
   options: AuthRoutesOptions
 ) => {
-  const authService = options?.authService ?? new SupabaseAuthService();
+  let authService: AuthService;
+  try {
+    authService = options?.authService ?? new SupabaseAuthService();
+    fastify.log.info('SupabaseAuthService initialized successfully');
+  } catch (error) {
+    fastify.log.error({ error }, 'Failed to initialize SupabaseAuthService');
+    throw error;
+  }
 
   // Initialize SystemUserService for welcome matches with Doc Love
   const docLoveHelper = new DocLoveHelper();

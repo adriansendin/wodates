@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
+import os from 'os';
 import multipart from '@fastify/multipart';
 import { registerCors } from './plugins/cors';
 import { registerRateLimit } from './plugins/rate-limit';
@@ -259,7 +260,20 @@ async function start() {
     console.log(`🔗 Health check: http://localhost:${port}/health`);
     console.log(`🌐 Listening on all interfaces (0.0.0.0:${port})`);
     console.log(`   - Local: http://localhost:${port}`);
-    console.log(`   - Network: http://192.168.1.11:${port} (or your local IP)`);
+    
+    // Try to detect and display the actual local IP
+    const networkInterfaces = os.networkInterfaces();
+    let localIP = 'YOUR_LOCAL_IP';
+    for (const interfaceName of Object.keys(networkInterfaces)) {
+      for (const iface of networkInterfaces[interfaceName] || []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          localIP = iface.address;
+          break;
+        }
+      }
+      if (localIP !== 'YOUR_LOCAL_IP') break;
+    }
+    console.log(`   - Network: http://${localIP}:${port} (use this on your iPhone)`);
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);

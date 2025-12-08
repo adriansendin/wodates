@@ -1,0 +1,62 @@
+# ===========================================
+# DEPENDENCIES
+# ===========================================
+node_modules/
+
+# ===========================================
+# BUILD OUTPUTS & COMPILATION
+# ===========================================
+# Backend TypeScript compilation output
+backend-api/dist/
+backend-api/build/
+backend-api/*.tsbuildinfo
+
+# Mobile app native builds
+mobile-app/android/app/build/
+mobile-app/android/build/
+mobile-app/ios/build/
+mobile-app/web-build/
+
+# ===========================================
+# TESTING COVERAGE & ARTIFACTS
+# ===========================================
+coverage/
+.nyc_output/
+.vitest/
+test-results/
+playwright-report/
+test-results.xml
+jest-cache/
+
+# ===========================================
+# CACHE & TOOLING ARTIFACTS
+# ===========================================
+# Expo cache
+.expo/
+.expo-shared/
+
+# Other caches
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.turbo/
+
+# ===========================================
+# GENERATED FILES & CONFIGURATION
+# ===========================================
+# TypeScript build info
+*.tsbuildinfo
+
+# Metro bundler
+.metro-health-check*
+
+# ===========================================
+# TEMPORARY & LOG FILES
+# ===========================================
+*.log
+*.tmp
+*.temp
+logs/
+tmp/
+temp/

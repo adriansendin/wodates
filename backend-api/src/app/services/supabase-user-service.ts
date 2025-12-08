@@ -20,6 +20,7 @@ type UserProfileRow = {
   city: string | null;
   avatar_url: string | null;
   show_bio_in_feed: boolean | null;
+  face_reference_ready: boolean | null;
 };
 
 export type UserProfile = {
@@ -35,6 +36,7 @@ export type UserProfile = {
   city: string | null;
   avatarUrl: string | null;
   show_bio_in_feed: boolean | null;
+  face_reference_ready: boolean | null;
 };
 
 export type UpdateUserProfileInput = {
@@ -47,6 +49,7 @@ export type UpdateUserProfileInput = {
   city?: string | null;
   avatarUrl?: string | null;
   show_bio_in_feed?: boolean | null;
+  face_reference_ready?: boolean | null;
 };
 
 /**
@@ -127,6 +130,9 @@ export class SupabaseUserService {
       if ('show_bio_in_feed' in input) {
         updatePayload.show_bio_in_feed = input.show_bio_in_feed ?? null;
       }
+      if ('face_reference_ready' in input) {
+        updatePayload.face_reference_ready = input.face_reference_ready ?? null;
+      }
 
       if (Object.keys(updatePayload).length === 0) {
         // Get auth user data even if no profile updates
@@ -139,7 +145,7 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed'
+          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed, face_reference_ready'
         )
         .single();
 
@@ -205,7 +211,7 @@ export class SupabaseUserService {
       .from('users')
       .upsert(defaults, { onConflict: 'id' })
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed, face_reference_ready'
       )
       .single();
 
@@ -232,7 +238,7 @@ export class SupabaseUserService {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed, face_reference_ready'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -363,6 +369,7 @@ export class SupabaseUserService {
       city: row.city,
       avatarUrl: this.sanitizeAvatarUrl(row.avatar_url),
       show_bio_in_feed: row.show_bio_in_feed,
+      face_reference_ready: row.face_reference_ready ?? false,
     };
   }
 
