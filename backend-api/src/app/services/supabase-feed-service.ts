@@ -22,7 +22,6 @@ type FeedUserRow = {
   birthDate: string | null;
   gender: string | null;
   bio: string | null;
-  avatar_url: string | null;
 };
 
 type CurrentUserRow = {
@@ -68,7 +67,7 @@ export class SupabaseFeedService {
 
       let query = this.client
         .from('users')
-        .select('id, birthDate, gender, bio, avatar_url') // Removed 'name' - comes from auth.users
+        .select('id, birthDate, gender, bio') // Removed 'name' and 'avatar_url' - name comes from auth.users, photo from user_photos
         .neq('id', userId)
         .lt('active_chats_count', 3) // Exclude users with 3 or more active chats
         .or('is_bot.is.null,is_bot.eq.false') // Exclude bots (system users)
@@ -103,7 +102,7 @@ export class SupabaseFeedService {
             return null;
           }
 
-          return this.mapRowToCandidate({ ...row, name: identity.name });
+          return await this.mapRowToCandidate({ ...row, name: identity.name });
         })
       );
 
@@ -250,12 +249,12 @@ export class SupabaseFeedService {
     }
   }
 
-  private mapRowToCandidate(row: FeedUserRow): FeedCandidate {
+  private async mapRowToCandidate(row: FeedUserRow): Promise<FeedCandidate> {
     const gender = this.normalizeGender(row.gender);
     const birthDate = this.normalizeDate(row.birthDate);
     const bio = this.truncateBio(row.bio);
     const age = birthDate ? this.calculateAge(birthDate) : null;
-    const photoUrl = this.normalizeUrl(row.avatar_url);
+    const photoUrl = await this.getMainPhotoUrl(row.id);
 
     return {
       id: row.id,
@@ -266,6 +265,25 @@ export class SupabaseFeedService {
       gender,
       photoUrl,
     };
+  }
+
+  private async getMainPhotoUrl(userId: string): Promise<string | null> {
+    try {
+      const { data, error } = await this.client
+        .from('user_photos')
+        .select('public_url')
+        .eq('user_id', userId)
+        .eq('is_main', true)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return this.normalizeUrl(data.public_url);
+    } catch {
+      return null;
+    }
   }
 
   private normalizeGender(value: string | null): Gender | null {

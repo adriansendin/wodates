@@ -139,48 +139,33 @@ export class SupabaseAuthService implements AuthService {
     password: string
   ): Promise<AuthUser> {
     try {
-      // First try a proper password check if we have an anon key configured.
-      if (this.anonClient) {
-        const { data, error } = await this.anonClient.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (!error && data.user) {
-          this.ensureUserIsActive(data.user);
-          return this.mapUser(data.user);
-        }
-
-        if (error) {
-          console.error(
-            '[SupabaseAuthService] signInWithPassword error:',
-            error
-          );
-        }
+      // We MUST use signInWithPassword to properly validate the password
+      // The Admin API cannot validate passwords, so we require anonClient
+      if (!this.anonClient) {
+        throw new InternalError(
+          'Authentication service is not properly configured. SUPABASE_ANON_KEY is required to validate passwords.'
+        );
       }
 
-      // Fallback: just confirm the user exists in Supabase Auth.
-      const { data, error } = await this.adminClient.auth.admin.listUsers({
-        page: 1,
-        perPage: 100,
+      // Use signInWithPassword to properly validate email and password
+      const { data, error } = await this.anonClient.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      if (error) {
-        console.error('[SupabaseAuthService] listUsers error:', error);
+      // If signInWithPassword fails, the credentials are invalid
+      if (error || !data.user) {
+        // Log the error for debugging but don't expose details to user
+        console.warn(
+          '[SupabaseAuthService] signInWithPassword failed:',
+          error?.message || error?.code || 'Unknown error'
+        );
         throw new UnauthorizedError('Invalid email or password');
       }
 
-      const matchedUser = data?.users?.find(
-        (candidate) => candidate.email?.toLowerCase() === email.toLowerCase()
-      );
-
-      if (!matchedUser) {
-        throw new UnauthorizedError('Invalid email or password');
-      }
-
-      this.ensureUserIsActive(matchedUser);
-
-      return this.mapUser(matchedUser);
+      // Credentials are valid, ensure user is active
+      this.ensureUserIsActive(data.user);
+      return this.mapUser(data.user);
     } catch (error) {
       if (error instanceof DomainError) {
         throw error;

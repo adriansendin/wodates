@@ -24,55 +24,99 @@ const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024;
  * @returns {Promise<string>} The URI of the compressed image
  */
 async function compressImageIfNeeded(uri: string): Promise<string> {
-  // Get file info to check size
-  const response = await fetch(uri);
-  const blob = await response.blob();
+  let originalSizeKB = 0;
+  
+  try {
+    console.log('[ImageService] compressImageIfNeeded called with URI:', uri);
+    
+    // Get file info to check size
+    console.log('[ImageService] Fetching blob to check size...');
+    const response = await fetch(uri);
+    
+    if (!response.ok) {
+      console.error('[ImageService] Failed to fetch blob, status:', response.status, response.statusText);
+      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    originalSizeKB = Math.round(blob.size / 1024);
 
-  if (blob.size <= MAX_IMAGE_SIZE_BYTES) {
-    return uri; // Image is already small enough
+    console.log(`[ImageService] Original image size: ${originalSizeKB}KB, limit: ${MAX_IMAGE_SIZE_KB}KB, type: ${blob.type}`);
+
+    if (blob.size <= MAX_IMAGE_SIZE_BYTES) {
+      console.log('[ImageService] Image is already within size limit, no compression needed');
+      return uri; // Image is already small enough
+    }
+  } catch (error) {
+    console.error('[ImageService] Error checking image size:', error);
+    // If we can't check the size, return the original URI and let the upload handle it
+    console.warn('[ImageService] Returning original URI due to error, compression skipped');
+    return uri;
   }
 
   console.log(
-    `[ImageService] Image size: ${Math.round(blob.size / 1024)}KB, compressing...`
+    `[ImageService] Image size: ${originalSizeKB}KB exceeds ${MAX_IMAGE_SIZE_KB}KB limit, compressing...`
   );
 
-  // Start with quality 0.8 and reduce if needed
-  let quality = 0.8;
+  // Start with quality 0.7 and reduce more aggressively
+  let quality = 0.7;
   let compressedUri = uri;
   let attempts = 0;
-  const maxAttempts = 5;
+  const maxAttempts = 6; // Increased attempts
 
   while (attempts < maxAttempts) {
-    const result = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 800 } }], // Resize to max width 800px
-      { compress: quality, format: ImageManipulator.SaveFormat.JPEG }
-    );
-
-    const compressedResponse = await fetch(result.uri);
-    const compressedBlob = await compressedResponse.blob();
-
-    console.log(
-      `[ImageService] Attempt ${attempts + 1}: Quality ${quality}, Size: ${Math.round(compressedBlob.size / 1024)}KB`
-    );
-
-    if (compressedBlob.size <= MAX_IMAGE_SIZE_BYTES) {
-      compressedUri = result.uri;
-      console.log(
-        `[ImageService] Compression successful: ${Math.round(compressedBlob.size / 1024)}KB`
+    try {
+      const result = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 800 } }], // Resize to max width 800px
+        { compress: quality, format: ImageManipulator.SaveFormat.JPEG }
       );
-      break;
-    }
 
-    quality -= 0.15;
-    attempts++;
+      const compressedResponse = await fetch(result.uri);
+      const compressedBlob = await compressedResponse.blob();
+      const compressedSizeKB = Math.round(compressedBlob.size / 1024);
 
-    if (quality < 0.1) {
-      console.warn('[ImageService] Could not compress image below 500KB');
-      compressedUri = result.uri; // Use the best we could get
-      break;
+      console.log(
+        `[ImageService] Attempt ${attempts + 1}: Quality ${quality.toFixed(2)}, Size: ${compressedSizeKB}KB (${originalSizeKB}KB → ${compressedSizeKB}KB)`
+      );
+
+      if (compressedBlob.size <= MAX_IMAGE_SIZE_BYTES) {
+        compressedUri = result.uri;
+        console.log(
+          `[ImageService] ✓ Compression successful: ${compressedSizeKB}KB (reduced from ${originalSizeKB}KB)`
+        );
+        break;
+      }
+
+      // Reduce quality more aggressively
+      quality -= 0.2;
+      attempts++;
+
+      if (quality < 0.1) {
+        const finalSizeKB = Math.round(compressedBlob.size / 1024);
+        console.warn(
+          `[ImageService] ⚠ Could not compress image below ${MAX_IMAGE_SIZE_KB}KB. Best result: ${finalSizeKB}KB`
+        );
+        compressedUri = result.uri; // Use the best we could get
+        break;
+      }
+    } catch (error) {
+      console.error(`[ImageService] Compression attempt ${attempts + 1} failed:`, error);
+      // If compression fails, try with lower quality
+      quality -= 0.2;
+      attempts++;
+      if (attempts >= maxAttempts) {
+        console.error('[ImageService] All compression attempts failed, using original');
+        return uri; // Return original if all attempts fail
+      }
     }
   }
+
+  // Final verification
+  const finalResponse = await fetch(compressedUri);
+  const finalBlob = await finalResponse.blob();
+  const finalSizeKB = Math.round(finalBlob.size / 1024);
+  console.log(`[ImageService] Final compressed image size: ${finalSizeKB}KB`);
 
   return compressedUri;
 }
@@ -97,24 +141,155 @@ async function requestCameraPermissions(): Promise<boolean> {
 
 /**
  * Picks an image from web file input
+ * @param useCamera - If true, use camera capture attribute for mobile web
  * @returns {Promise<string | null>} Image URI or null if cancelled
  */
-async function pickImageFromWeb(): Promise<string | null> {
-  return new Promise((resolve) => {
+async function pickImageFromWeb(useCamera: boolean = false): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    console.log('[ImageService] pickImageFromWeb called, useCamera:', useCamera);
+    
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    const isChromeIOS = /CriOS/i.test(userAgent);
+    const isSecure =
+      (typeof window !== 'undefined' && window.isSecureContext) ||
+      (typeof location !== 'undefined' &&
+        (location.protocol === 'https:' || location.hostname === 'localhost'));
+
+    // Chrome en iOS bloquea cámara/capture en orígenes no seguros. Forzamos galería.
+    const shouldDisableCapture = useCamera && isChromeIOS && !isSecure;
+    if (shouldDisableCapture) {
+      console.warn(
+        '[ImageService] Capture disabled on Chrome iOS without HTTPS/localhost. Falling back to gallery picker.',
+      );
+    }
+    
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+    
+    // For mobile web, use capture attribute to access camera directly
+    if (useCamera && !shouldDisableCapture) {
+      input.capture = 'environment'; // Use back camera
+      console.log('[ImageService] Using camera capture for mobile web');
+    }
+    
+    let resolved = false;
+    
+    const cleanup = () => {
+      if (input.parentNode) {
+        input.parentNode.removeChild(input);
+      }
+    };
+    
     input.onchange = async (event) => {
-      const file = (event.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const uri = URL.createObjectURL(file);
-        const compressedUri = await compressImageIfNeeded(uri);
-        resolve(compressedUri);
-      } else {
+      console.log('[ImageService] File input onChange event fired');
+      
+      if (resolved) {
+        console.warn('[ImageService] onChange called after promise was already resolved');
+        return;
+      }
+      
+      try {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        console.log('[ImageService] File from input:', file ? {
+          name: file.name,
+          size: Math.round(file.size / 1024) + 'KB',
+          type: file.type,
+          lastModified: new Date(file.lastModified).toISOString()
+        } : 'null');
+        
+        if (file) {
+          const sizeKB = Math.round(file.size / 1024);
+          console.log('[ImageService] Reading file...', {
+            name: file.name,
+            sizeKB,
+            type: file.type,
+            isChromeIOS,
+          });
+
+          const reader = new FileReader();
+
+          reader.onload = async () => {
+            try {
+              const dataUri = reader.result as string;
+              console.log('[ImageService] FileReader onload, data URI length:', dataUri?.length || 0);
+              let finalUri = dataUri;
+
+              if (isChromeIOS) {
+                console.log('[ImageService] Chrome iOS detected, skipping compression and returning data URI directly');
+              } else {
+                try {
+                  console.log('[ImageService] Starting image compression from data URL...');
+                  finalUri = await compressImageIfNeeded(dataUri);
+                  console.log('[ImageService] Image compression completed, compressed URI:', finalUri);
+                } catch (compressionError) {
+                  // If compression fails, fall back to the original data URL
+                  console.error('[ImageService] Compression failed, using original data URI:', compressionError);
+                  finalUri = dataUri;
+                }
+              }
+
+              resolved = true;
+              cleanup();
+              resolve(finalUri);
+            } catch (readError) {
+              console.error('[ImageService] Error processing file reader result:', readError);
+              resolved = true;
+              cleanup();
+              reject(readError);
+            }
+          };
+
+          reader.onerror = (readError) => {
+            console.error('[ImageService] FileReader error:', readError);
+            if (!resolved) {
+              resolved = true;
+              cleanup();
+              reject(readError);
+            }
+          };
+
+          reader.readAsDataURL(file);
+        } else {
+          console.log('[ImageService] No file selected, user cancelled');
+          resolved = true;
+          cleanup();
+          resolve(null);
+        }
+      } catch (error) {
+        console.error('[ImageService] Error in onChange handler:', error);
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          reject(error);
+        }
+      }
+    };
+    
+    input.onerror = (error) => {
+      console.error('[ImageService] Error with file input:', error);
+      if (!resolved) {
+        resolved = true;
+        cleanup();
         resolve(null);
       }
     };
+    
+    // Add input to DOM temporarily (some browsers require this)
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    
+    console.log('[ImageService] Clicking file input...');
+    console.log('[ImageService] Awaiting user interaction (camera/gallery)...');
     input.click();
+    
+    // Cleanup after a delay if nothing happened (fallback)
+    setTimeout(() => {
+      if (!resolved) {
+        console.warn('[ImageService] File input timeout - no response after 5 seconds');
+        // Don't resolve here, let the user interaction complete
+      }
+    }, 5000);
   });
 }
 
@@ -129,7 +304,7 @@ export async function pickImageFromGallery(): Promise<
   try {
     // Check if running on web
     if (Platform.OS === 'web') {
-      const uri = await pickImageFromWeb();
+      const uri = await pickImageFromWeb(false); // false = gallery, not camera
       return success(uri);
     }
 
@@ -180,9 +355,35 @@ export async function takePictureWithCamera(): Promise<
   try {
     // Check if running on web
     if (Platform.OS === 'web') {
-      // For web, we'll use the same file picker but with a different message
-      const uri = await pickImageFromWeb();
-      return success(uri);
+      // For web (including mobile web), use file input with camera capture attribute
+      console.log('[ImageService] takePictureWithCamera called on web, using camera capture');
+      try {
+        const uri = await pickImageFromWeb(true); // true = use camera, may fallback to gallery
+        if (!uri) {
+          console.log('[ImageService] User cancelled camera capture');
+          return success(null);
+        }
+      console.log('[ImageService] Camera capture successful, URI length:', uri.length);
+        return success(uri);
+      } catch (error) {
+        console.error('[ImageService] Error in pickImageFromWeb for camera, falling back to gallery:', error);
+        try {
+          const fallbackUri = await pickImageFromWeb(false);
+          if (!fallbackUri) {
+            console.log('[ImageService] User cancelled gallery fallback after camera error');
+            return success(null);
+          }
+          return success(fallbackUri);
+        } catch (fallbackError) {
+          console.error('[ImageService] Gallery fallback also failed:', fallbackError);
+          return failure(
+            new CameraError(
+              'Error al tomar la foto. Inténtalo de nuevo.',
+              fallbackError instanceof Error ? fallbackError : new Error(String(fallbackError))
+            )
+          );
+        }
+      }
     }
 
     const hasPermission = await requestCameraPermissions();

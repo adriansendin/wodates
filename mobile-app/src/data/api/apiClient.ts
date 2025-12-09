@@ -19,20 +19,10 @@ export class ApiClient {
     this.client = axios.create({
       baseURL,
       timeout: 10000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      // Don't set Content-Type by default - we'll set it per request
     });
 
-    // Request interceptor to add auth token
-    this.client.interceptors.request.use(
-      (config) => {
-        // In v0.1, we'll add token from store
-        // For now, we'll handle this in the individual API calls
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
+    // Request interceptor - no longer needed since we handle Content-Type in post method
 
     // Response interceptor for error handling
     this.client.interceptors.response.use(
@@ -81,10 +71,24 @@ export class ApiClient {
       const fullUrl = `${this.client.defaults.baseURL}${url}`;
       console.log(`[ApiClient] POST ${fullUrl}`, {
         data: data ? '***' : undefined,
+        isFormData: data instanceof FormData,
       });
 
+      const headers: Record<string, string | undefined> = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
+
+      // For FormData, explicitly don't set Content-Type - let browser/axios set it with boundary
+      // For other data, set Content-Type to application/json
+      if (data instanceof FormData) {
+        // Explicitly set to undefined so axios doesn't use the default
+        headers['Content-Type'] = undefined;
+      } else {
+        headers['Content-Type'] = 'application/json';
+      }
+
       const response: AxiosResponse<T> = await this.client.post(url, data, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers,
       });
       return success(response.data);
     } catch (error) {
@@ -141,6 +145,20 @@ export class ApiClient {
   ): Promise<Result<T, DomainError>> {
     try {
       const response: AxiosResponse<T> = await this.client.put(url, data, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      return success(response.data);
+    } catch (error) {
+      return failure(this.handleError(error));
+    }
+  }
+
+  async delete<T>(
+    url: string,
+    token?: string
+  ): Promise<Result<T, DomainError>> {
+    try {
+      const response: AxiosResponse<T> = await this.client.delete(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       return success(response.data);

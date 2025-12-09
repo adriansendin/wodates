@@ -31,7 +31,6 @@ type UserRow = {
   bio: string | null;
   birthDate: string | null;
   gender: string | null;
-  avatar_url: string | null;
   is_bot: boolean | null;
 };
 
@@ -122,7 +121,7 @@ export class MatchOverviewService {
     // Get profile data from public.users
     const { data: userRows, error: userError } = await this.client
       .from('users')
-      .select('id, bio, birthDate, gender, avatar_url, is_bot')
+      .select('id, bio, birthDate, gender, is_bot')
       .in('id', Array.from(otherUserIds));
 
     if (userError) {
@@ -169,6 +168,10 @@ export class MatchOverviewService {
         lastMessage = lastMessageResult.data[0];
       }
 
+      const photoUrl = otherUserRow
+        ? await this.getMainPhotoUrl(otherUserRow.id)
+        : null;
+
       overviews.push({
         ...(match as any),
         otherUser:
@@ -177,7 +180,7 @@ export class MatchOverviewService {
                 id: otherUserRow.id,
                 name: this.extractDisplayName(otherAuthUser),
                 bio: otherUserRow.bio,
-                photoUrl: this.normalizeUrl(otherUserRow.avatar_url),
+                photoUrl: photoUrl ? this.normalizeUrl(photoUrl) : null,
                 birthDate: otherUserRow.birthDate,
                 gender: otherUserRow.gender,
                 isBot: otherUserRow.is_bot ?? false,
@@ -257,6 +260,25 @@ export class MatchOverviewService {
         : '';
 
     return displayName || authUser.email || 'User';
+  }
+
+  private async getMainPhotoUrl(userId: string): Promise<string | null> {
+    try {
+      const { data, error } = await this.client
+        .from('user_photos')
+        .select('public_url')
+        .eq('user_id', userId)
+        .eq('is_main', true)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return this.normalizeUrl(data.public_url);
+    } catch {
+      return null;
+    }
   }
 
   private normalizeUrl(value: string | null): string | null {

@@ -104,7 +104,6 @@ export class SupabaseUserRepository implements UserRepository {
     max_age: number | null;
     bio: string | null;
     city: string | null;
-    avatarUrl: string | null;
     show_bio_in_feed: boolean | null;
   }): User {
     // Map to User entity schema
@@ -126,7 +125,7 @@ export class SupabaseUserRepository implements UserRepository {
       birthDate: profile.birthDate || now, // Required field, use now as fallback
       gender: validGender, // Required field
       bio: profile.bio || undefined,
-      photoUrl: profile.avatarUrl || undefined,
+      photoUrl: undefined, // Photo URL now comes from user_photos, not profile
       location: profile.city
         ? {
             city: profile.city,
@@ -148,7 +147,6 @@ export class SupabaseUserRepository implements UserRepository {
     max_age?: number | null;
     bio?: string | null;
     city?: string | null;
-    avatarUrl?: string | null;
     show_bio_in_feed?: boolean | null;
   } {
     return {
@@ -159,7 +157,6 @@ export class SupabaseUserRepository implements UserRepository {
       max_age: null, // Not in User entity, set to null instead of undefined
       bio: user.bio ?? null,
       city: user.location?.city ?? null,
-      avatarUrl: user.photoUrl ?? null,
       show_bio_in_feed: null, // Not in User entity, set to null instead of undefined
     };
   }

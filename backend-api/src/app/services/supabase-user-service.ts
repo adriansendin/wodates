@@ -18,7 +18,6 @@ type UserProfileRow = {
   max_age: number | null;
   bio: string | null;
   city: string | null;
-  avatar_url: string | null;
   show_bio_in_feed: boolean | null;
   face_reference_ready: boolean | null;
 };
@@ -34,7 +33,6 @@ export type UserProfile = {
   max_age: number | null;
   bio: string | null;
   city: string | null;
-  avatarUrl: string | null;
   show_bio_in_feed: boolean | null;
   face_reference_ready: boolean | null;
 };
@@ -47,7 +45,6 @@ export type UpdateUserProfileInput = {
   max_age?: number | null;
   bio?: string | null;
   city?: string | null;
-  avatarUrl?: string | null;
   show_bio_in_feed?: boolean | null;
   face_reference_ready?: boolean | null;
 };
@@ -124,9 +121,6 @@ export class SupabaseUserService {
       if ('city' in input) {
         updatePayload.city = input.city ?? null;
       }
-      if ('avatarUrl' in input) {
-        updatePayload.avatar_url = this.sanitizeAvatarUrl(input.avatarUrl);
-      }
       if ('show_bio_in_feed' in input) {
         updatePayload.show_bio_in_feed = input.show_bio_in_feed ?? null;
       }
@@ -145,7 +139,7 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed, face_reference_ready'
+          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, face_reference_ready'
         )
         .single();
 
@@ -211,7 +205,7 @@ export class SupabaseUserService {
       .from('users')
       .upsert(defaults, { onConflict: 'id' })
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed, face_reference_ready'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, face_reference_ready'
       )
       .single();
 
@@ -238,7 +232,7 @@ export class SupabaseUserService {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, avatar_url, show_bio_in_feed, face_reference_ready'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, face_reference_ready'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -295,8 +289,6 @@ export class SupabaseUserService {
         ? metadata.bio.trim() || null
         : null;
 
-    const avatarUrl = this.resolveAvatarUrl(metadata);
-
     return {
       id: userId,
       // name and email are no longer stored in public.users
@@ -307,7 +299,6 @@ export class SupabaseUserService {
       max_age: null,
       bio,
       city,
-      avatar_url: avatarUrl,
       show_bio_in_feed: true, // Default to true as per database schema
     };
   }
@@ -367,7 +358,6 @@ export class SupabaseUserService {
       max_age: row.max_age,
       bio: row.bio,
       city: row.city,
-      avatarUrl: this.sanitizeAvatarUrl(row.avatar_url),
       show_bio_in_feed: row.show_bio_in_feed,
       face_reference_ready: row.face_reference_ready ?? false,
     };
@@ -467,53 +457,6 @@ export class SupabaseUserService {
         `Failed to block chat partners: ${this.formatSupabaseError(error)}`,
         error
       );
-    }
-  }
-
-  private resolveAvatarUrl(
-    metadata: Record<string, unknown> | null
-  ): string | null {
-    if (!metadata) {
-      return null;
-    }
-
-    const candidateKeys = [
-      'avatar_url',
-      'avatarUrl',
-      'picture',
-      'photoUrl',
-      'image',
-      'image_url',
-    ];
-
-    for (const key of candidateKeys) {
-      const value = metadata[key];
-      if (typeof value === 'string') {
-        const sanitized = this.sanitizeAvatarUrl(value);
-        if (sanitized) {
-          return sanitized;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  private sanitizeAvatarUrl(value: string | null | undefined): string | null {
-    if (!value) {
-      return null;
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-
-    try {
-      const url = new URL(trimmed);
-      return url.toString();
-    } catch {
-      return null;
     }
   }
 

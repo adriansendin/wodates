@@ -17,7 +17,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AvatarPicker } from '../../src/components/AvatarPicker';
+import { useUserPhotos } from '../../src/features/profile/photos/useUserPhotos';
 import { AgeRangePicker } from '../../src/components/AgeRangePicker';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
@@ -37,7 +37,6 @@ import {
 import {
   pickImageFromGallery,
   takePictureWithCamera,
-  uploadAvatarToBackend,
 } from '../../src/data/api/imageService';
 import { getSupabaseClient } from '../../src/data/api/supabaseClient';
 import { getApiUrl } from '../../src/utils/apiConfig';
@@ -156,10 +155,8 @@ export default function ProfileScreen() {
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
-  const avatarUri = useMemo(
-    () => profile?.avatarUrl ?? null,
-    [profile?.avatarUrl],
-  );
+  const { photos: userPhotos } = useUserPhotos(user?.id || null);
+  const mainPhoto = userPhotos.find((p) => p.is_main);
 
   const loadProfile = useCallback(async () => {
     if (!tokens?.accessToken) {
@@ -391,29 +388,11 @@ export default function ProfileScreen() {
   };
 
   const handleTakePhoto = async () => {
-    const result = await takePictureWithCamera();
-    
-    if (!result.success) {
-      Alert.alert('Error', result.error.message);
-      return;
-    }
-
-    if (result.data) {
-      await uploadAndUpdateAvatar(result.data);
-    }
+    router.push('/profile/photos');
   };
 
   const handlePickFromGallery = async () => {
-    const result = await pickImageFromGallery();
-    
-    if (!result.success) {
-      Alert.alert('Error', result.error.message);
-      return;
-    }
-
-    if (result.data) {
-      await uploadAndUpdateAvatar(result.data);
-    }
+    router.push('/profile/photos');
   };
 
   const autoSave = useCallback(async (field: keyof FormState, value: any) => {
@@ -477,56 +456,6 @@ export default function ProfileScreen() {
     }
   }, [profileApi, tokens?.accessToken, isAutoSaving]);
 
-  const uploadAndUpdateAvatar = async (imageUri: string) => {
-    if (!tokens?.accessToken || !user?.id) {
-      Alert.alert('Error', 'Sesión no válida');
-      return;
-    }
-
-    setIsUploadingAvatar(true);
-    setFeedback({ type: 'info', message: 'Subiendo imagen...' });
-
-    try {
-      // Upload via backend
-      const uploadResult = await uploadAvatarToBackend(imageUri);
-
-      if (!uploadResult.success) {
-        Alert.alert('Error', uploadResult.error.message);
-        setFeedback({ type: 'error', message: uploadResult.error.message });
-        setIsUploadingAvatar(false);
-        return;
-      }
-
-      // Update profile with new avatar URL
-      const updateResult = await profileApi.updateProfile(
-        { avatarUrl: uploadResult.data },
-        tokens.accessToken
-      );
-
-      if (updateResult.success) {
-        const updatedProfile = updateResult.data;
-        setProfile(updatedProfile);
-        setForm(mapProfileToForm(updatedProfile));
-        // Clear feedback - user can see the avatar has changed visually
-        setFeedback(null);
-      } else {
-        Alert.alert('Error', updateResult.error.message ?? 'No se pudo actualizar la foto de perfil.');
-        setFeedback({
-          type: 'error',
-          message: updateResult.error.message ?? 'No se pudo actualizar la foto de perfil.',
-        });
-      }
-    } catch (error) {
-      console.error('[Profile] uploadAndUpdateAvatar error', error);
-      Alert.alert('Error', 'Error al actualizar la foto de perfil.');
-      setFeedback({
-        type: 'error',
-        message: 'Error al actualizar la foto de perfil.',
-      });
-    } finally {
-      setIsUploadingAvatar(false);
-    }
-  };
 
   const handleContactUs = () => {
     setIsContactModalVisible(true);
@@ -744,16 +673,24 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <View style={styles.avatarContainer}>
-          <AvatarPicker
-            uri={avatarUri}
-            size={160}
-            disabled={isUploadingAvatar}
-            onChange={async (localUri) => {
-              if (!localUri) return;
-              await uploadAndUpdateAvatar(localUri);
-            }}
-            helperText="Toca el botón para cambiar la foto"
-          />
+          <TouchableOpacity
+            onPress={() => router.push('/profile/photos')}
+            style={styles.avatarButton}
+          >
+            {mainPhoto ? (
+              <Image
+                source={{ uri: mainPhoto.public_url }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarPlaceholderText}>+</Text>
+              </View>
+            )}
+            <View style={styles.avatarEditBadge}>
+              <Text style={styles.avatarEditText}>Editar</Text>
+            </View>
+          </TouchableOpacity>
         </View>
         
         {/* Mostrar nombre y edad de forma natural */}
@@ -1073,17 +1010,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  avatarWrapper: {
-    position: 'relative',
+  avatarButton: {
     width: 160,
     height: 160,
     borderRadius: 80,
     overflow: 'hidden',
     backgroundColor: '#f0f0f0',
+    position: 'relative',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#e0e0e0',
+  },
+  avatarPlaceholderText: {
+    fontSize: 48,
+    color: '#999',
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  avatarEditText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   avatarOverlay: {
     position: 'absolute',

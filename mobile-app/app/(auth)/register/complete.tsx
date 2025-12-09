@@ -8,7 +8,6 @@ import { AuthApi } from '../../../src/data/api/authApi';
 import { ProfileApi } from '../../../src/data/api/profileApi';
 import { AuthTokens } from '../../../src/domain/entities/Auth';
 import { User, Gender } from '../../../src/domain/entities/User';
-import { uploadAvatarToBackend } from '../../../src/data/api/imageService';
 import { FeedbackBanner } from '../../../src/components/FeedbackBanner';
 import { getApiUrl } from '../../../src/utils/apiConfig';
 
@@ -95,35 +94,11 @@ export default function CompleteScreen() {
         await profileApi.getProfile(tokens.accessToken);
       }
 
-      // Actualizar perfil con preferencias adicionales
-      let avatarUrl: string | undefined = undefined;
-
-      // Si hay un avatar local, subirlo a Supabase
-      if (data.avatarUrl) {
-        console.log('[Register] Uploading avatar via backend...');
-        const uploadResult = await uploadAvatarToBackend(data.avatarUrl);
-
-        if (uploadResult.success) {
-          if (uploadResult.data) {
-            console.log('[Register] Avatar uploaded successfully');
-            avatarUrl = uploadResult.data;
-          } else {
-            console.warn('[Register] Avatar upload returned without URL');
-          }
-        } else {
-          console.warn('[Register] Failed to upload avatar:', uploadResult.error);
-        }
-      }
-
-      // Actualizar perfil con avatar y rango de edad
+      // Actualizar perfil con rango de edad
       const profileUpdates: Record<string, any> = {
         min_age: data.minAge,
         max_age: data.maxAge,
       };
-
-      if (avatarUrl) {
-        profileUpdates.avatarUrl = avatarUrl;
-      }
 
       console.log('[Register] Updating profile with age range and avatar...');
       const updateResult = await profileApi.updateProfile(profileUpdates, token);

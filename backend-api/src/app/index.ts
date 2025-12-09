@@ -11,6 +11,7 @@ import { authRoutes } from './routes/auth-routes';
 import { feedRoutes } from './routes/feed-routes';
 import { chatRoutes } from './routes/chat-routes';
 import { userRoutes } from './routes/user-routes';
+import { userPhotosRoutes } from './routes/user-photos-routes';
 import { matchRoutes } from './routes/match-routes';
 import { storageRoutes } from './routes/storage-routes';
 import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
@@ -232,6 +233,7 @@ async function buildApp() {
   await fastify.register(chatRoutes, { prefix: '/api/v1' });
   await fastify.register(matchRoutes, { prefix: '/api/v1' });
   await fastify.register(userRoutes, { prefix: '/api/v1' });
+  await fastify.register(userPhotosRoutes, { prefix: '/api/v1' });
   await fastify.register(storageRoutes, { prefix: '/api/v1' });
 
   // Health check
@@ -260,7 +262,7 @@ async function start() {
     console.log(`🔗 Health check: http://localhost:${port}/health`);
     console.log(`🌐 Listening on all interfaces (0.0.0.0:${port})`);
     console.log(`   - Local: http://localhost:${port}`);
-    
+
     // Try to detect and display the actual local IP
     const networkInterfaces = os.networkInterfaces();
     let localIP = 'YOUR_LOCAL_IP';
@@ -273,7 +275,9 @@ async function start() {
       }
       if (localIP !== 'YOUR_LOCAL_IP') break;
     }
-    console.log(`   - Network: http://${localIP}:${port} (use this on your iPhone)`);
+    console.log(
+      `   - Network: http://${localIP}:${port} (use this on your iPhone)`
+    );
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);

@@ -12,7 +12,6 @@ export const UserProfileSchema = z.object({
   max_age: z.number().int().nullable(),
   bio: z.string().nullable(),
   city: z.string().nullable(),
-  avatarUrl: z.string().url().nullable(),
   show_bio_in_feed: z.boolean().nullable(),
 });
 
@@ -24,7 +23,6 @@ export const UpdateUserProfileSchema = z.object({
   max_age: z.number().int().nullable().optional(),
   bio: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
-  avatarUrl: z.string().url().nullable().optional(),
   show_bio_in_feed: z.boolean().nullable().optional(),
 });
 
