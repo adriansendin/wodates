@@ -141,5 +141,3 @@ export async function userPhotosRoutes(fastify: FastifyInstance) {
     controller.deleteUserPhoto.bind(controller)
   );
 }
-
-

@@ -8,6 +8,12 @@ type SupabaseConfig = {
   serviceRoleKey: string;
 };
 
+export type VerificationStatus =
+  | 'pending'
+  | 'verifying'
+  | 'verified'
+  | 'rejected';
+
 type UserProfileRow = {
   id: string;
   // email and name are no longer in public.users, they come from auth.users
@@ -19,7 +25,7 @@ type UserProfileRow = {
   bio: string | null;
   city: string | null;
   show_bio_in_feed: boolean | null;
-  face_reference_ready: boolean | null;
+  verification_status: VerificationStatus;
 };
 
 export type UserProfile = {
@@ -34,7 +40,7 @@ export type UserProfile = {
   bio: string | null;
   city: string | null;
   show_bio_in_feed: boolean | null;
-  face_reference_ready: boolean | null;
+  verification_status: VerificationStatus;
 };
 
 export type UpdateUserProfileInput = {
@@ -46,7 +52,6 @@ export type UpdateUserProfileInput = {
   bio?: string | null;
   city?: string | null;
   show_bio_in_feed?: boolean | null;
-  face_reference_ready?: boolean | null;
 };
 
 /**
@@ -124,10 +129,6 @@ export class SupabaseUserService {
       if ('show_bio_in_feed' in input) {
         updatePayload.show_bio_in_feed = input.show_bio_in_feed ?? null;
       }
-      if ('face_reference_ready' in input) {
-        updatePayload.face_reference_ready = input.face_reference_ready ?? null;
-      }
-
       if (Object.keys(updatePayload).length === 0) {
         // Get auth user data even if no profile updates
         const authUser = await this.getAuthUser(userId);
@@ -139,7 +140,7 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, face_reference_ready'
+          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status'
         )
         .single();
 
@@ -205,7 +206,7 @@ export class SupabaseUserService {
       .from('users')
       .upsert(defaults, { onConflict: 'id' })
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, face_reference_ready'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status'
       )
       .single();
 
@@ -232,7 +233,7 @@ export class SupabaseUserService {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, face_reference_ready'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -300,6 +301,7 @@ export class SupabaseUserService {
       bio,
       city,
       show_bio_in_feed: true, // Default to true as per database schema
+      verification_status: 'pending',
     };
   }
 
@@ -359,7 +361,7 @@ export class SupabaseUserService {
       bio: row.bio,
       city: row.city,
       show_bio_in_feed: row.show_bio_in_feed,
-      face_reference_ready: row.face_reference_ready ?? false,
+      verification_status: row.verification_status ?? 'pending',
     };
   }
 

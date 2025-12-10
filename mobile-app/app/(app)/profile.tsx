@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +22,7 @@ import {
   Pressable,
   KeyboardAvoidingView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useUserPhotos } from '../../src/features/profile/photos/useUserPhotos';
 import { AgeRangePicker } from '../../src/components/AgeRangePicker';
 import { useAuthStore } from '../../src/domain/stores/authStore';
@@ -25,11 +31,9 @@ import { ProfileApi } from '../../src/data/api/profileApi';
 import {
   UpdateUserProfile,
   UserProfile,
+  VerificationStatus,
 } from '../../src/domain/entities/UserProfile';
-import {
-  GENDER_OPTIONS,
-  GenderOption,
-} from '../../src/domain/entities/Gender';
+import { GENDER_OPTIONS, GenderOption } from '../../src/domain/entities/Gender';
 import {
   LOOKING_FOR_OPTIONS,
   LookingForOption,
@@ -68,11 +72,13 @@ const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
   both: 'Ambos',
 };
 
-const LOOKING_FOR_CHOICES: Array<{ value: LookingForFormValue; label: string }> = 
-  LOOKING_FOR_OPTIONS.map((value) => ({
-    value,
-    label: LOOKING_FOR_LABELS[value],
-  }));
+const LOOKING_FOR_CHOICES: Array<{
+  value: LookingForFormValue;
+  label: string;
+}> = LOOKING_FOR_OPTIONS.map((value) => ({
+  value,
+  label: LOOKING_FOR_LABELS[value],
+}));
 
 const getLookingForLabel = (value: LookingForFormValue) =>
   value ? LOOKING_FOR_LABELS[value] : 'Seleccionar';
@@ -83,7 +89,7 @@ const GENDER_LABELS: Record<GenderOption, string> = {
   non_binary: 'No binario',
 };
 
-const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> = 
+const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> =
   GENDER_OPTIONS.map((value) => ({
     value,
     label: GENDER_LABELS[value],
@@ -91,6 +97,13 @@ const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> =
 
 const getGenderLabel = (value: GenderFormValue) =>
   value ? GENDER_LABELS[value] : 'Seleccionar';
+
+const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
+  pending: 'Verificar perfil',
+  verifying: 'Verificación en curso',
+  verified: 'Perfil verificado',
+  rejected: 'Reintentar verificación',
+};
 
 const emptyForm: FormState = {
   gender: 'male',
@@ -112,23 +125,22 @@ const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
   show_bio_in_feed: nextProfile?.show_bio_in_feed ?? true,
 });
 
-
 const isValidDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 const calculateAge = (birthDate: string): number => {
   if (!birthDate || !isValidDate(birthDate)) {
     return 0;
   }
-  
+
   const today = new Date();
   const birth = new Date(birthDate);
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
-  
+
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
     age--;
   }
-  
+
   return age;
 };
 
@@ -137,13 +149,18 @@ export default function ProfileScreen() {
   const supabase = useMemo(() => getSupabaseClient(), []);
   const { tokens, user, logout } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [verificationStatus, setVerificationStatus] =
+    useState<VerificationStatus>('pending');
   const [form, setForm] = useState<FormState>(emptyForm);
   const [isLoading, setIsLoading] = useState(false);
-  const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [formErrors, setFormErrors] = useState<
+    Partial<Record<keyof FormState, string>>
+  >({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [isGenderModalVisible, setIsGenderModalVisible] = useState(false);
-  const [isLookingForModalVisible, setIsLookingForModalVisible] = useState(false);
+  const [isLookingForModalVisible, setIsLookingForModalVisible] =
+    useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isContactModalVisible, setIsContactModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -170,6 +187,7 @@ export default function ProfileScreen() {
       if (result.success) {
         const nextProfile = result.data;
         setProfile(nextProfile);
+        setVerificationStatus(nextProfile.verification_status ?? 'pending');
         setForm(mapProfileToForm(nextProfile));
         setFormErrors({});
       } else {
@@ -192,6 +210,12 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [loadProfile])
+  );
 
   // Cleanup timeout al desmontar el componente
   useEffect(() => {
@@ -272,69 +296,79 @@ export default function ProfileScreen() {
   };
 
   // Función especializada para guardar el rango de edad atómicamente
-  const autoSaveAgeRange = useCallback((minAge: number, maxAge: number) => {
-    // Limpiar timeout anterior si existe
-    if (ageRangeTimeoutRef.current) {
-      clearTimeout(ageRangeTimeoutRef.current);
-    }
-
-    // Debounce: esperar 800ms antes de guardar
-    ageRangeTimeoutRef.current = setTimeout(async () => {
-      if (!tokens?.accessToken || isAutoSaving) {
-        return;
+  const autoSaveAgeRange = useCallback(
+    (minAge: number, maxAge: number) => {
+      // Limpiar timeout anterior si existe
+      if (ageRangeTimeoutRef.current) {
+        clearTimeout(ageRangeTimeoutRef.current);
       }
 
-      // Validación
-      if (minAge > maxAge) {
-        console.warn('[Profile] Invalid age range: min > max', { minAge, maxAge });
-        return;
-      }
+      // Debounce: esperar 800ms antes de guardar
+      ageRangeTimeoutRef.current = setTimeout(async () => {
+        if (!tokens?.accessToken || isAutoSaving) {
+          return;
+        }
 
-      setIsAutoSaving(true);
-      
-      try {
-        const payload: UpdateUserProfile = {
-          min_age: minAge,
-          max_age: maxAge,
-        };
-
-        console.log('[Profile] Auto-saving age range:', payload);
-
-        const result = await profileApi.updateProfile(payload, tokens.accessToken);
-        
-        if (result.success) {
-          const updatedProfile = result.data;
-          setProfile(updatedProfile);
-          
-          // Actualizar el formulario con los valores confirmados de la BD
-          setForm(prev => ({
-            ...prev,
-            min_age: updatedProfile.min_age ?? 18,
-            max_age: updatedProfile.max_age ?? 99,
-          }));
-
-          console.log('[Profile] Age range saved successfully:', {
-            min_age: updatedProfile.min_age,
-            max_age: updatedProfile.max_age,
+        // Validación
+        if (minAge > maxAge) {
+          console.warn('[Profile] Invalid age range: min > max', {
+            minAge,
+            maxAge,
           });
-        } else {
-          console.error('[Profile] autoSaveAgeRange failed', result.error);
+          return;
+        }
+
+        setIsAutoSaving(true);
+
+        try {
+          const payload: UpdateUserProfile = {
+            min_age: minAge,
+            max_age: maxAge,
+          };
+
+          console.log('[Profile] Auto-saving age range:', payload);
+
+          const result = await profileApi.updateProfile(
+            payload,
+            tokens.accessToken
+          );
+
+          if (result.success) {
+            const updatedProfile = result.data;
+            setProfile(updatedProfile);
+
+            // Actualizar el formulario con los valores confirmados de la BD
+            setForm((prev) => ({
+              ...prev,
+              min_age: updatedProfile.min_age ?? 18,
+              max_age: updatedProfile.max_age ?? 99,
+            }));
+
+            console.log('[Profile] Age range saved successfully:', {
+              min_age: updatedProfile.min_age,
+              max_age: updatedProfile.max_age,
+            });
+          } else {
+            console.error('[Profile] autoSaveAgeRange failed', result.error);
+            setFeedback({
+              type: 'error',
+              message:
+                'No se pudo guardar el rango de edad. Inténtalo de nuevo.',
+            });
+          }
+        } catch (error) {
+          console.error('[Profile] autoSaveAgeRange error', error);
           setFeedback({
             type: 'error',
-            message: 'No se pudo guardar el rango de edad. Inténtalo de nuevo.',
+            message: 'Error al guardar el rango de edad.',
           });
+        } finally {
+          setIsAutoSaving(false);
         }
-      } catch (error) {
-        console.error('[Profile] autoSaveAgeRange error', error);
-        setFeedback({
-          type: 'error',
-          message: 'Error al guardar el rango de edad.',
-        });
-      } finally {
-        setIsAutoSaving(false);
-      }
-    }, 800);
-  }, [profileApi, tokens?.accessToken, isAutoSaving]);
+      }, 800);
+    },
+    [profileApi, tokens?.accessToken, isAutoSaving]
+  );
 
   const handleShowInFeedToggle = () => {
     const newValue = !form.show_bio_in_feed;
@@ -395,67 +429,72 @@ export default function ProfileScreen() {
     router.push('/profile/photos');
   };
 
-  const autoSave = useCallback(async (field: keyof FormState, value: any) => {
-    if (!tokens?.accessToken || isAutoSaving) {
-      return;
-    }
-
-    setIsAutoSaving(true);
-    
-    try {
-      const payload: UpdateUserProfile = {};
-      
-      // Map form field to API field
-      switch (field) {
-        case 'gender':
-          payload.gender = value || null;
-          break;
-        case 'looking_for':
-          payload.looking_for = value || null;
-          break;
-        case 'min_age':
-          payload.min_age = value;
-          break;
-        case 'max_age':
-          payload.max_age = value;
-          break;
-        case 'show_bio_in_feed':
-          payload.show_bio_in_feed = value;
-          break;
-        default:
-          return; // Don't auto-save other fields
+  const autoSave = useCallback(
+    async (field: keyof FormState, value: any) => {
+      if (!tokens?.accessToken || isAutoSaving) {
+        return;
       }
 
-      console.log(`[Profile] Auto-saving ${field}:`, value);
+      setIsAutoSaving(true);
 
-      const result = await profileApi.updateProfile(payload, tokens.accessToken);
-      
-      if (result.success) {
-        const updatedProfile = result.data;
-        setProfile(updatedProfile);
-        
-        // Actualizar el formulario con los valores confirmados de la BD
-        setForm(mapProfileToForm(updatedProfile));
-        
-        console.log(`[Profile] ${field} saved successfully`);
-      } else {
-        console.error('[Profile] autoSave failed', result.error);
+      try {
+        const payload: UpdateUserProfile = {};
+
+        // Map form field to API field
+        switch (field) {
+          case 'gender':
+            payload.gender = value || null;
+            break;
+          case 'looking_for':
+            payload.looking_for = value || null;
+            break;
+          case 'min_age':
+            payload.min_age = value;
+            break;
+          case 'max_age':
+            payload.max_age = value;
+            break;
+          case 'show_bio_in_feed':
+            payload.show_bio_in_feed = value;
+            break;
+          default:
+            return; // Don't auto-save other fields
+        }
+
+        console.log(`[Profile] Auto-saving ${field}:`, value);
+
+        const result = await profileApi.updateProfile(
+          payload,
+          tokens.accessToken
+        );
+
+        if (result.success) {
+          const updatedProfile = result.data;
+          setProfile(updatedProfile);
+
+          // Actualizar el formulario con los valores confirmados de la BD
+          setForm(mapProfileToForm(updatedProfile));
+
+          console.log(`[Profile] ${field} saved successfully`);
+        } else {
+          console.error('[Profile] autoSave failed', result.error);
+          setFeedback({
+            type: 'error',
+            message: 'No se pudo guardar el cambio. Inténtalo de nuevo.',
+          });
+        }
+      } catch (error) {
+        console.error('[Profile] autoSave error', error);
         setFeedback({
           type: 'error',
-          message: 'No se pudo guardar el cambio. Inténtalo de nuevo.',
+          message: 'Error al guardar el cambio.',
         });
+      } finally {
+        setIsAutoSaving(false);
       }
-    } catch (error) {
-      console.error('[Profile] autoSave error', error);
-      setFeedback({
-        type: 'error',
-        message: 'Error al guardar el cambio.',
-      });
-    } finally {
-      setIsAutoSaving(false);
-    }
-  }, [profileApi, tokens?.accessToken, isAutoSaving]);
-
+    },
+    [profileApi, tokens?.accessToken, isAutoSaving]
+  );
 
   const handleContactUs = () => {
     setIsContactModalVisible(true);
@@ -473,14 +512,14 @@ export default function ProfileScreen() {
     }
 
     setIsSubmitting(true);
-    
+
     // Simular envío (500ms)
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     // Mostrar mensaje de éxito (sin limpiar el texto)
     setIsSubmitting(false);
     setShowToast(true);
-    
+
     // Cerrar modal después de 2 segundos (y limpiar texto al cerrar)
     setTimeout(() => {
       setShowToast(false);
@@ -521,7 +560,7 @@ export default function ProfileScreen() {
 
       Alert.alert(
         'Cuenta desactivada',
-        'Tu cuenta ha sido desactivada. Contacta con soporte si deseas reactivarla.',
+        'Tu cuenta ha sido desactivada. Contacta con soporte si deseas reactivarla.'
       );
 
       router.replace('/(auth)/login');
@@ -544,8 +583,21 @@ export default function ProfileScreen() {
     logout,
     router,
   ]);
+  const resolvedVerificationStatus =
+    profile?.verification_status ?? verificationStatus;
+  const verificationLabel =
+    VERIFICATION_LABELS[resolvedVerificationStatus] ??
+    VERIFICATION_LABELS.pending;
+  const isVerificationActionable =
+    resolvedVerificationStatus === 'pending' ||
+    resolvedVerificationStatus === 'rejected';
 
-
+  const handleVerifyProfile = () => {
+    if (!isVerificationActionable) {
+      return;
+    }
+    router.push('/profile/verify');
+  };
 
   if (!tokens?.accessToken) {
     return (
@@ -651,199 +703,225 @@ export default function ProfileScreen() {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={loadProfile}
-          tintColor="#e91e63"
-        />
-      }
-      keyboardShouldPersistTaps="handled"
-    >
-      {feedback && (
-        <View
-          style={[
-            styles.banner,
-            feedback.type === 'success'
-              ? styles.bannerSuccess
-              : feedback.type === 'info'
-              ? styles.bannerInfo
-              : styles.bannerError,
-          ]}
-        >
-          <Text style={styles.bannerText}>{feedback.message}</Text>
-        </View>
-      )}
-
-      <View style={styles.card}>
-        <View style={styles.avatarContainer}>
-          <TouchableOpacity
-            onPress={() => router.push('/profile/photos')}
-            style={styles.avatarButton}
-          >
-            {mainPhoto ? (
-              <Image
-                source={{ uri: mainPhoto.public_url }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarPlaceholderText}>+</Text>
-              </View>
-            )}
-            <View style={styles.avatarEditBadge}>
-              <Text style={styles.avatarEditText}>Editar</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Mostrar nombre y edad de forma natural */}
-        <View style={styles.nameAgeContainer}>
-          <Text style={styles.nameAgeText}>
-            {profile?.name ?? user?.name ?? 'Usuario'}
-            {profile?.birthDate && calculateAge(profile.birthDate) > 0 ? `, ${calculateAge(profile.birthDate)}` : null}
-          </Text>
-          {form.city ? (
-            <View style={styles.locationContainer}>
-              <Text style={styles.locationText}>{`📍 ${form.city}`}</Text>
-            </View>
-          ) : null}
-        </View>
-        
-        <Text style={styles.sectionTitle}>Información básica</Text>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Genero</Text>
-          <TouchableOpacity
-            style={[
-              styles.input,
-              styles.selectTrigger,
-              formErrors.gender ? styles.inputError : null,
-            ]}
-            activeOpacity={0.7}
-            onPress={() => setIsGenderModalVisible(true)}
-          >
-            <Text
-              style={
-                form.gender ? styles.selectValue : styles.selectPlaceholder
-              }
-            >
-              {getGenderLabel(form.gender)}
-            </Text>
-          </TouchableOpacity>
-          {formErrors.gender ? (
-            <Text style={styles.errorText}>{formErrors.gender}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Busco</Text>
-          <TouchableOpacity
-            style={[
-              styles.input,
-              styles.selectTrigger,
-              formErrors.looking_for ? styles.inputError : null,
-            ]}
-            activeOpacity={0.7}
-            onPress={() => setIsLookingForModalVisible(true)}
-          >
-            <Text
-              style={
-                form.looking_for
-                  ? styles.selectValue
-                  : styles.selectPlaceholder
-              }
-            >
-              {getLookingForLabel(form.looking_for)}
-            </Text>
-          </TouchableOpacity>
-          {formErrors.looking_for ? (
-            <Text style={styles.errorText}>{formErrors.looking_for}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Rango de edad que buscas</Text>
-          <AgeRangePicker
-            minAge={form.min_age}
-            maxAge={form.max_age}
-            onRangeChange={handleAgeRangeChange}
+            tintColor="#e91e63"
           />
-          {(formErrors.min_age || formErrors.max_age) && (
-            <Text style={styles.errorText}>
-              {formErrors.min_age ? formErrors.min_age : formErrors.max_age}
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Biografia</Text>
-          <TextInput
+        }
+        keyboardShouldPersistTaps="handled"
+      >
+        {feedback && (
+          <View
             style={[
-              styles.input,
-              styles.multiline,
-              styles.inputDisabled,
-              formErrors.bio ? styles.inputError : null,
+              styles.banner,
+              feedback.type === 'success'
+                ? styles.bannerSuccess
+                : feedback.type === 'info'
+                  ? styles.bannerInfo
+                  : styles.bannerError,
             ]}
-            placeholder="Tu perfil crecerá a medida que conectes con otras personas."
-            value={form.bio}
-            onChangeText={handleChange('bio')}
-            multiline
-            numberOfLines={4}
-            editable={false}
-            maxLength={300}
-          />
-        </View>
+          >
+            <Text style={styles.bannerText}>{feedback.message}</Text>
+          </View>
+        )}
 
-        <View style={styles.field}>
-          <View style={styles.toggleContainer}>
-            <Text style={styles.toggleLabel}>Mostrar mi descripción a otras personas</Text>
+        <View style={styles.card}>
+          <View style={styles.avatarContainer}>
             <TouchableOpacity
-              style={[
-                styles.toggle,
-                form.show_bio_in_feed ? styles.toggleActive : styles.toggleInactive,
-              ]}
-              onPress={handleShowInFeedToggle}
-              activeOpacity={0.7}
+              onPress={() => router.push('/profile/photos')}
+              style={styles.avatarButton}
             >
-              <View
-                style={[
-                  styles.toggleThumb,
-                  form.show_bio_in_feed ? styles.toggleThumbActive : styles.toggleThumbInactive,
-                ]}
-              />
+              {mainPhoto ? (
+                <Image
+                  source={{ uri: mainPhoto.public_url }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarPlaceholderText}>+</Text>
+                </View>
+              )}
+              <View style={styles.avatarEditBadge}>
+                <Text style={styles.avatarEditText}>Editar</Text>
+              </View>
             </TouchableOpacity>
           </View>
-          <Text style={styles.toggleHelperText}>
-            Si lo desactivas, tu bio no será visible para otros usuarios.
+
+          <TouchableOpacity
+            onPress={handleVerifyProfile}
+            activeOpacity={0.85}
+            disabled={!isVerificationActionable}
+            style={[
+              styles.verificationButton,
+              !isVerificationActionable
+                ? styles.verificationButtonDisabled
+                : null,
+            ]}
+          >
+            <Text style={styles.verificationButtonText}>
+              {verificationLabel}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Mostrar nombre y edad de forma natural */}
+          <View style={styles.nameAgeContainer}>
+            <Text style={styles.nameAgeText}>
+              {profile?.name ?? user?.name ?? 'Usuario'}
+              {profile?.birthDate && calculateAge(profile.birthDate) > 0
+                ? `, ${calculateAge(profile.birthDate)}`
+                : null}
+            </Text>
+            {form.city ? (
+              <View style={styles.locationContainer}>
+                <Text style={styles.locationText}>{`📍 ${form.city}`}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <Text style={styles.sectionTitle}>Información básica</Text>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Genero</Text>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                styles.selectTrigger,
+                formErrors.gender ? styles.inputError : null,
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setIsGenderModalVisible(true)}
+            >
+              <Text
+                style={
+                  form.gender ? styles.selectValue : styles.selectPlaceholder
+                }
+              >
+                {getGenderLabel(form.gender)}
+              </Text>
+            </TouchableOpacity>
+            {formErrors.gender ? (
+              <Text style={styles.errorText}>{formErrors.gender}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Busco</Text>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                styles.selectTrigger,
+                formErrors.looking_for ? styles.inputError : null,
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setIsLookingForModalVisible(true)}
+            >
+              <Text
+                style={
+                  form.looking_for
+                    ? styles.selectValue
+                    : styles.selectPlaceholder
+                }
+              >
+                {getLookingForLabel(form.looking_for)}
+              </Text>
+            </TouchableOpacity>
+            {formErrors.looking_for ? (
+              <Text style={styles.errorText}>{formErrors.looking_for}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Rango de edad que buscas</Text>
+            <AgeRangePicker
+              minAge={form.min_age}
+              maxAge={form.max_age}
+              onRangeChange={handleAgeRangeChange}
+            />
+            {(formErrors.min_age || formErrors.max_age) && (
+              <Text style={styles.errorText}>
+                {formErrors.min_age ? formErrors.min_age : formErrors.max_age}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Biografia</Text>
+            <TextInput
+              style={[
+                styles.input,
+                styles.multiline,
+                styles.inputDisabled,
+                formErrors.bio ? styles.inputError : null,
+              ]}
+              placeholder="Tu perfil crecerá a medida que conectes con otras personas."
+              value={form.bio}
+              onChangeText={handleChange('bio')}
+              multiline
+              numberOfLines={4}
+              editable={false}
+              maxLength={300}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <View style={styles.toggleContainer}>
+              <Text style={styles.toggleLabel}>
+                Mostrar mi descripción a otras personas
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.toggle,
+                  form.show_bio_in_feed
+                    ? styles.toggleActive
+                    : styles.toggleInactive,
+                ]}
+                onPress={handleShowInFeedToggle}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.toggleThumb,
+                    form.show_bio_in_feed
+                      ? styles.toggleThumbActive
+                      : styles.toggleThumbInactive,
+                  ]}
+                />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.toggleHelperText}>
+              Si lo desactivas, tu bio no será visible para otros usuarios.
+            </Text>
+          </View>
+
+          <Text style={styles.autoSaveMessage}>
+            Los cambios se guardan automáticamente.
           </Text>
+
+          {/* Contact and Delete options */}
+          <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleContactUs}
+            >
+              <Text style={styles.actionButtonText}>Contacta con nosotros</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={handleDeleteAccount}
+            >
+              <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
+                Borrar cuenta
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <Text style={styles.autoSaveMessage}>
-          Los cambios se guardan automáticamente.
-        </Text>
-
-        {/* Contact and Delete options */}
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleContactUs}
-          >
-            <Text style={styles.actionButtonText}>Contacta con nosotros</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={handleDeleteAccount}
-          >
-            <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Borrar cuenta</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {isLoading && (
-        <View style={styles.overlay}>
-          <ActivityIndicator size="large" color="#e91e63" />
-          <Text style={styles.loadingText}>Cargando perfil...</Text>
-        </View>
-      )}
-        </ScrollView>
+        {isLoading && (
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color="#e91e63" />
+            <Text style={styles.loadingText}>Cargando perfil...</Text>
+          </View>
+        )}
+      </ScrollView>
 
       {/* Contact us modal */}
       <Modal
@@ -852,7 +930,7 @@ export default function ProfileScreen() {
         animationType="fade"
         onRequestClose={() => setIsContactModalVisible(false)}
       >
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
@@ -861,8 +939,10 @@ export default function ProfileScreen() {
             onPress={() => setIsContactModalVisible(false)}
           >
             <Pressable style={styles.contactModalContent}>
-              <Text style={styles.contactModalTitle}>¿En qué podemos ayudarte?</Text>
-              
+              <Text style={styles.contactModalTitle}>
+                ¿En qué podemos ayudarte?
+              </Text>
+
               <View style={styles.textInputContainer}>
                 <TextInput
                   style={styles.contactTextInput}
@@ -883,13 +963,13 @@ export default function ProfileScreen() {
                   </Text>
                 )}
               </View>
-              
+
               {showToast && (
                 <Text style={styles.successMessage}>
                   Tu mensaje ha sido enviado correctamente.
                 </Text>
               )}
-              
+
               <View style={styles.contactButtonContainer}>
                 <TouchableOpacity
                   style={styles.contactCancelButton}
@@ -900,15 +980,21 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={[
                     styles.contactSubmitButton,
-                    contactMessage.length < 10 || isSubmitting ? styles.contactSubmitButtonDisabled : null
+                    contactMessage.length < 10 || isSubmitting
+                      ? styles.contactSubmitButtonDisabled
+                      : null,
                   ]}
                   onPress={handleContactSubmit}
                   disabled={contactMessage.length < 10 || isSubmitting}
                 >
-                  <Text style={[
-                    styles.contactSubmitButtonText,
-                    contactMessage.length < 10 || isSubmitting ? styles.contactSubmitButtonTextDisabled : null
-                  ]}>
+                  <Text
+                    style={[
+                      styles.contactSubmitButtonText,
+                      contactMessage.length < 10 || isSubmitting
+                        ? styles.contactSubmitButtonTextDisabled
+                        : null,
+                    ]}
+                  >
                     {isSubmitting ? 'Enviando...' : 'Enviar'}
                   </Text>
                 </TouchableOpacity>
@@ -917,7 +1003,6 @@ export default function ProfileScreen() {
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
-
 
       {/* Delete account modal */}
       <Modal
@@ -931,9 +1016,12 @@ export default function ProfileScreen() {
           onPress={() => setIsDeleteModalVisible(false)}
         >
           <Pressable style={styles.deleteModalContent}>
-            <Text style={styles.deleteModalTitle}>¿Seguro que quieres eliminar tu cuenta?</Text>
+            <Text style={styles.deleteModalTitle}>
+              ¿Seguro que quieres eliminar tu cuenta?
+            </Text>
             <Text style={styles.deleteModalSubtext}>
-              Esta acción no se puede deshacer. Perderás tu perfil, tus matches y tus mensajes.
+              Esta acción no se puede deshacer. Perderás tu perfil, tus matches
+              y tus mensajes.
             </Text>
             <View style={styles.deleteButtonContainer}>
               <TouchableOpacity
@@ -1307,6 +1395,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 24,
     fontStyle: 'italic',
+  },
+  verificationButton: {
+    width: '100%',
+    backgroundColor: '#e91e63',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  verificationButtonDisabled: {
+    backgroundColor: '#f3a5c3',
+  },
+  verificationButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   // Action buttons styles
   actionButtonsContainer: {

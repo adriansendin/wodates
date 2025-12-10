@@ -42,6 +42,10 @@ export async function userRoutes(fastify: FastifyInstance) {
               bio: { type: ['string', 'null'] },
               city: { type: ['string', 'null'] },
               show_bio_in_feed: { type: ['boolean', 'null'] },
+              verification_status: {
+                type: 'string',
+                enum: ['none', 'pending', 'verified', 'rejected'],
+              },
             },
           },
         },
@@ -85,6 +89,10 @@ export async function userRoutes(fastify: FastifyInstance) {
               bio: { type: ['string', 'null'] },
               city: { type: ['string', 'null'] },
               show_bio_in_feed: { type: ['boolean', 'null'] },
+              verification_status: {
+                type: 'string',
+                enum: ['none', 'pending', 'verified', 'rejected'],
+              },
             },
           },
         },

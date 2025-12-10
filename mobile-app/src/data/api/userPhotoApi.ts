@@ -63,5 +63,3 @@ export class UserPhotoApi {
     return this.apiClient.delete<void>(`/users/me/photos/${photoId}`, token);
   }
 }
-
-

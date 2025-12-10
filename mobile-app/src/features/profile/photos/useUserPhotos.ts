@@ -9,6 +9,9 @@ import { DomainError, ServerError } from '../../../domain/errors/DomainError';
 import { useAuthStore } from '../../../domain/stores/authStore';
 import { getApiUrl } from '../../../utils/apiConfig';
 
+const MAX_IMAGE_SIZE_KB = 500;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024;
+
 export function useUserPhotos(userId: string | null) {
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +28,9 @@ export function useUserPhotos(userId: string | null) {
 
   const loadPhotos = useCallback(async () => {
     if (!userId || !tokens?.accessToken) {
-      console.log('[useUserPhotos] Skipping loadPhotos - missing userId or token');
+      console.log(
+        '[useUserPhotos] Skipping loadPhotos - missing userId or token'
+      );
       return;
     }
 
@@ -34,10 +39,23 @@ export function useUserPhotos(userId: string | null) {
     setError(null);
 
     try {
-      const result = await photoApiRef.current.listUserPhotos(tokens.accessToken);
-      console.log('[useUserPhotos] Photos loaded:', result.success ? `${result.data.length} photos` : 'failed', result);
+      const result = await photoApiRef.current.listUserPhotos(
+        tokens.accessToken
+      );
+      console.log(
+        '[useUserPhotos] Photos loaded:',
+        result.success ? `${result.data.length} photos` : 'failed',
+        result
+      );
       if (result.success) {
-        console.log('[useUserPhotos] Setting photos:', result.data.map(p => ({ id: p.id, is_main: p.is_main, position: p.position })));
+        console.log(
+          '[useUserPhotos] Setting photos:',
+          result.data.map((p) => ({
+            id: p.id,
+            is_main: p.is_main,
+            position: p.position,
+          }))
+        );
         setPhotos(result.data);
       } else {
         setError(result.error.message);
@@ -62,10 +80,16 @@ export function useUserPhotos(userId: string | null) {
 
   const uploadPhoto = useCallback(
     async (imageUri: string): Promise<Result<UserPhoto, DomainError>> => {
-      console.log('[useUserPhotos] uploadPhoto called with imageUri:', imageUri);
-      
+      console.log(
+        '[useUserPhotos] uploadPhoto called with imageUri:',
+        imageUri
+      );
+
       if (!userId || !tokens?.accessToken) {
-        console.error('[useUserPhotos] Missing userId or token:', { userId, hasToken: !!tokens?.accessToken });
+        console.error('[useUserPhotos] Missing userId or token:', {
+          userId,
+          hasToken: !!tokens?.accessToken,
+        });
         return {
           success: false,
           error: new ServerError('User ID or token required'),
@@ -76,7 +100,12 @@ export function useUserPhotos(userId: string | null) {
       setError(null);
 
       try {
-        console.log('[useUserPhotos] Creating FormData, Platform.OS:', Platform.OS, 'imageUri length:', imageUri?.length || 0);
+        console.log(
+          '[useUserPhotos] Creating FormData, Platform.OS:',
+          Platform.OS,
+          'imageUri length:',
+          imageUri?.length || 0
+        );
         const formData = new FormData();
         if (Platform.OS === 'web') {
           const webFile = await prepareWebUploadFile(imageUri);
@@ -90,12 +119,20 @@ export function useUserPhotos(userId: string | null) {
           // Check if image exceeds 500KB limit
           const MAX_SIZE_BYTES = 500 * 1024; // 500KB
           if (webFile.blob.size > MAX_SIZE_BYTES) {
-            console.warn(`[useUserPhotos] WARNING: Image size (${blobSizeKB}KB) exceeds 500KB limit!`);
-            console.warn('[useUserPhotos] Compression should have been applied but image is still too large.');
-            console.warn('[useUserPhotos] This may cause upload to fail if bucket has size restrictions.');
+            console.warn(
+              `[useUserPhotos] WARNING: Image size (${blobSizeKB}KB) exceeds 500KB limit!`
+            );
+            console.warn(
+              '[useUserPhotos] Compression should have been applied but image is still too large.'
+            );
+            console.warn(
+              '[useUserPhotos] This may cause upload to fail if bucket has size restrictions.'
+            );
           }
 
-          const file = new File([webFile.blob], webFile.filename, { type: webFile.mimeType });
+          const file = new File([webFile.blob], webFile.filename, {
+            type: webFile.mimeType,
+          });
           formData.append('file', file);
         } else {
           const filename = imageUri.split('/').pop() || 'photo.jpg';
@@ -107,13 +144,20 @@ export function useUserPhotos(userId: string | null) {
             type: type,
             name: filename,
           });
-          console.log('[useUserPhotos] FormData created for React Native:', { uri: imageUri, type, filename });
+          console.log('[useUserPhotos] FormData created for React Native:', {
+            uri: imageUri,
+            type,
+            filename,
+          });
         }
 
         console.log('[useUserPhotos] Calling photoApi.addUserPhoto...');
-        const result = await photoApiRef.current.addUserPhoto(formData, tokens.accessToken);
+        const result = await photoApiRef.current.addUserPhoto(
+          formData,
+          tokens.accessToken
+        );
         console.log('[useUserPhotos] photoApi.addUserPhoto result:', result);
-        
+
         if (result.success) {
           console.log('[useUserPhotos] Upload successful, reloading photos...');
           await loadPhotosRef.current();
@@ -150,7 +194,10 @@ export function useUserPhotos(userId: string | null) {
       setError(null);
 
       try {
-        const result = await photoApiRef.current.deleteUserPhoto(photoId, tokens.accessToken);
+        const result = await photoApiRef.current.deleteUserPhoto(
+          photoId,
+          tokens.accessToken
+        );
         if (result.success) {
           await loadPhotosRef.current();
         } else {
@@ -184,7 +231,10 @@ export function useUserPhotos(userId: string | null) {
       setError(null);
 
       try {
-        const result = await photoApiRef.current.setMainPhoto(photoId, tokens.accessToken);
+        const result = await photoApiRef.current.setMainPhoto(
+          photoId,
+          tokens.accessToken
+        );
         if (result.success) {
           await loadPhotosRef.current();
         } else {
@@ -246,7 +296,9 @@ async function prepareWebUploadFile(imageUri: string): Promise<{
 
   try {
     if (imageUri.startsWith('data:')) {
-      console.log('[useUserPhotos] Detected data URI, converting locally (no fetch)');
+      console.log(
+        '[useUserPhotos] Detected data URI, converting locally (no fetch)'
+      );
       blob = buildBlobFromDataUri(imageUri);
     } else {
       const response = await fetch(imageUri);
@@ -256,7 +308,9 @@ async function prepareWebUploadFile(imageUri: string): Promise<{
           statusText: response.statusText,
           url: response.url,
         });
-        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch image: ${response.status} ${response.statusText}`
+        );
       }
       blob = await response.blob();
       console.log('[useUserPhotos] Fetched blob from URI', {
@@ -265,26 +319,29 @@ async function prepareWebUploadFile(imageUri: string): Promise<{
       });
     }
   } catch (fetchError) {
-    console.error('[useUserPhotos] Error fetching/converting image URI for upload:', fetchError);
+    console.error(
+      '[useUserPhotos] Error fetching/converting image URI for upload:',
+      fetchError
+    );
     throw fetchError;
   }
 
-  console.log('[useUserPhotos] Initial blob size:', Math.round(blob.size / 1024), 'KB');
-
-  // Apply compression logic same as mobile native
-  const MAX_IMAGE_SIZE_KB = 500;
-  const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024;
+  console.log(
+    '[useUserPhotos] Initial blob size:',
+    Math.round(blob.size / 1024),
+    'KB'
+  );
 
   blob = await compressImageIfNeeded(blob, imageUri, isChromeIOS);
 
-  let mimeType = (blob.type || 'image/jpeg').toLowerCase();
+  const mimeType = (blob.type || 'image/jpeg').toLowerCase();
 
   const filename =
     mimeType === 'image/png'
       ? 'photo.png'
       : mimeType.includes('heic')
-      ? 'photo.heic'
-      : 'photo.jpg';
+        ? 'photo.heic'
+        : 'photo.jpg';
 
   console.log('[useUserPhotos] Final upload file prepared:', {
     sizeKB: Math.round(blob.size / 1024),
@@ -296,16 +353,22 @@ async function prepareWebUploadFile(imageUri: string): Promise<{
 }
 
 // Compression function matching mobile native logic
-async function compressImageIfNeeded(blob: Blob, imageUri: string, isChromeIOS: boolean): Promise<Blob> {
+async function compressImageIfNeeded(
+  blob: Blob,
+  imageUri: string,
+  isChromeIOS: boolean
+): Promise<Blob> {
   try {
     if (blob.size <= MAX_IMAGE_SIZE_BYTES) {
       console.log('[useUserPhotos] Image size OK, no compression needed');
       return blob;
     }
 
-    console.log(`[useUserPhotos] Image size: ${Math.round(blob.size / 1024)}KB, compressing...`);
+    console.log(
+      `[useUserPhotos] Image size: ${Math.round(blob.size / 1024)}KB, compressing...`
+    );
 
-    let mimeType = (blob.type || 'image/jpeg').toLowerCase();
+    const mimeType = (blob.type || 'image/jpeg').toLowerCase();
     const isHeicLike =
       mimeType.includes('heic') ||
       mimeType.includes('heif') ||
@@ -323,9 +386,15 @@ async function compressImageIfNeeded(blob: Blob, imageUri: string, isChromeIOS: 
         );
         const convertedResponse = await fetch(converted.uri);
         blob = await convertedResponse.blob();
-        console.log('[useUserPhotos] HEIC conversion completed, new size (KB):', Math.round(blob.size / 1024));
+        console.log(
+          '[useUserPhotos] HEIC conversion completed, new size (KB):',
+          Math.round(blob.size / 1024)
+        );
       } catch (conversionError) {
-        console.error('[useUserPhotos] Failed to convert HEIC to JPEG, continuing with original', conversionError);
+        console.error(
+          '[useUserPhotos] Failed to convert HEIC to JPEG, continuing with original',
+          conversionError
+        );
       }
     }
 
@@ -351,10 +420,14 @@ async function compressImageIfNeeded(blob: Blob, imageUri: string, isChromeIOS: 
         compressedBlob = await compressedResponse.blob();
 
         const compressedSizeKB = Math.round(compressedBlob.size / 1024);
-        console.log(`[useUserPhotos] Compression attempt ${attempts + 1}: Quality ${quality.toFixed(2)}, Size: ${compressedSizeKB}KB`);
+        console.log(
+          `[useUserPhotos] Compression attempt ${attempts + 1}: Quality ${quality.toFixed(2)}, Size: ${compressedSizeKB}KB`
+        );
 
         if (compressedBlob.size <= MAX_IMAGE_SIZE_BYTES) {
-          console.log(`[useUserPhotos] ✓ Compression successful: ${compressedSizeKB}KB`);
+          console.log(
+            `[useUserPhotos] ✓ Compression successful: ${compressedSizeKB}KB`
+          );
           return compressedBlob;
         }
 
@@ -362,15 +435,22 @@ async function compressImageIfNeeded(blob: Blob, imageUri: string, isChromeIOS: 
         attempts++;
 
         if (quality < 0.1) {
-          console.log(`[useUserPhotos] ⚠ Could not compress below ${MAX_IMAGE_SIZE_KB}KB. Using best result: ${compressedSizeKB}KB`);
+          console.log(
+            `[useUserPhotos] ⚠ Could not compress below ${MAX_IMAGE_SIZE_KB}KB. Using best result: ${compressedSizeKB}KB`
+          );
           return compressedBlob;
         }
       } catch (error) {
-        console.error(`[useUserPhotos] Compression attempt ${attempts + 1} failed:`, error);
+        console.error(
+          `[useUserPhotos] Compression attempt ${attempts + 1} failed:`,
+          error
+        );
         quality -= 0.15;
         attempts++;
         if (attempts >= maxAttempts) {
-          console.error('[useUserPhotos] All compression attempts failed, using original blob');
+          console.error(
+            '[useUserPhotos] All compression attempts failed, using original blob'
+          );
           return blob;
         }
       }
@@ -382,4 +462,3 @@ async function compressImageIfNeeded(blob: Blob, imageUri: string, isChromeIOS: 
     return blob; // Return original if compression fails
   }
 }
-

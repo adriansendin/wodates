@@ -2,6 +2,13 @@ import { z } from 'zod';
 import { GenderSchema } from './Gender';
 import { LookingForSchema } from './LookingFor';
 
+export const VerificationStatusSchema = z.enum([
+  'pending', // nunca ha enviado
+  'verifying', // selfie enviada, esperando revisión
+  'verified',
+  'rejected',
+]);
+
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -13,6 +20,7 @@ export const UserProfileSchema = z.object({
   bio: z.string().nullable(),
   city: z.string().nullable(),
   show_bio_in_feed: z.boolean().nullable(),
+  verification_status: VerificationStatusSchema.default('pending'),
 });
 
 export const UpdateUserProfileSchema = z.object({
@@ -28,3 +36,4 @@ export const UpdateUserProfileSchema = z.object({
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 export type UpdateUserProfile = z.infer<typeof UpdateUserProfileSchema>;
+export type VerificationStatus = z.infer<typeof VerificationStatusSchema>;

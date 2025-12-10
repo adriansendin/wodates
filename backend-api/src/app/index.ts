@@ -14,6 +14,8 @@ import { userRoutes } from './routes/user-routes';
 import { userPhotosRoutes } from './routes/user-photos-routes';
 import { matchRoutes } from './routes/match-routes';
 import { storageRoutes } from './routes/storage-routes';
+import { userVerificationRoutes } from './routes/user-verification-routes';
+import { adminVerificationRoutes } from './routes/admin-verification-routes';
 import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
 import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
 import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepository';
@@ -234,7 +236,9 @@ async function buildApp() {
   await fastify.register(matchRoutes, { prefix: '/api/v1' });
   await fastify.register(userRoutes, { prefix: '/api/v1' });
   await fastify.register(userPhotosRoutes, { prefix: '/api/v1' });
+  await fastify.register(userVerificationRoutes, { prefix: '/api/v1' });
   await fastify.register(storageRoutes, { prefix: '/api/v1' });
+  await fastify.register(adminVerificationRoutes, { prefix: '/admin' });
 
   // Health check
   fastify.get('/health', async () => {

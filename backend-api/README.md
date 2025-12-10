@@ -55,6 +55,16 @@ cp env.example .env
 - `GET /api/v1/chats/:matchId/messages` - Get messages
 - `POST /api/v1/chats/:matchId/messages` - Send message
 
+### Admin (verificación manual)
+- `GET /admin/verification` - Panel web protegido (Basic Auth o header `x-admin-secret`)
+- `GET /admin/verification/next` - Obtiene la siguiente selfie pendiente
+- `POST /admin/verification/:id/approve` - Aprueba y marca al usuario como `verified`
+- `POST /admin/verification/:id/reject` - Rechaza y marca al usuario como `rejected`
+
+#### Configuración de acceso
+- Define `ADMIN_VERIFICATION_SECRET` **o** pareja `ADMIN_BASIC_USER` + `ADMIN_BASIC_PASSWORD`.
+- Accede al panel en `http://localhost:3000/admin/verification`. El navegador usará Basic Auth; para scripts puedes enviar `x-admin-secret`.
+
 ## Architecture
 
 ```
