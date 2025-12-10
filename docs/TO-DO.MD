@@ -1,11 +1,21 @@
+# Índice de tareas pendientes
+
 1. Mejora del motor de embeddings
+2. Adaptación del job de procesamiento de perfiles según plataforma de despliegue
+3. Integración de procesamiento de chats externos en el job de perfiles
+4. Añadir análisis psicológico implícito a los perfiles de usuario
+5. Verificación de identidad con cámara directa
+
+---
+
+## 1. Mejora del motor de embeddings
 
 Contexto: Actualmente usamos multilingual-e5-base(de Ollama) para generar vectores de perfiles en Wodates (suficiente para el MVP).
 Acción futura: Evaluar Alibaba GTE-multilingual-base (de Hugging Face) como encoder principal.
 Motivo: Mayor calidad semántica → mejor matching entre usuarios.
 Issue: #embedding-upgrade
 
-2. Adaptación del job de procesamiento de perfiles según plataforma de despliegue
+## 2. Adaptación del job de procesamiento de perfiles según plataforma de despliegue
 
 Contexto: El job process-user-profiles-job.ts actualmente está diseñado para ejecutarse vía cron del sistema. Necesita adaptarse según la plataforma donde se despliegue (AWS Lambda, Google Cloud Functions, Railway, Vercel, Azure, Heroku, etc.).
 Acción futura: Implementar adaptadores/entry points específicos para cada plataforma:
@@ -25,7 +35,7 @@ Acción futura: Refactorizar la lógica de extract-chat-from-zip.ts en una funci
 Motivo: Unificar el procesamiento de todas las fuentes de datos de chat (Buddy + ZIPs externos) en un solo job mejora la eficiencia, reduce la duplicación de código (DRY), facilita el mantenimiento y asegura que todos los chats se procesen de forma consistente y coordinada.
 Issue: #integrate-external-chats-job
 
-4. Añadir análisis psicológico implícito a los perfiles de usuario
+## 3. Integración de procesamiento de chats externos en el job de perfiles
 
 Aquí tienes **el informe claro, directo y sin verbosidad**, para que lo entiendas como si fuera la primera vez.
 
@@ -177,3 +187,38 @@ Esto da el vector más completo y barato para un MVP.**
 ---
 
 Si quieres, te genero **el texto final consolidado**, para que sepas EXACTAMENTE qué debes meter a `E5-multilingual`.
+
+
+## 5. Verificación de identidad con cámara directa
+
+Contexto:
+La verificación actual del usuario en Wodates no existe como flujo dedicado. En iPhone + Chrome no es posible abrir la cámara directamente porque el navegador obliga a mostrar el selector del sistema. En iPhone + Safari o como PWA sí es posible, y en app nativa con Expo funciona sin limitaciones.
+
+Acción futura:
+Añadir en la pantalla de perfil (profile.tsx) un botón “Verificar cuenta” que abra la cámara frontal directamente. Implementar el endpoint backend /users/me/verify para recibir la foto y almacenarla en Supabase (bucket verification_photos/). Añadir validaciones de formato y tamaño.
+
+Motivo:
+Reducir cuentas falsas y aumentar la confianza. La verificación biométrica con selfie aumenta la calidad del matching y la percepción de seguridad dentro de la app.
+
+Limitación técnica importante:
+Chrome en iOS no permite apertura directa de cámara. El flujo correcto es:
+
+Detectar navegador → si es Chrome iOS, mostrar mensaje para usar Safari.
+
+Permitir cámara directa solo en Safari, PWA o app nativa.
+
+Tareas técnicas:
+
+Añadir botón UI en profile.tsx.
+
+Implementar handleVerifyAccount() usando takePictureWithCamera().
+
+Crear endpoint backend /users/me/verify.
+
+Subida segura del archivo a Supabase.
+
+Guardar referencia en users.verification_status (pending, verified, rejected).
+
+Añadir job para análisis automático (o revisión manual en dashboard interno).
+
+Issue: #account-verification
