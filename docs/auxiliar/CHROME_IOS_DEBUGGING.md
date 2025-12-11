@@ -207,3 +207,4 @@ Los logs ahora son muy detallados y deberían mostrar exactamente dónde está f
 **Próximo paso**: Ver logs en dispositivo físico
 
 
+
