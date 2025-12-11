@@ -24,3 +24,4 @@ export type UpdateUserPhotoInput = {
   is_main?: boolean;
   position?: number;
 };
+
