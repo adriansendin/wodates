@@ -178,7 +178,7 @@ export function useUserPhotos(userId: string | null) {
         setIsUploading(false);
       }
     },
-    [userId, tokens?.accessToken, photoApi, loadPhotos]
+    [userId, tokens?.accessToken]
   );
 
   const deletePhoto = useCallback(
@@ -215,7 +215,7 @@ export function useUserPhotos(userId: string | null) {
         setIsDeleting(false);
       }
     },
-    [userId, tokens?.accessToken, photoApi, loadPhotos]
+    [userId, tokens?.accessToken]
   );
 
   const setMainPhoto = useCallback(
@@ -252,7 +252,7 @@ export function useUserPhotos(userId: string | null) {
         setIsSettingMain(false);
       }
     },
-    [userId, tokens?.accessToken, photoApi, loadPhotos]
+    [userId, tokens?.accessToken]
   );
 
   return {
@@ -269,6 +269,26 @@ export function useUserPhotos(userId: string | null) {
   };
 }
 
+/**
+ * Converts a data URI to a Blob object
+ * @param uri - The data URI to convert
+ * @returns {Blob} The converted blob
+ */
+function buildBlobFromDataUri(uri: string): Blob {
+  const commaIndex = uri.indexOf(',');
+  const meta = uri.substring(5, commaIndex); // skip "data:"
+  const base64 = uri.substring(commaIndex + 1);
+  const isBase64 = meta.endsWith(';base64');
+  const mime = meta.replace(';base64', '') || 'image/jpeg';
+  const binary = isBase64 ? atob(base64) : decodeURIComponent(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
+}
+
 async function prepareWebUploadFile(imageUri: string): Promise<{
   blob: Blob;
   mimeType: string;
@@ -278,21 +298,6 @@ async function prepareWebUploadFile(imageUri: string): Promise<{
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const isChromeIOS = /CriOS/i.test(ua);
   let blob: Blob;
-
-  const buildBlobFromDataUri = (uri: string): Blob => {
-    const commaIndex = uri.indexOf(',');
-    const meta = uri.substring(5, commaIndex); // skip "data:"
-    const base64 = uri.substring(commaIndex + 1);
-    const isBase64 = meta.endsWith(';base64');
-    const mime = meta.replace(';base64', '') || 'image/jpeg';
-    const binary = isBase64 ? atob(base64) : decodeURIComponent(base64);
-    const len = binary.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return new Blob([bytes], { type: mime });
-  };
 
   try {
     if (imageUri.startsWith('data:')) {
@@ -384,8 +389,14 @@ async function compressImageIfNeeded(
           [], // no resize here, only format conversion
           { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
         );
-        const convertedResponse = await fetch(converted.uri);
-        blob = await convertedResponse.blob();
+        // Handle data URIs correctly
+        if (converted.uri.startsWith('data:')) {
+          console.log('[useUserPhotos] Converted result is data URI, converting to blob...');
+          blob = buildBlobFromDataUri(converted.uri);
+        } else {
+          const convertedResponse = await fetch(converted.uri);
+          blob = await convertedResponse.blob();
+        }
         console.log(
           '[useUserPhotos] HEIC conversion completed, new size (KB):',
           Math.round(blob.size / 1024)
@@ -416,8 +427,15 @@ async function compressImageIfNeeded(
           { compress: quality, format: ImageManipulator.SaveFormat.JPEG }
         );
 
-        const compressedResponse = await fetch(result.uri);
-        compressedBlob = await compressedResponse.blob();
+        // Handle data URIs correctly (ImageManipulator returns data URIs in web)
+        // fetch() can fail with data URIs in Chrome iOS, so we convert directly
+        if (result.uri.startsWith('data:')) {
+          console.log('[useUserPhotos] Compressed result is data URI, converting to blob...');
+          compressedBlob = buildBlobFromDataUri(result.uri);
+        } else {
+          const compressedResponse = await fetch(result.uri);
+          compressedBlob = await compressedResponse.blob();
+        }
 
         const compressedSizeKB = Math.round(compressedBlob.size / 1024);
         console.log(
