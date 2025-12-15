@@ -21,12 +21,15 @@ type FeedUserRow = {
   name: string; // Retrieved from auth.users.raw_user_meta_data.display_name
   birthDate: string | null;
   gender: string | null;
+  looking_for: LookingForValue | null;
   bio: string | null;
 };
 
 type CurrentUserRow = {
   id: string;
   looking_for: LookingForValue | null;
+  gender: string | null;
+  city: string | null;
 };
 
 type InteractionRow = {
@@ -67,14 +70,20 @@ export class SupabaseFeedService {
 
       let query = this.client
         .from('users')
-        .select('id, birthDate, gender, bio') // Removed 'name' and 'avatar_url' - name comes from auth.users, photo from user_photos
+        .select('id, birthDate, gender, looking_for, bio, city') // Added 'looking_for' and 'city' for filtering
         .neq('id', userId)
-        .lt('active_chats_count', 3) // Exclude users with 3 or more active chats
+        .lt('active_chats_count', 1) // Exclude users with any active chats (must be 0)
         .or('is_bot.is.null,is_bot.eq.false') // Exclude bots (system users)
         .range(offset, offset + limit - 1);
 
+      // Initial filter: optimize query by filtering candidates that current user is looking for
       if (genderFilter !== 'any') {
         query = query.in('gender', genderFilter);
+      }
+
+      // Filter by city: only show users in the same city
+      if (currentUser.city) {
+        query = query.eq('city', currentUser.city);
       }
 
       const [{ data, error }, excludedIds] = await Promise.all([
@@ -92,7 +101,29 @@ export class SupabaseFeedService {
         return [];
       }
 
-      const filtered = data.filter((row) => !excludedIds.has(row.id));
+      // Filter out excluded users (liked/passed) and apply bidirectional gender filter
+      const currentUserGender = this.normalizeGender(currentUser.gender);
+      const filtered = data.filter((row) => {
+        if (excludedIds.has(row.id)) {
+          return false;
+        }
+
+        // Bidirectional filter: both users must be looking for each other's gender
+        const candidateGender = this.normalizeGender(row.gender);
+        const candidateLookingFor = row.looking_for;
+
+        // Check if current user is looking for candidate's gender
+        if (!this.includesGender(currentUser.looking_for, candidateGender)) {
+          return false;
+        }
+
+        // Check if candidate is looking for current user's gender
+        if (!currentUserGender || !this.includesGender(candidateLookingFor, currentUserGender)) {
+          return false;
+        }
+
+        return true;
+      });
 
       // Fetch identity info from auth.users for all candidates in parallel
       const candidatesWithNames = await Promise.all(
@@ -124,7 +155,7 @@ export class SupabaseFeedService {
   private async fetchCurrentUser(userId: string): Promise<CurrentUserRow> {
     const { data, error } = await this.client
       .from('users')
-      .select('id, looking_for')
+      .select('id, looking_for, gender, city')
       .eq('id', userId)
       .single();
 
@@ -141,6 +172,46 @@ export class SupabaseFeedService {
     return data as CurrentUserRow;
   }
 
+  /**
+   * Determines if a looking_for preference includes a specific gender.
+   * Pure function for bidirectional gender filtering.
+   *
+   * @param lookingFor - The user's looking_for preference ('male', 'female', 'both', or null)
+   * @param gender - The gender to check ('male', 'female', 'non_binary')
+   * @returns true if the looking_for preference includes the gender
+   */
+  private includesGender(
+    lookingFor: LookingForValue | null,
+    gender: Gender | null
+  ): boolean {
+    if (!gender) {
+      return false;
+    }
+
+    if (!lookingFor || lookingFor === 'both') {
+      // 'both' means "any gender" - includes all genders (male, female, non_binary)
+      return true;
+    }
+
+    // Map looking_for values to gender values
+    if (lookingFor === 'male') {
+      return gender === 'male';
+    }
+
+    if (lookingFor === 'female') {
+      return gender === 'female';
+    }
+
+    return false;
+  }
+
+  /**
+   * Resolves looking_for preference to a list of genders for SQL query optimization.
+   * Used for initial filtering in the database query.
+   *
+   * @param lookingFor - The user's looking_for preference
+   * @returns Array of genders or 'any' if no filter should be applied
+   */
   private resolveGenderFilter(
     lookingFor: LookingForValue | null
   ): 'any' | Gender[] {
@@ -165,23 +236,33 @@ export class SupabaseFeedService {
     return Array.from(allowed);
   }
 
+
   private async fetchExcludedUserIds(userId: string): Promise<Set<string>> {
     const excluded = new Set<string>();
 
-    const [likes, passes] = (await Promise.all([
+    const [likes, passes, receivedPasses] = (await Promise.all([
+      // Users the current user has liked
       this.client
         .from('interactions')
         .select('to_user')
         .eq('from_user', userId)
         .eq('action', 'like'),
+      // Users the current user has passed (disliked)
       this.client
         .from('interactions')
         .select('to_user')
         .eq('from_user', userId)
         .eq('action', 'pass'),
+      // Users who have passed (disliked) the current user
+      this.client
+        .from('interactions')
+        .select('from_user')
+        .eq('to_user', userId)
+        .eq('action', 'pass'),
     ])) as [
       PostgrestResponse<InteractionRow>,
       PostgrestResponse<InteractionRow>,
+      PostgrestResponse<{ from_user: string }>,
     ];
 
     const processResult = (result: PostgrestResponse<InteractionRow>) => {
@@ -198,8 +279,22 @@ export class SupabaseFeedService {
       });
     };
 
+    // Process likes and passes given by current user
     processResult(likes);
     processResult(passes);
+
+    // Process passes received by current user (bidirectional exclusion)
+    if (receivedPasses.error) {
+      throw new InternalError(
+        `Failed to fetch received passes for feed exclusion: ${this.formatSupabaseError(receivedPasses.error)}`
+      );
+    }
+
+    (receivedPasses.data ?? []).forEach((row) => {
+      if (row?.from_user) {
+        excluded.add(row.from_user);
+      }
+    });
 
     return excluded;
   }

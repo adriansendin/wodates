@@ -19,7 +19,9 @@ import { createEmbeddingModel } from '../../src/app/ai/core/config';
 // CONFIGURACIÓN: Edita este array con los IDs de usuarios que quieres procesar
 // ============================================================================
 const USER_IDS: string[] = [
-  'bf9e9fc1-ad44-46b0-933e-1e58bfc904a4',
+  '1806d6c0-9fd3-401d-b602-e0b474694cbe',
+  '27322fa5-a727-4b86-a136-83fc71c6e47c'
+  /*'bf9e9fc1-ad44-46b0-933e-1e58bfc904a4',
   '9b290985-decc-46e4-817a-1e7d7cdf8f8b',
   '9cab4177-62c7-4979-9aa5-4eebf61c1c9c',
   'd5024075-6603-424d-8294-902ab53a1039',
@@ -52,7 +54,7 @@ const USER_IDS: string[] = [
   'c437554c-d5fc-4155-a1f7-a77747aac300',
   '7db0ecdc-e4b1-48fa-9f50-34f2c36844ae',
   'bd3082a2-4046-4563-abec-f6eb781c703f',
-  'deeeb34b-8fd7-4031-8cff-fd1308335ba0',
+  'deeeb34b-8fd7-4031-8cff-fd1308335ba0',*/
 ];
 
 

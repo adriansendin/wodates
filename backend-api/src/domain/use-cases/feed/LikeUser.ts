@@ -42,7 +42,7 @@ export class LikeUser {
       userId
     );
     if (isSuccess(mutualLikeResult) && mutualLikeResult.data) {
-      // Check if both users have less than 3 active chats before creating match
+      // Check if both users have no active chats before creating match
       const activeChatsCounts = await this.matchRepository.getActiveChatsCount([
         userId,
         targetUserId,
@@ -51,18 +51,18 @@ export class LikeUser {
       const userActiveChats = activeChatsCounts.get(userId) ?? 0;
       const targetUserActiveChats = activeChatsCounts.get(targetUserId) ?? 0;
 
-      if (userActiveChats >= 3) {
+      if (userActiveChats >= 1) {
         return failure(
           new ConflictError(
-            'You have reached the maximum number of active chats (3)'
+            'You have reached the maximum number of active chats (0)'
           )
         );
       }
 
-      if (targetUserActiveChats >= 3) {
+      if (targetUserActiveChats >= 1) {
         return failure(
           new ConflictError(
-            'This user has reached the maximum number of active chats (3)'
+            'This user has reached the maximum number of active chats (0)'
           )
         );
       }
