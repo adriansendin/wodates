@@ -1,20 +1,7 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/domain/stores/authStore';
-import { useMatchesStore } from '../../src/domain/stores/matchesStore';
 import { View, Text } from 'react-native';
-
-function MatchesHeaderRight() {
-  const activeChatsCount = useMatchesStore((state) => state.activeChatsCount);
-  
-  return (
-    <View style={{ marginRight: 16 }}>
-      <Text style={{ fontSize: 14, color: '#666' }}>
-        {activeChatsCount}/3 chats
-      </Text>
-    </View>
-  );
-}
 
 export default function AppTabsLayout() {
   const { user } = useAuthStore();
@@ -45,7 +32,7 @@ export default function AppTabsLayout() {
             </Text>
           </View>
         ),
-        headerRight: route.name === 'matches' ? () => <MatchesHeaderRight /> : undefined,
+        headerRight: undefined,
         headerBackVisible: false,
         tabBarIcon: ({ focused, color, size }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {

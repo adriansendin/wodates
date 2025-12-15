@@ -42,7 +42,7 @@ export default function Home() {
         {/* Tagline */}
         <View style={styles.sloganBlock}>
                 <Text style={styles.tagline}>Relaciones serias</Text>
-                <Text style={styles.tagline}>Menos swipe. Más conexiones.</Text>
+                <Text style={styles.tagline}>Menos swipe. Más conexión.</Text>
         </View>
 
         {/* Botones principales */}

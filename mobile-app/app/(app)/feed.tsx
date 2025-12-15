@@ -232,8 +232,8 @@ export default function FeedScreen() {
     );
   }
 
-  // Show blocked message if user has 3+ active chats
-  if (activeChatsCount >= 3) {
+  // Show blocked message if user has any active chats
+  if (activeChatsCount >= 1) {
     return (
       <View style={styles.emptyContainer}>
         <View style={styles.emptyIconContainer}>
@@ -241,7 +241,7 @@ export default function FeedScreen() {
         </View>
         <Text style={styles.emptyTitle}>Conoce a tus matches</Text>
         <Text style={styles.emptySubtext}>
-          Tienes {activeChatsCount} conversaciones activas. Conecta con tus matches antes de descubrir más personas.
+          Tienes {activeChatsCount} conversación{activeChatsCount > 1 ? 'es' : ''} activa{activeChatsCount > 1 ? 's' : ''}. Conecta con tus matches antes de descubrir más personas.
         </Text>
         <TouchableOpacity 
           style={styles.discoverButton}
