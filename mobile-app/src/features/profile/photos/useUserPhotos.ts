@@ -391,7 +391,9 @@ async function compressImageIfNeeded(
         );
         // Handle data URIs correctly
         if (converted.uri.startsWith('data:')) {
-          console.log('[useUserPhotos] Converted result is data URI, converting to blob...');
+          console.log(
+            '[useUserPhotos] Converted result is data URI, converting to blob...'
+          );
           blob = buildBlobFromDataUri(converted.uri);
         } else {
           const convertedResponse = await fetch(converted.uri);
@@ -430,7 +432,9 @@ async function compressImageIfNeeded(
         // Handle data URIs correctly (ImageManipulator returns data URIs in web)
         // fetch() can fail with data URIs in Chrome iOS, so we convert directly
         if (result.uri.startsWith('data:')) {
-          console.log('[useUserPhotos] Compressed result is data URI, converting to blob...');
+          console.log(
+            '[useUserPhotos] Compressed result is data URI, converting to blob...'
+          );
           compressedBlob = buildBlobFromDataUri(result.uri);
         } else {
           const compressedResponse = await fetch(result.uri);

@@ -109,7 +109,7 @@ export class EmbeddingModelOllama implements EmbeddingModel {
 
   /**
    * Builds the request payload for Ollama embeddings API
-   * 
+   *
    * For multilingual-e5-base model, adds the "passage:" prefix as required by E5 models
    * for asymmetric tasks (passage retrieval/document embedding).
    */

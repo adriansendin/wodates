@@ -118,7 +118,10 @@ export class SupabaseFeedService {
         }
 
         // Check if candidate is looking for current user's gender
-        if (!currentUserGender || !this.includesGender(candidateLookingFor, currentUserGender)) {
+        if (
+          !currentUserGender ||
+          !this.includesGender(candidateLookingFor, currentUserGender)
+        ) {
           return false;
         }
 
@@ -235,7 +238,6 @@ export class SupabaseFeedService {
 
     return Array.from(allowed);
   }
-
 
   private async fetchExcludedUserIds(userId: string): Promise<Set<string>> {
     const excluded = new Set<string>();

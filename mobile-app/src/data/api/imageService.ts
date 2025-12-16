@@ -30,14 +30,20 @@ async function compressImageIfNeeded(uri: string): Promise<string> {
 
   try {
     console.log('[ImageService] compressImageIfNeeded called with URI:', {
-      uriType: uri.startsWith('data:') ? 'data URI' : uri.startsWith('blob:') ? 'blob URI' : 'other',
+      uriType: uri.startsWith('data:')
+        ? 'data URI'
+        : uri.startsWith('blob:')
+          ? 'blob URI'
+          : 'other',
       uriLength: uri.length,
       uriPreview: uri.substring(0, 50) + '...',
     });
 
     // Handle data URIs directly without fetch (fetch can fail with data URIs in Chrome iOS)
     if (uri.startsWith('data:')) {
-      console.log('[ImageService] Data URI detected, converting to blob locally...');
+      console.log(
+        '[ImageService] Data URI detected, converting to blob locally...'
+      );
       blob = buildBlobFromDataUri(uri);
       originalSizeKB = Math.round(blob.size / 1024);
       console.log(
@@ -104,13 +110,15 @@ async function compressImageIfNeeded(uri: string): Promise<string> {
       // fetch() can fail with data URIs in Chrome iOS, so we convert directly
       let compressedBlob: Blob;
       if (result.uri.startsWith('data:')) {
-        console.log('[ImageService] Compressed result is data URI, converting to blob...');
+        console.log(
+          '[ImageService] Compressed result is data URI, converting to blob...'
+        );
         compressedBlob = buildBlobFromDataUri(result.uri);
       } else {
         const compressedResponse = await fetch(result.uri);
         compressedBlob = await compressedResponse.blob();
       }
-      
+
       const compressedSizeKB = Math.round(compressedBlob.size / 1024);
 
       console.log(
@@ -157,7 +165,9 @@ async function compressImageIfNeeded(uri: string): Promise<string> {
   // Final verification
   let finalBlob: Blob;
   if (compressedUri.startsWith('data:')) {
-    console.log('[ImageService] Final verification: compressed URI is data URI, converting to blob...');
+    console.log(
+      '[ImageService] Final verification: compressed URI is data URI, converting to blob...'
+    );
     finalBlob = buildBlobFromDataUri(compressedUri);
   } else {
     const finalResponse = await fetch(compressedUri);
@@ -178,7 +188,10 @@ const buildBlobFromDataUri = (uri: string): Blob => {
   try {
     console.log('[ImageService] buildBlobFromDataUri: Starting conversion...');
     console.log('[ImageService] Data URI length:', uri.length);
-    console.log('[ImageService] Data URI preview:', uri.substring(0, 100) + '...');
+    console.log(
+      '[ImageService] Data URI preview:',
+      uri.substring(0, 100) + '...'
+    );
 
     const commaIndex = uri.indexOf(',');
     if (commaIndex === -1) {
@@ -208,7 +221,9 @@ const buildBlobFromDataUri = (uri: string): Blob => {
       }
     } catch (decodeError) {
       console.error('[ImageService] Error decoding data URI:', decodeError);
-      throw new Error(`Failed to decode data URI: ${decodeError instanceof Error ? decodeError.message : String(decodeError)}`);
+      throw new Error(
+        `Failed to decode data URI: ${decodeError instanceof Error ? decodeError.message : String(decodeError)}`
+      );
     }
 
     const len = binary.length;
@@ -357,22 +372,19 @@ async function pickImageFromWeb(
                 );
                 finalUri = await compressImageIfNeeded(dataUri);
                 const finalSizeKB = Math.round(finalUri.length / 1024);
-                console.log(
-                  '[ImageService] Image compression completed:',
-                  {
-                    originalSizeKB: dataUriSizeKB,
-                    compressedSizeKB: finalSizeKB,
-                    reduction: `${Math.round((1 - finalSizeKB / dataUriSizeKB) * 100)}%`,
-                    finalUri: finalUri.substring(0, 50) + '...',
-                  }
-                );
+                console.log('[ImageService] Image compression completed:', {
+                  originalSizeKB: dataUriSizeKB,
+                  compressedSizeKB: finalSizeKB,
+                  reduction: `${Math.round((1 - finalSizeKB / dataUriSizeKB) * 100)}%`,
+                  finalUri: finalUri.substring(0, 50) + '...',
+                });
               } catch (compressionError) {
                 // If compression fails, check if original is too large
                 console.error(
                   '[ImageService] Compression failed, checking original size:',
                   compressionError
                 );
-                
+
                 // Check if original exceeds limit (500KB)
                 if (dataUriSizeKB > MAX_IMAGE_SIZE_KB) {
                   console.error(
@@ -381,7 +393,7 @@ async function pickImageFromWeb(
                   // Still try to use it, but log a warning
                   // The upload will likely fail with 413 error
                 }
-                
+
                 finalUri = dataUri;
               }
 
@@ -696,8 +708,7 @@ type VerificationUploadResponse = {
 export async function uploadVerificationSelfie(
   imageUri: string
 ): Promise<Result<VerificationUploadResponse, DomainError>> {
-  const userAgent =
-    typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const isChromeIOS = /CriOS/i.test(userAgent);
   const isWeb = Platform.OS === 'web';
 
@@ -786,7 +797,9 @@ export async function uploadVerificationSelfie(
           return failure(
             new UploadError(
               errorMessage,
-              new Error(`File size ${fileSizeKB}KB exceeds limit ${MAX_IMAGE_SIZE_KB}KB`)
+              new Error(
+                `File size ${fileSizeKB}KB exceeds limit ${MAX_IMAGE_SIZE_KB}KB`
+              )
             )
           );
         }
@@ -823,8 +836,14 @@ export async function uploadVerificationSelfie(
       });
     }
 
-    console.log('[ImageService] 📤 Sending POST request to:', `${API_URL}/users/me/verification`);
-    console.log('[ImageService] FormData entries count:', formData instanceof FormData ? 'FormData object created' : 'Unknown');
+    console.log(
+      '[ImageService] 📤 Sending POST request to:',
+      `${API_URL}/users/me/verification`
+    );
+    console.log(
+      '[ImageService] FormData entries count:',
+      formData instanceof FormData ? 'FormData object created' : 'Unknown'
+    );
 
     // IMPORTANT: Don't set Content-Type manually - let axios set it with boundary
     const headers: Record<string, string> = {
@@ -859,7 +878,10 @@ export async function uploadVerificationSelfie(
   } catch (error: unknown) {
     console.error('[ImageService] ===== UPLOAD ERROR =====');
     console.error('[ImageService] Error type:', error?.constructor?.name);
-    console.error('[ImageService] Error message:', error instanceof Error ? error.message : String(error));
+    console.error(
+      '[ImageService] Error message:',
+      error instanceof Error ? error.message : String(error)
+    );
     console.error('[ImageService] Full error object:', error);
 
     if (axios.isAxiosError(error)) {
@@ -895,7 +917,9 @@ export async function uploadVerificationSelfie(
         if (error.response.status === 413) {
           const message =
             'La imagen es demasiado grande. Por favor, selecciona una imagen más pequeña. El tamaño máximo permitido es 500KB.';
-          console.error('[ImageService] ❌ 413 Payload Too Large - Image exceeds server limit');
+          console.error(
+            '[ImageService] ❌ 413 Payload Too Large - Image exceeds server limit'
+          );
           return failure(new UploadError(message, error));
         }
 
@@ -906,7 +930,9 @@ export async function uploadVerificationSelfie(
       } else if (error.request) {
         const message =
           error.message || 'Network error - no response from server';
-        console.error('[ImageService] Network error - request was made but no response received');
+        console.error(
+          '[ImageService] Network error - request was made but no response received'
+        );
         return failure(new UploadError(message, error));
       } else {
         const message = error.message || 'Request setup error';

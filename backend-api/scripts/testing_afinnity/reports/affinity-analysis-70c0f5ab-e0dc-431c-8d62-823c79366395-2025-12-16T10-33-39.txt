@@ -1,0 +1,348 @@
+================================================================================
+AFFINITY ANALYSIS REPORT
+================================================================================
+
+Target User ID: 70c0f5ab-e0dc-431c-8d62-823c79366395
+Target User Name: testio1
+Target User Email: testio1@example.com
+Generated at: 2025-12-16T10:33:39.856Z
+
+================================================================================
+TARGET USER MESSAGES
+================================================================================
+
+Messages (24):
+   [15/12/25, 22:21:59] testio1: Vale, Doc Love, vamos a ver si me entiendes. No soy de los que escriben perfiles de citas con frases hechas.
+   [15/12/25, 22:21:59] testio1: Así que, aquí va:
+
+Me llamo Marc, tengo 24 años, nacido en 2000, y vivo en Gràcia, en Barcelona.
+   [15/12/25, 22:21:59] testio1: Es un barrio que me va genial, con ese rollo de plazas, bares con encanto y gente que no es demasiado “curada”.
+   [15/12/25, 22:21:59] testio1: Trabajo como diseñador gráfico freelance, principalmente para pequeñas empresas y tiendas online.
+   [15/12/25, 22:21:59] testio1: No es lo más glamuroso del mundo, pero me gusta que sea flexible y que pueda trabajar desde casa, sobre todo ahora que el invierno se acerca.
+   [15/12/25, 22:22:00] testio1: La verdad es que a veces me aburro, pero me gusta que pueda dedicar tiempo a mis proyectos personales, que son un poco de ilustración y diseño de objetos pequeños.
+   [15/12/25, 22:22:00] testio1: Mi día a día es bastante normal, la verdad. Me levanto a las 7:30, desayuno (normalmente tostada con aceite de oliva y tomate, ¡soy un clásico. ), y me voy a trabajar.
+   [15/12/25, 22:22:00] testio1: A veces tengo reuniones online, otras veces diseño, y otras, simplemente, me pierdo en un proyecto.
+   [15/12/25, 22:22:00] testio1: Almorzar es a las 14:30, siempre en algún bar de la zona, y por la tarde sigo trabajando hasta que cierran los bares.
+   [15/12/25, 22:22:00] testio1: Por la noche, si no tengo alguna reunión, suelo ir a tomar algo con amigos, o a casa a ver alguna serie (Netflix es mi mejor amigo últimamente, la verdad). Los fines de semana.
+   [15/12/25, 22:22:00] testio1: A veces me voy a Montjuïc a hacer senderismo, me gusta desconectar y ver las vistas.
+   [15/12/25, 22:22:01] testio1: O me encuentro con amigos, a veces vamos a algún concierto de música indie, o a un partido de fútbol (aunque soy más de verlos que de animarlos, la verdad).
+   [15/12/25, 22:22:01] testio1: También me gusta ir a mercados, como el de la Boqueria, o a algún mercadillo de diseño. He estado intentando aprender a hacer cerámica, pero no me sale nada bien, ¡es un desastre.
+   [15/12/25, 22:22:01] testio1: En cuanto a las relaciones. He tenido algunas experiencias, no todas buenas, la verdad. Estuve con una chica, Laura, durante un año, la conocí en la universidad.
+   [15/12/25, 22:22:01] testio1: Era buena, muy buena, pero al final no funcionó. Nos separamos hace seis meses, fue duro, pero creo que era que teníamos expectativas diferentes sobre el futuro.
+   [15/12/25, 22:22:01] testio1: Antes de ella, tuve una relación más corta, con una chica que conocí en un festival de música. Fue una aventura, pero no llegamos a nada serio. Y mi padre falleció hace cinco años, cuando tenía 16.
+   [15/12/25, 22:22:02] testio1: Fue un golpe duro, y me ha hecho pensar mucho sobre la vida y la pérdida. No es algo que quiera hablar mucho, pero está ahí, claro.
+   [15/12/25, 22:22:02] testio1: Tengo miedo a comprometerme demasiado rápido, a que una relación se convierta en una carga. También tengo miedo a que la gente que conozco no sea quien parece ser. Soy bastante cauto, la verdad.
+   [15/12/25, 22:22:02] testio1: Pero también quiero encontrar a alguien con quien compartir cosas, con quien reír, con quien discutir (de forma sana, claro), y con quien simplemente estar.
+   [15/12/25, 22:22:02] testio1: Busco a alguien inteligente, con sentido del humor, que tenga sus propios intereses y que no tenga miedo a ser vulnerable.
+   [15/12/25, 22:22:02] testio1: Que le guste la buena comida, la música, el arte, y que, sobre todo, sea una buena persona.
+   [15/12/25, 22:22:03] testio1: No busco a alguien perfecto, porque nadie lo es, pero sí a alguien con quien pueda conectar a un nivel más profundo. Y que, por favor, no sea de los que se quejan de todo.
+   [15/12/25, 22:22:03] testio1: En fin, Doc Love, eso es más o menos yo. ¿Qué te parece.
+   [15/12/25, 22:22:03] testio1: ¿Crees que hay alguna posibilidad de que nos entendamos.
+
+--------------------------------------------------------------------------------
+
+================================================================================
+SQL QUERY EXECUTED
+================================================================================
+
+
+WITH me AS (
+  SELECT summary_embedding AS e
+  FROM public.user_ai_profiles
+  WHERE user_id = '70c0f5ab-e0dc-431c-8d62-823c79366395'
+)
+SELECT
+  p.user_id,
+  u.email,
+  (p.summary_embedding <=> me.e) AS cosine_distance,
+  (1 - (p.summary_embedding <=> me.e)) AS cosine_similarity,
+  ((1 - (p.summary_embedding <=> me.e)) * 100.0) AS affinity_pct
+FROM public.user_ai_profiles p
+JOIN auth.users u ON u.id = p.user_id
+CROSS JOIN me
+WHERE p.user_id <> '70c0f5ab-e0dc-431c-8d62-823c79366395'
+ORDER BY cosine_distance ASC
+LIMIT 10;
+
+
+SQL QUERY RESULTS:
+--------------------------------------------------------------------------------
+| user_id                              | email               | cosine_distance    | cosine_similarity | affinity_pct     |
+| ------------------------------------ | ------------------- | ------------------ | ----------------- | ---------------- |
+| 04cb6fbb-0653-4bba-bfe3-2ecfd3870439  | test2@example.com   | 0.04425203206519568 | 0.95574796793480432 | 95.5747967934804308 |
+| d84a19bc-4e40-4ca4-8380-4d241673dbe9  | testia2@example.com | 0.04718061084476788 | 0.95281938915523212 | 95.2819389155232130 |
+| 11d4f1de-59c5-498d-aeec-726e7052f9e7  | kkk@example.com     | 0.04793530285262870 | 0.95206469714737130 | 95.2064697147371248 |
+| 7db0ecdc-e4b1-48fa-9f50-34f2c36844ae  | merche@example.com  | 0.04858736502542427 | 0.95141263497457573 | 95.1412634974575724 |
+| 5f96c9fa-7324-42e4-9d37-aaf265f8d98a  | testia4@example.com | 0.04918018926950785 | 0.95081981073049215 | 95.0819810730492208 |
+| 9de80b1e-772e-43ef-b6b5-ef00b955d54f  | testia1@example.com | 0.04981906462479746 | 0.95018093537520254 | 95.0180935375202580 |
+| deeeb34b-8fd7-4031-8cff-fd1308335ba0  | scarlet@example.com | 0.04983190339456811 | 0.95016809660543189 | 95.0168096605431884 |
+| 7314dcde-7e67-46f7-b46d-532e13765476  | test5@example.com   | 0.05065282673437155 | 0.94934717326562845 | 94.9347173265628470 |
+| 1f093bcf-1032-40e3-b2a2-19d0b5c9a42a  | testia5@example.com | 0.05405035743197550 | 0.94594964256802450 | 94.5949642568024558 |
+| 457ad77b-e8e8-4a02-bbfa-08bbd8d161cf  | tucan@example.com   | 0.05549959981863228 | 0.94450040018136772 | 94.4500400181367752 |
+--------------------------------------------------------------------------------
+
+================================================================================
+TOP 10 MOST AFFINITY USERS
+================================================================================
+
+1. User ID: 04cb6fbb-0653-4bba-bfe3-2ecfd3870439
+   Email: test2@example.com
+   Cosine Distance: 0.044252
+   Cosine Similarity: 0.955748
+   Affinity %: 95.57%
+
+   Messages (9):
+   [12/12/25, 20:33:33] test2: **Biografía**
+
+Soy Clara, nacida en Barcelona hace 42 años, aunque la ciudad ya es parte esencial de mí desde siempre.
+   [12/12/25, 20:33:33] test2: Hace diez años, mi carrera como economista me llevó a vivir una etapa interesante: intercambié estudios con Italia, específicamente en Venecia, donde aprendí que el equilibrio entre trabajo y pasión define el verdadero éxito.
+   [12/12/25, 20:33:33] test2: Aunque siempre he sido pragmática, ese viaje me enseñó que la curiosidad y el arte —no la burocracia— también tienen su lugar en la vida.
+   [12/12/25, 20:33:34] test2: Me apasiona Barcelona, su mezcla de historia y vanguardia, y aunque trabajo en un entorno riguroso, busco espacios donde la creatividad florezca.
+   [12/12/25, 20:33:34] test2: Toco la guitarra los domingos (aunque no soy virtuosa), porque la música me conecta con otras personas y me recuerda que, más allá de los números, hay historias que contar.
+   [12/12/25, 20:33:34] test2: Además, cocino mediterráneo con fervor: mi mesa siempre es un refugio de sabores compartidos, desde un pan recién horneado hasta platos de la abuela.
+   [12/12/25, 20:33:34] test2: En lo personal, valoro la intimidad y la complicidad. Busco relaciones donde haya confianza sin presión, donde el diálogo fluya y donde el otro se sienta cómodo con su propia versión.
+   [12/12/25, 20:33:34] test2: Aunque no soy la que siempre dice sí —sé que hay límites—, prefiero un amor que me haga crecer, no uno que me limite.
+   [12/12/25, 20:33:34] test2: Y por supuesto, si un día me invitas a un museo o a un concierto, te espero con un café y un bocadillo de txangurro.
+
+--------------------------------------------------------------------------------
+
+2. User ID: d84a19bc-4e40-4ca4-8380-4d241673dbe9
+   Email: testia2@example.com
+   Cosine Distance: 0.047181
+   Cosine Similarity: 0.952819
+   Affinity %: 95.28%
+
+   Messages (20):
+   [16/12/25, 11:24:33] testia2: [22/03/25, 10:02] Clara: Tengo 25 años y vivo en Barcelona, en Gràcia, llevo aquí desde que empecé la universidad.
+   [16/12/25, 11:24:34] testia2: [22/03/25, 10:05] Clara: Estudié Bellas Artes y ahora mismo trabajo a tiempo parcial en una tienda mientras intento mover proyectos creativos.
+   [16/12/25, 11:24:34] testia2: [22/03/25, 10:09] Clara: Mis días no tienen una estructura fija, hay semanas muy activas y otras en las que me cuesta incluso salir de casa.
+   [16/12/25, 11:24:34] testia2: [22/03/25, 10:13] Clara: Paso bastante tiempo sola, no porque no tenga amigos, sino porque necesito silencio para pensar y ordenar cosas.
+   [16/12/25, 11:24:34] testia2: [22/03/25, 10:16] Clara: Me despierto tarde casi siempre, trabajo mejor por la noche y eso hace que viva un poco a contracorriente.
+   [16/12/25, 11:24:34] testia2: [22/03/25, 10:20] Clara: A veces siento que no encajo del todo en los ritmos normales de la gente de mi edad.
+   [16/12/25, 11:24:34] testia2: [22/03/25, 10:24] Clara: He tenido pocas relaciones, pero muy intensas, y me han marcado más de lo que me gustaría admitir.
+   [16/12/25, 11:24:35] testia2: [22/03/25, 10:27] Clara: Me cuesta separar lo emocional de lo creativo, todo se me mezcla bastante.
+   [16/12/25, 11:24:35] testia2: [22/03/25, 10:31] Clara: No me gusta hablar de futuro en términos muy cerrados, me genera rechazo sentirme atada a planes largos.
+   [16/12/25, 11:24:35] testia2: [22/03/25, 10:35] Clara: Hay personas que interpretan eso como falta de compromiso, pero para mí es una forma de protegerme.
+   [16/12/25, 11:24:35] testia2: [22/03/25, 10:38] Clara: Económicamente no tengo una situación estable y eso me genera bastante ansiedad, aunque lo lleve por dentro.
+   [16/12/25, 11:24:35] testia2: [22/03/25, 10:42] Clara: Me comparo mucho con otros y sé que no me hace bien, pero me cuesta dejar de hacerlo.
+   [16/12/25, 11:24:35] testia2: [22/03/25, 10:45] Clara: No soy una persona especialmente práctica, necesito tiempo para aterrizar decisiones importantes.
+   [16/12/25, 11:24:36] testia2: [22/03/25, 10:49] Clara: Me siento cómoda con gente sensible, pero me abruma cuando alguien quiere ir demasiado rápido.
+   [16/12/25, 11:24:36] testia2: [22/03/25, 10:53] Clara: Barcelona me inspira y me desgasta a partes iguales, no tengo claro si me quedaré aquí muchos años más.
+   [16/12/25, 11:24:36] testia2: [22/03/25, 10:57] Clara: A veces tengo la sensación de que todavía estoy construyendo quién soy, aunque ya tenga 25 años.
+   [16/12/25, 11:24:36] testia2: [22/03/25, 11:01] Clara: No busco que alguien me complete, pero sí alguien con quien no tenga que fingir estabilidad constante.
+   [16/12/25, 11:24:36] testia2: [22/03/25, 11:05] Clara: Me cuesta confiar en personas muy pragmáticas, siento que hablan un idioma distinto al mío.
+   [16/12/25, 11:24:37] testia2: [22/03/25, 11:08] Clara: Necesito espacio, incluso cuando me siento cerca de alguien, y no todo el mundo entiende eso.
+   [16/12/25, 11:24:37] testia2: [22/03/25, 11:12] Clara: No soy caótica por fuera, pero sí bastante por dentro, y eso a veces se nota.
+
+--------------------------------------------------------------------------------
+
+3. User ID: 11d4f1de-59c5-498d-aeec-726e7052f9e7
+   Email: kkk@example.com
+   Cosine Distance: 0.047935
+   Cosine Similarity: 0.952065
+   Affinity %: 95.21%
+
+   Messages (12):
+   [12/12/25, 20:46:07] Kkk@example.com: **Mi vida entre planos, ritmos y montañas**
+
+Nací en Barcelona el 12 de marzo de 1994, aunque siempre me dijeron que la ciudad me había elegido antes que yo.
+   [12/12/25, 20:46:07] Kkk@example.com: Desde pequeño, soñaba con convertir papel en espacios, con cómo la luz filtraba entre los edificios y cómo el cielo se desdibujaba entre techos altos.
+   [12/12/25, 20:46:07] Kkk@example.com: Estudie arquitectura y, aunque al principio el mercado era duro, seguí por ese impulso que me decía que el arte de diseñar era también una forma de resolver problemas.
+   [12/12/25, 20:46:08] Kkk@example.com: Hoy, con 30 años, trabajo en un estudio local, donde lo importante es el equilibrio entre creatividad y sostenibilidad —esa obsesión mía por que las ciudades respiren.
+   [12/12/25, 20:46:08] Kkk@example.com: Fuera del taller, el ritmo es otro.
+   [12/12/25, 20:46:08] Kkk@example.com: Los fines de semana dedico a las rutas de montaña, con ese viento que huele a salitre y a tierra mojada, o a perderme en una sala de salsa, donde el sudor y la energía se mezclan como la mejor sinfonía.
+   [12/12/25, 20:46:08] Kkk@example.com: También leo ciencia ficción, esa ficción que me hace soñar con futuros posibles, aunque a veces los sueños se desmoronen en el papel.
+   [12/12/25, 20:46:08] Kkk@example.com: En el 2019 fundé *Nuevos Horizontes*, un pequeño negocio de muebles modulares y materiales reciclados.
+   [12/12/25, 20:46:08] Kkk@example.com: Vendí la empresa ese mismo año, pero no por falta de ganas: fue un aprendizaje sobre lo que realmente quería —más tiempo para explorar, para bailarte hasta el amanecer o para perderme entre las páginas de un libro.
+   [12/12/25, 20:46:09] Kkk@example.com: Ahora, cuando miro atrás, me pregunto si mi vida está completa, pero sé que no puedo esperar a que lo decida alguien más.
+   [12/12/25, 20:46:09] Kkk@example.com: Quiero una relación donde el respeto se escriba entre líneas, donde haya espacio para los planes y para improvisar, y donde la otra persona sea también un arquitecto de sueños, aunque sus planos no coincidan con los míos.
+   [12/12/25, 20:46:09] Kkk@example.com: Por ahora, me conformo con seguir dibujando el mapa de mi propia existencia, una a una, entre senderos y compases.
+
+--------------------------------------------------------------------------------
+
+4. User ID: 7db0ecdc-e4b1-48fa-9f50-34f2c36844ae
+   Email: merche@example.com
+   Cosine Distance: 0.048587
+   Cosine Similarity: 0.951413
+   Affinity %: 95.14%
+
+   Messages (8):
+   [12/12/25, 20:49:29] Merche: Nací en Barcelona hace 34 años, aunque siempre he sentido que la ciudad no es solo mi hogar, sino también el escenario de muchas historias que me han definido.
+   [12/12/25, 20:49:29] Merche: Estudie Filología Hispánica en la UAB, pero una pasión por la fotografía me llevó a cambiar de rumbo durante un intercambio universitario en Florencia, Italia, donde aprendí a ver el mundo a través de las imágenes antes de que surgiera la cámara en mis manos.
+   [12/12/25, 20:49:29] Merche: Ahora, con mi cámara al hombro, trabajo como fotógrafo documentando historias, desde calles de Barcelona hasta retratos de gente común que me inspira.
+   [12/12/25, 20:49:29] Merche: Fuera del trabajo, me encanta perderme en libros de ciencia ficción —ahí es donde más me transporto—, aunque también corro por el parque Gràcia cuando hace buen tiempo.
+   [12/12/25, 20:49:30] Merche: Voluntario en proyectos locales, creo que la fotografía y el servicio son dos caras de la misma moneda: la necesidad de compartir lo que ves con los demás.
+   [12/12/25, 20:49:30] Merche: Busco relaciones que me permitan crecer, donde el respeto y la complicidad sean el pilar, aunque también quiero un poco de caos, esa chispa que hace que las noches se alarguen.
+   [12/12/25, 20:49:30] Merche: Barcelona es mi refugio, aunque también viajo por instinto: Italia, Marruecos, incluso un poco más lejos.
+   [12/12/25, 20:49:30] Merche: Siempre he creído que el mundo es un libro abierto, y yo solo estoy aquí para leerlo, uno de los personajes a la vez.
+
+--------------------------------------------------------------------------------
+
+5. User ID: 5f96c9fa-7324-42e4-9d37-aaf265f8d98a
+   Email: testia4@example.com
+   Cosine Distance: 0.049180
+   Cosine Similarity: 0.950820
+   Affinity %: 95.08%
+
+   Messages (10):
+   [16/12/25, 11:29:08] testia4: [12/03/25, 09:12] Laura: Tengo 25 años y vivo en Barcelona desde siempre, ahora mismo en el Eixample.
+   [16/12/25, 11:29:08] testia4: [12/03/25, 09:14] Laura: Trabajo en una asesoría contable, horario bastante fijo, de 9 a 18, y la verdad es que me da tranquilidad.
+   [16/12/25, 11:29:08] testia4: [12/03/25, 09:17] Laura: Entre semana suelo levantarme pronto, gimnasio dos días, y los otros intento caminar aunque sea media hora.
+   [16/12/25, 11:29:08] testia4: [12/03/25, 09:19] Laura: No soy especialmente espontánea, me gusta planificar las cosas con tiempo y me pone nerviosa improvisar demasiado.
+   [16/12/25, 11:29:09] testia4: [12/03/25, 09:23] Laura: Los fines de semana suelo ver a mis padres o quedar con una amiga de toda la vida, no tengo un grupo grande.
+   [16/12/25, 11:29:09] testia4: [12/03/25, 09:25] Laura: He tenido una relación larga que terminó hace más de un año, fue tranquila pero sentí que nos acomodamos demasiado.
+   [16/12/25, 11:29:09] testia4: [12/03/25, 09:28] Laura: Desde entonces tengo claro que quiero algo estable, pero sin prisas ni dramas innecesarios.
+   [16/12/25, 11:29:09] testia4: [12/03/25, 09:31] Laura: Me cuesta conectar con gente muy caótica o que vive al día, necesito cierta previsibilidad.
+   [16/12/25, 11:29:09] testia4: [12/03/25, 09:34] Laura: No me considero fría, pero sí bastante racional cuando tengo que tomar decisiones importantes.
+   [16/12/25, 11:29:09] testia4: [12/03/25, 09:36] Laura: Me gusta mi rutina y no tengo intención de cambiar radicalmente de vida ahora mismo.
+
+--------------------------------------------------------------------------------
+
+6. User ID: 9de80b1e-772e-43ef-b6b5-ef00b955d54f
+   Email: testia1@example.com
+   Cosine Distance: 0.049819
+   Cosine Similarity: 0.950181
+   Affinity %: 95.02%
+
+   Messages (18):
+   [16/12/25, 11:22:17] testia1: [27/03/25, 18:11] Ana: Tengo 25 años y vivo en Barcelona, ahora mismo por la zona de Poblenou.
+   [16/12/25, 11:22:17] testia1: [27/03/25, 18:14] Ana: Trabajo como diseñadora gráfica en una agencia pequeña, es un trabajo bastante creativo pero con plazos que a veces aprietan.
+   [16/12/25, 11:22:18] testia1: [27/03/25, 18:18] Ana: Entre semana intento mantener una rutina, por las mañanas me levanto pronto y salgo a correr dos o tres días.
+   [16/12/25, 11:22:18] testia1: [27/03/25, 18:21] Ana: Me gusta mucho el deporte al aire libre, sobre todo correr por la playa o ir en bici cuando hace buen tiempo.
+   [16/12/25, 11:22:18] testia1: [27/03/25, 18:25] Ana: Los fines de semana suelo aprovechar para desconectar, quedar con amigos, ir a tomar algo tranquilo o probar algún sitio nuevo.
+   [16/12/25, 11:22:18] testia1: [27/03/25, 18:28] Ana: No soy de salir de fiesta fuerte, prefiero planes más de día o cenas largas con conversación.
+   [16/12/25, 11:22:18] testia1: [27/03/25, 18:32] Ana: Viajar es algo que me motiva mucho, siempre tengo algún viaje en mente aunque sea corto.
+   [16/12/25, 11:22:18] testia1: [27/03/25, 18:35] Ana: Me encanta organizar escapadas, mirar rutas, alojamientos y perderme caminando por sitios nuevos.
+   [16/12/25, 11:22:19] testia1: [27/03/25, 18:39] Ana: He viajado bastante por Europa, sobre todo Italia y Portugal, y tengo muchas ganas de conocer países fuera.
+   [16/12/25, 11:22:19] testia1: [27/03/25, 18:43] Ana: Cuando no puedo viajar intento suplirlo con planes distintos en la ciudad, exposiciones, mercados o rutas por la montaña cerca de Barcelona.
+   [16/12/25, 11:22:19] testia1: [27/03/25, 18:46] Ana: Los domingos suelen ser más tranquilos, aprovecho para ordenar la casa, cocinar algo elaborado y preparar la semana.
+   [16/12/25, 11:22:19] testia1: [27/03/25, 18:50] Ana: Me gusta cocinar, sobre todo probar recetas nuevas aunque no siempre me salen bien.
+   [16/12/25, 11:22:19] testia1: [27/03/25, 18:54] Ana: En casa suelo escuchar música casi todo el tiempo, me ayuda a relajarme después de días intensos.
+   [16/12/25, 11:22:20] testia1: [27/03/25, 18:57] Ana: He tenido alguna relación seria, pero ahora mismo me encuentro bien sola y no tengo prisa por repetir errores.
+   [16/12/25, 11:22:20] testia1: [27/03/25, 19:01] Ana: Valoro mucho la independencia y el espacio personal, incluso cuando hay interés por alguien.
+   [16/12/25, 11:22:20] testia1: [27/03/25, 19:04] Ana: Me cuesta conectar con personas muy negativas o que no tengan inquietudes propias.
+   [16/12/25, 11:22:20] testia1: [27/03/25, 19:08] Ana: Me considero bastante optimista, aunque también necesito momentos de calma y silencio.
+   [16/12/25, 11:22:20] testia1: [27/03/25, 19:12] Ana: No busco aventuras sin más, me interesa conocer a alguien con quien compartir planes y proyectos, aunque sea poco a poco.
+
+--------------------------------------------------------------------------------
+
+7. User ID: deeeb34b-8fd7-4031-8cff-fd1308335ba0
+   Email: scarlet@example.com
+   Cosine Distance: 0.049832
+   Cosine Similarity: 0.950168
+   Affinity %: 95.02%
+
+   Messages (10):
+   [12/12/25, 20:40:20] Scarlet: **Mi nombre es Daniel, tengo 29 años y vivo en Barcelona, una ciudad que me ha enseñado más de lo que nunca imaginé.
+   [12/12/25, 20:40:20] Scarlet: ** Desde pequeño he sido de esos que buscan la conexión entre la música y las palabras, por eso, a los 16 años, me apasionó tocar la guitarra.
+   [12/12/25, 20:40:20] Scarlet: Ahora, cuando el tiempo me lo permite, me subo a un banco del Born o a un techo de Gaixample y observo las sombras de la ciudad bajo la lluvia, captándolas en fotos que luego se convierten en historias.
+   [12/12/25, 20:40:20] Scarlet: Londres fue mi primer gran salto: un año lejos de casa, aprendiendo a navegar el caos de la vida adulta, pero también descubriendo que, aunque el inglés me costaba al principio, el marketing local nunca lo hizo.
+   [12/12/25, 20:40:20] Scarlet: La ciudad me enseñó que las diferencias son solo excusas para crecer juntas.
+   [12/12/25, 20:40:20] Scarlet: Fuera del trabajo —donde como consultor de marketing intento que las marcas hablen con la gente, no al revés— me pierdo en los sabores del Mediterráneo.
+   [12/12/25, 20:40:21] Scarlet: Las sardinas en escabeche, los tomates de la huerta de Montjuïc, el pan recién hecho… La cocina es mi refugio, donde la paciencia y el cariño se vuelven ingredientes más que sal y aceite.
+   [12/12/25, 20:40:21] Scarlet: Aunque en mi cabeza siempre hay una guitarra y una cámara, prefiero cocinar en silencio, como si el tiempo fuera ajeno.
+   [12/12/25, 20:40:21] Scarlet: En lo personal, busco relaciones donde el respeto no sea algo negociable, sino una base. Que no haya ego, sino espacio para escuchar; que el amor no se mida en días, sino en pequeños gestos.
+   [12/12/25, 20:40:21] Scarlet: Y aunque Barcelona es mi casa, siempre llevo con mí el eco de Londres: la mezcla de tradición y modernidad que define a las ciudades que nos dejan crecer.
+
+--------------------------------------------------------------------------------
+
+8. User ID: 7314dcde-7e67-46f7-b46d-532e13765476
+   Email: test5@example.com
+   Cosine Distance: 0.050653
+   Cosine Similarity: 0.949347
+   Affinity %: 94.93%
+
+   Messages (8):
+   [12/12/25, 20:38:09] test5: **Daniel Ribera, 45 años, de Barcelona**
+
+Nací en las barriadas de Montcada, donde el fútbol y la calle eran mi primer profesor.
+   [12/12/25, 20:38:10] test5: Trabajo como periodista desde hace una década, escribiendo sobre cultura urbana y tecnología para revistas locales y plataformas digitales.
+   [12/12/25, 20:38:10] test5: El día a día me exige flexibilidad, pero lo que me sostiene son los pequeños momentos: un café en el bar de Montjuïc al atardecer, las fotos que hago en la Rambla o las conversaciones improvisadas con vecinos sobre el cambio climático.
+   [12/12/25, 20:38:10] test5: Hace años, hice un máster en Comunicación en Madrid, donde aprendí que la curiosidad no tiene límites.
+   [12/12/25, 20:38:10] test5: Ahora, mientras estudio francés y portugués —para entender más de los pueblos que visito—, busco conectar con culturas a través del idioma y la imagen.
+   [12/12/25, 20:38:10] test5: Mi fotografía urbana captura lo efímero: un cartel roto en el Raval, una protesta en las calles del Eixample, esos instantes donde la ciudad nos revela algo que no decimos.
+   [12/12/25, 20:38:10] test5: En el amor busco alguien que comparta mi energía: alguien que me empuje a aprender, a salir de mi zona de confort, pero también alguien que no me abandone cuando el mundo se pone demasiado grande.
+   [12/12/25, 20:38:11] test5: Aunque, entre nosotros, prefiero seguir jugando al fútbol en el parqué del barrio.
+
+--------------------------------------------------------------------------------
+
+9. User ID: 1f093bcf-1032-40e3-b2a2-19d0b5c9a42a
+   Email: testia5@example.com
+   Cosine Distance: 0.054050
+   Cosine Similarity: 0.945950
+   Affinity %: 94.59%
+
+   Messages (17):
+   [16/12/25, 11:30:57] testia5: [18/03/25, 08:47] Marta: Tengo 25 años y vivo en Barcelona, ahora mismo comparto piso en el barrio de Sants.
+   [16/12/25, 11:30:57] testia5: [18/03/25, 08:50] Marta: Vine a Barcelona a estudiar y al final me quedé, aunque muchas veces pienso que no es una ciudad fácil para asentarse.
+   [16/12/25, 11:30:58] testia5: [18/03/25, 08:54] Marta: Trabajo en hostelería, en un restaurante pequeño, y los horarios son bastante caóticos, nunca tengo dos semanas iguales.
+   [16/12/25, 11:30:58] testia5: [18/03/25, 08:58] Marta: Hay días que entro a las cuatro de la tarde y salgo pasada la medianoche, y otros que empiezo a las siete de la mañana.
+   [16/12/25, 11:30:58] testia5: [18/03/25, 09:01] Marta: Eso me ha hecho perder muchas rutinas, me cuesta mucho mantener horarios de sueño normales.
+   [16/12/25, 11:30:58] testia5: [18/03/25, 09:05] Marta: Cuando tengo tiempo libre suelo estar cansada, así que no soy muy constante con el deporte, voy y vengo.
+   [16/12/25, 11:30:58] testia5: [18/03/25, 09:09] Marta: He tenido relaciones bastante intensas, alguna de ellas más complicada de lo que debería haber sido.
+   [16/12/25, 11:30:59] testia5: [18/03/25, 09:13] Marta: Me cuesta confiar rápido, sobre todo porque en el pasado he cedido demasiado por no estar sola.
+   [16/12/25, 11:30:59] testia5: [18/03/25, 09:16] Marta: Ahora mismo no busco nada perfecto, busco algo que no me quite más energía de la que ya gasto en el día a día.
+   [16/12/25, 11:30:59] testia5: [18/03/25, 09:19] Marta: Soy bastante emocional, a veces incluso impulsiva, y luego le doy muchas vueltas a las cosas.
+   [16/12/25, 11:30:59] testia5: [18/03/25, 09:23] Marta: Me atrae la gente que transmite calma, justo lo que a mí me falta muchas veces.
+   [16/12/25, 11:31:00] testia5: [18/03/25, 09:27] Marta: No tengo claro a largo plazo dónde quiero vivir, Barcelona me gusta pero también me agota.
+   [16/12/25, 11:31:00] testia5: [18/03/25, 09:31] Marta: A veces siento que estoy un poco perdida, pero intento no dramatizarlo demasiado.
+   [16/12/25, 11:31:00] testia5: [18/03/25, 09:35] Marta: No soy especialmente organizada, vivo bastante al día y eso puede chocar con personas muy estructuradas.
+   [16/12/25, 11:31:00] testia5: [18/03/25, 09:39] Marta: Me gusta hablar las cosas, aunque reconozco que cuando me siento atacada me cierro rápido.
+   [16/12/25, 11:31:00] testia5: [18/03/25, 09:42] Marta: Ahora mismo valoro mucho la honestidad, incluso cuando lo que se dice no es cómodo.
+   [16/12/25, 11:31:01] testia5: [18/03/25, 09:46] Marta: No espero que nadie me salve ni me ordene la vida, pero sí que esté ahí de verdad.
+
+--------------------------------------------------------------------------------
+
+10. User ID: 457ad77b-e8e8-4a02-bbfa-08bbd8d161cf
+   Email: tucan@example.com
+   Cosine Distance: 0.055500
+   Cosine Similarity: 0.944500
+   Affinity %: 94.45%
+
+   Messages (10):
+   [12/12/25, 20:42:52] Tucan: **Raúl Martín**
+
+Llevo más de tres años viviendo en Barcelona, donde el ritmo de la ciudad me ha enseñado a valorar tanto los pequeños detalles como la libertad de explorar sin prisas.
+   [12/12/25, 20:42:53] Tucan: Soy economista, pero más que datos y gráficos, busco en mi trabajo entender cómo el sistema afecta a las personas.
+   [12/12/25, 20:42:53] Tucan: Trabajo en un centro de investigación local, aunque a veces me frustran las burocracias que esconden detrás de los números —por eso, cuando puedo, me dedico a analizar proyectos sociales desde otra perspectiva.
+   [12/12/25, 20:42:53] Tucan: Nací en Madrid, pero estudié un máster allí y es donde me quedó más marcada su energía, esa mezcla de tradición y modernidad que luego me llevó a buscar algo más libre en Barcelona.
+   [12/12/25, 20:42:53] Tucan: El senderismo es mi escape: me encanta perderme en los Pirineos o subir al Montserrat para observar la ciudad desde arriba, como un mapa vivo.
+   [12/12/25, 20:42:53] Tucan: También fotografío la ciudad en blanco y negro, esos detalles que el ruido del día a día suele pasar desapercibidos —la luz en una plaza vacía, el reflejo de un reloj en el agua del Besòs.
+   [12/12/25, 20:42:54] Tucan: Leer ciencia ficción me salvó cuando los números me dejaban desorientada: autores como Orson Welles o Ursula K.
+   [12/12/25, 20:42:54] Tucan: Le Guin me enseñaron que la humanidad no siempre actúa con coherencia, pero que también puede imaginarse futuro.
+   [12/12/25, 20:42:54] Tucan: Busco relaciones donde haya espacio para la curiosidad: alguien que no me quite el deseo de explorar, aunque eso signifique romper reglas.
+   [12/12/25, 20:42:54] Tucan: Y, por supuesto, alguien que, al igual que yo, no tema perderse en los laberintos de la vida.
+
+--------------------------------------------------------------------------------
+
+================================================================================
+CREATED USERS NOT IN TOP 10
+================================================================================
+
+User ID: 5dd6cbce-93a8-4a97-82c2-a44b92a666bc
+Name: testia3
+Email: testia3@example.com
+(Affinity not calculated - user may not have embedding)
+
+Messages (18):
+   [16/12/25, 11:26:54] testia3: [02/04/25, 21:06] Irene: Tengo 25 años y vivo en Barcelona, en el barrio de Sant Andreu, llevo aquí casi toda mi vida.
+   [16/12/25, 11:26:54] testia3: [02/04/25, 21:09] Irene: Trabajo como técnica de laboratorio en un centro de investigación, es un trabajo muy metódico y bastante exigente mentalmente.
+   [16/12/25, 11:26:54] testia3: [02/04/25, 21:13] Irene: Entre semana suelo ir bastante cansada, así que intento mantener rutinas sencillas y no sobrecargarme.
+   [16/12/25, 11:26:54] testia3: [02/04/25, 21:17] Irene: Me gusta mucho leer, sobre todo novela y ensayo, es algo que hago casi a diario antes de dormir.
+   [16/12/25, 11:26:55] testia3: [02/04/25, 21:21] Irene: No soy muy de gimnasio, pero camino bastante y los fines de semana intento hacer alguna ruta tranquila.
+   [16/12/25, 11:26:55] testia3: [02/04/25, 21:25] Irene: Los sábados por la mañana suelo ir al mercado, comprar con calma y luego cocinar en casa.
+   [16/12/25, 11:26:55] testia3: [02/04/25, 21:29] Irene: Me gusta cocinar para otros, aunque normalmente soy bastante sencilla con lo que preparo.
+   [16/12/25, 11:26:55] testia3: [02/04/25, 21:33] Irene: Los fines de semana por la tarde quedo con amigos de la universidad, solemos vernos en casas más que salir fuera.
+   [16/12/25, 11:26:55] testia3: [02/04/25, 21:36] Irene: No me atrae mucho la vida nocturna, prefiero planes que me permitan hablar sin ruido.
+   [16/12/25, 11:26:55] testia3: [02/04/25, 21:40] Irene: Viajar me gusta, pero no de forma compulsiva, prefiero pocos viajes bien pensados.
+   [16/12/25, 11:26:56] testia3: [02/04/25, 21:44] Irene: Me atraen mucho los destinos de naturaleza, pueblos pequeños o sitios donde se pueda caminar mucho.
+   [16/12/25, 11:26:56] testia3: [02/04/25, 21:48] Irene: He hecho algún viaje sola y me ha ayudado bastante a conocerme mejor.
+   [16/12/25, 11:26:56] testia3: [02/04/25, 21:52] Irene: En pareja soy bastante constante, pero necesito sentir estabilidad y coherencia en el día a día.
+   [16/12/25, 11:26:56] testia3: [02/04/25, 21:56] Irene: Me cuesta entender a personas muy impulsivas o que cambian de planes continuamente.
+   [16/12/25, 11:26:56] testia3: [02/04/25, 22:00] Irene: Valoro mucho la responsabilidad y que cada uno tenga su vida más o menos ordenada.
+   [16/12/25, 11:26:56] testia3: [02/04/25, 22:04] Irene: Barcelona me gusta, pero disfruto mucho cuando salgo de la ciudad y bajo el ritmo.
+   [16/12/25, 11:26:57] testia3: [02/04/25, 22:08] Irene: No tengo claro dónde estaré dentro de cinco años, pero sí cómo quiero sentirme.
+   [16/12/25, 11:26:57] testia3: [02/04/25, 22:11] Irene: Busco algo tranquilo, sin montañas rusas emocionales, donde las cosas se hablen con calma.
+
+--------------------------------------------------------------------------------
+

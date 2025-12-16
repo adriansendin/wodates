@@ -176,8 +176,7 @@ async function main() {
 
     console.log(`Embedding A: dimension ${embeddingA.length}, magnitude ${magnitudeA.toFixed(4)} (normalized: ${normalizedA ? 'yes' : 'no'})`);
     console.log(`Embedding B: dimension ${embeddingB.length}, magnitude ${magnitudeB.toFixed(4)} (normalized: ${normalizedB ? 'yes' : 'no'})`);
-    console.log();
-    console.log('');
+    console.log('La normalización de momento NO hay que aplicarla');
 
     // Calculate cosine similarity
     const cosineSimilarity = calculateCosineSimilarity(embeddingA, embeddingB);
