@@ -559,6 +559,7 @@ export class GenerateUserProfileFromChats {
 
               if (json.done === true) {
                 clearTimeout(timeoutId);
+
                 return fullResponse.trim();
               }
 

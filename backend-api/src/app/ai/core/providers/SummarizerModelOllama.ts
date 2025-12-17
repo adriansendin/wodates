@@ -419,6 +419,7 @@ export class SummarizerModelOllama implements SummarizerModel {
 
               if (json.done === true) {
                 clearTimeout(timeoutId);
+
                 return fullResponse;
               }
 

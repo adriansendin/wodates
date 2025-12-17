@@ -55,6 +55,9 @@ test-results.xml
 # Jest
 jest-cache/
 
+# Script reports
+**/scripts/testing_afinnity/reports/
+
 # ===========================================
 # LOGS
 # ===========================================
