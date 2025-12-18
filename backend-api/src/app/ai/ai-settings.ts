@@ -75,6 +75,18 @@ export const AIConfig = {
   },
 
   /**
+   * AI Service configuration
+   * URL base for the external ai-service HTTP API
+   */
+  aiService: {
+    baseUrl:
+      process.env.AI_SERVICE_URL || 'http://localhost:8000',
+    timeout: process.env.AI_SERVICE_TIMEOUT
+      ? parseInt(process.env.AI_SERVICE_TIMEOUT, 10)
+      : 600000, // 10 minutes default (for long-running operations like summarization)
+  },
+
+  /**
    * Ollama provider configuration
    */
   ollama: {

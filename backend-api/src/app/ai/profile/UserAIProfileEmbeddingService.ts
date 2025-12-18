@@ -1,5 +1,6 @@
 import { EmbeddingModel } from '../core/EmbeddingModel';
 import { UserAIProfileRepository } from '../../../domain/repositories/UserAIProfileRepository';
+import { AiServiceEmbeddingClient } from '../clients/AiServiceEmbeddingClient';
 
 /**
  * UserAIProfileEmbeddingService - Generates embeddings from existing summaries
@@ -14,11 +15,32 @@ import { UserAIProfileRepository } from '../../../domain/repositories/UserAIProf
  * - Handles errors gracefully (logs to console, preserves existing state)
  */
 export class UserAIProfileEmbeddingService {
+  private readonly useAiService: boolean;
+  private aiServiceEmbeddingClient?: AiServiceEmbeddingClient;
+
   constructor(
     private embeddingModel: EmbeddingModel,
     private aiProfileRepository: UserAIProfileRepository,
     private logger?: any
-  ) {}
+  ) {
+    // Feature flag: USE_AI_SERVICE=true to use ai-service, false/undefined to use direct LLM
+    this.useAiService = process.env.USE_AI_SERVICE === 'true';
+    
+    if (this.useAiService) {
+      this.aiServiceEmbeddingClient = new AiServiceEmbeddingClient(
+        undefined, // Use default from AIConfig
+        undefined, // Use default timeout
+        logger
+      );
+      if (this.logger) {
+        this.logger.info('UserAIProfileEmbeddingService: Using ai-service for embedding generation');
+      }
+    } else {
+      if (this.logger) {
+        this.logger.info('UserAIProfileEmbeddingService: Using direct LLM (EmbeddingModel) for embedding generation');
+      }
+    }
+  }
 
   /**
    * Generates embedding from existing summary and updates the database
@@ -78,9 +100,29 @@ export class UserAIProfileEmbeddingService {
         // Generate embedding directly from plain text summary
         const summaryText = profile.summary;
 
-        const embeddingResponse = await this.embeddingModel.generateEmbedding({
-          text: summaryText,
-        });
+        let embeddingResponse: { embedding: number[]; dimension: number };
+
+        if (this.useAiService && this.aiServiceEmbeddingClient) {
+          // NEW: Use ai-service HTTP client
+          const aiServiceResponse = await this.aiServiceEmbeddingClient.generateEmbedding({
+            text: summaryText,
+          });
+
+          embeddingResponse = {
+            embedding: aiServiceResponse.embedding,
+            dimension: aiServiceResponse.dimension,
+          };
+        } else {
+          // LEGACY: Use direct EmbeddingModel (keep for rollback)
+          const modelResponse = await this.embeddingModel.generateEmbedding({
+            text: summaryText,
+          });
+
+          embeddingResponse = {
+            embedding: modelResponse.embedding,
+            dimension: modelResponse.dimension,
+          };
+        }
 
         embedding = embeddingResponse.embedding;
 

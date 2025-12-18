@@ -7,6 +7,7 @@ import { UserRepository } from '../../../domain/repositories/UserRepository';
 import { DocLoveHelper } from '../../services/doc-love-helper';
 import { ChatModel, ChatMessage } from '../core/ChatModel';
 import { AIConfig } from '../ai-settings';
+import { AiServiceChatClient } from '../clients/AiServiceChatClient';
 
 /**
  * DocLoveChatService - Orchestrates Doc Love online chat
@@ -17,6 +18,9 @@ import { AIConfig } from '../ai-settings';
  * This is part of the ai/chat layer, focused on online chat orchestration.
  */
 export class DocLoveChatService {
+  private readonly useAiService: boolean;
+  private aiServiceChatClient?: AiServiceChatClient;
+
   constructor(
     private docLoveHelper: DocLoveHelper,
     private chatModel: ChatModel,
@@ -24,7 +28,25 @@ export class DocLoveChatService {
     private matchRepository: MatchRepository,
     private userRepository?: UserRepository,
     private logger?: any
-  ) {}
+  ) {
+    // Feature flag: USE_AI_SERVICE=true to use ai-service, false/undefined to use direct LLM
+    this.useAiService = process.env.USE_AI_SERVICE === 'true';
+    
+    if (this.useAiService) {
+      this.aiServiceChatClient = new AiServiceChatClient(
+        undefined, // Use default from AIConfig
+        undefined, // Use default timeout
+        logger
+      );
+      if (this.logger) {
+        this.logger.info('DocLoveChatService: Using ai-service for chat generation');
+      }
+    } else {
+      if (this.logger) {
+        this.logger.info('DocLoveChatService: Using direct LLM (ChatModel) for chat generation');
+      }
+    }
+  }
 
   /**
    * Detects if a match/conversation is with Doc Love
@@ -126,8 +148,9 @@ export class DocLoveChatService {
           {
             matchId,
             userId,
-            provider: this.chatModel.name,
-            model: this.chatModel.model,
+            useAiService: this.useAiService,
+            provider: this.useAiService ? 'ai-service' : this.chatModel.name,
+            model: this.useAiService ? 'ai-service' : this.chatModel.model,
             historyLength: conversationHistory.length,
             userContextIncluded: !!userContext,
             activeMatchesCount: activeMatches.length,
@@ -136,8 +159,27 @@ export class DocLoveChatService {
         );
       }
 
-      // Generate AI response using ChatModel
-      const chatResponse = await this.chatModel.generateChat(chatRequest);
+      let chatResponse: { content: string; provider: string; model?: string };
+
+      if (this.useAiService && this.aiServiceChatClient) {
+        // NEW: Use ai-service HTTP client
+        const systemPrompt = this.buildSystemPrompt(userContext, activeMatches);
+        const messages = this.buildMessages(conversationHistory, userMessage.content);
+
+        const aiServiceResponse = await this.aiServiceChatClient.generateChat({
+          messages,
+          system: systemPrompt,
+        });
+
+        chatResponse = {
+          content: aiServiceResponse.content,
+          provider: 'ai-service',
+          model: 'ai-service',
+        };
+      } else {
+        // LEGACY: Use direct ChatModel (keep for rollback)
+        chatResponse = await this.chatModel.generateChat(chatRequest);
+      }
 
       if (this.logger) {
         this.logger.info(
@@ -310,5 +352,76 @@ export class DocLoveChatService {
     } catch (error) {
       return [];
     }
+  }
+
+  /**
+   * Builds system prompt for ai-service
+   * Includes system instructions, user context, and active matches
+   */
+  private buildSystemPrompt(
+    userContext?: { name?: string; bio?: string },
+    activeMatches?: Array<{
+      matchId: string;
+      otherUserName: string;
+      lastMessage?: string;
+    }>
+  ): string {
+    let systemPrompt = `${AIConfig.prompt.systemInstructions}\n\n`;
+
+    if (userContext?.name) {
+      systemPrompt += `El usuario se llama ${userContext.name}.\n`;
+    }
+
+    if (userContext?.bio) {
+      systemPrompt += `Su bio dice: "${userContext.bio}"\n`;
+    }
+
+    if (activeMatches && activeMatches.length > 0) {
+      systemPrompt += `\nActualmente tiene ${activeMatches.length} conversación(es) activa(s):\n`;
+      for (const match of activeMatches.slice(0, 3)) {
+        systemPrompt += `- Con ${match.otherUserName}`;
+        if (match.lastMessage) {
+          systemPrompt += `: último mensaje sobre "${match.lastMessage.substring(0, 50)}..."`;
+        }
+        systemPrompt += '\n';
+      }
+    }
+
+    return systemPrompt;
+  }
+
+  /**
+   * Builds messages array for ai-service
+   * Includes conversation history and last user message
+   */
+  private buildMessages(
+    conversationHistory: ChatMessage[],
+    lastUserMessage: string
+  ): Array<{ role: 'user' | 'assistant'; content: string }> {
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+    // Add conversation history
+    for (const msg of conversationHistory) {
+      messages.push({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content,
+      });
+    }
+
+    // Add last user message if not already in history
+    const lastHistoryMessage = conversationHistory[conversationHistory.length - 1];
+    const isLastMessageInHistory =
+      lastHistoryMessage &&
+      lastHistoryMessage.role === 'user' &&
+      lastHistoryMessage.content === lastUserMessage;
+
+    if (!isLastMessageInHistory && lastUserMessage) {
+      messages.push({
+        role: 'user',
+        content: lastUserMessage,
+      });
+    }
+
+    return messages;
   }
 }

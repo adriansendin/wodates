@@ -9,6 +9,7 @@ import {
 } from '../../../app/ai/core/SummarizerModel';
 import { DocLoveHelper } from '../../../app/services/doc-love-helper';
 import { AIConfig } from '../../../app/ai/ai-settings';
+import { AiServiceProfileClient } from '../../../app/ai/clients/AiServiceProfileClient';
 
 /**
  * GenerateUserProfileFromChats - Generates or updates user profile from unprocessed chats
@@ -24,6 +25,8 @@ import { AIConfig } from '../../../app/ai/ai-settings';
  */
 export class GenerateUserProfileFromChats {
   private mergeModelOverride: string | undefined;
+  private readonly useAiService: boolean;
+  private aiServiceProfileClient?: AiServiceProfileClient;
 
   constructor(
     private getAllUserChats: GetAllUserChats,
@@ -35,6 +38,24 @@ export class GenerateUserProfileFromChats {
     mergeModelOverride?: string
   ) {
     this.mergeModelOverride = mergeModelOverride;
+    
+    // Feature flag: USE_AI_SERVICE=true to use ai-service, false/undefined to use direct LLM
+    this.useAiService = process.env.USE_AI_SERVICE === 'true';
+    
+    if (this.useAiService) {
+      this.aiServiceProfileClient = new AiServiceProfileClient(
+        undefined, // Use default from AIConfig
+        undefined, // Use default timeout
+        logger
+      );
+      if (this.logger) {
+        this.logger.info('GenerateUserProfileFromChats: Using ai-service for profile generation');
+      }
+    } else {
+      if (this.logger) {
+        this.logger.info('GenerateUserProfileFromChats: Using direct LLM (SummarizerModel) for profile generation');
+      }
+    }
   }
 
   async execute(userId: string): Promise<Result<string, DomainError>> {
@@ -127,19 +148,41 @@ export class GenerateUserProfileFromChats {
       //   `[8.5.1] ✅ Total mensajes que se pasarán al LLM: ${totalMessages} (TODOS los mensajes de todas las conversaciones)`
       // );
 
-      // Step 5: Generate summary using SummarizerModel
+      // Step 5: Generate summary using SummarizerModel or ai-service
       if (this.logger) {
         this.logger.info(
           {
             userId,
             chatsCount: chats.length,
+            useAiService: this.useAiService,
           },
-          'Calling SummarizerModel to generate profile summary'
+          'Calling to generate profile summary'
         );
       }
 
-      const summaryResponse =
-        await this.summarizerModel.generateSummary(summarizerRequest);
+      let summaryResponse: { summary: string; provider: string; model?: string };
+
+      if (this.useAiService && this.aiServiceProfileClient) {
+        // NEW: Use ai-service HTTP client
+        const conversations = this.transformToAiServiceConversations(
+          chats,
+          user.name || 'Usuario'
+        );
+
+        const aiServiceResponse = await this.aiServiceProfileClient.generateProfile({
+          conversations,
+          main_user_marker: '(MAIN)',
+        });
+
+        summaryResponse = {
+          summary: aiServiceResponse.profile,
+          provider: 'ai-service',
+          model: 'ai-service',
+        };
+      } else {
+        // LEGACY: Use direct SummarizerModel (keep for rollback)
+        summaryResponse = await this.summarizerModel.generateSummary(summarizerRequest);
+      }
 
       // Step 6: Save incremental summary (plain text)
       const upsertResult = await this.userAIProfileRepository.upsert({
@@ -178,10 +221,32 @@ export class GenerateUserProfileFromChats {
           );
         }
 
-        const mergeResult = await this.mergeSummaries(
-          consolidatedSummary,
-          incrementalSummary
-        );
+        let mergeResult: Result<string, DomainError>;
+
+        if (this.useAiService && this.aiServiceProfileClient) {
+          // NEW: Use ai-service HTTP client for merge
+          try {
+            const aiServiceResponse = await this.aiServiceProfileClient.mergeProfiles({
+              consolidated_profile: consolidatedSummary,
+              incremental_profile: incrementalSummary,
+            });
+
+            mergeResult = success(aiServiceResponse.merged_profile);
+          } catch (error) {
+            mergeResult = failure(
+              new InternalError(
+                'Failed to merge profiles via ai-service',
+                error instanceof Error ? error : new Error(String(error))
+              )
+            );
+          }
+        } else {
+          // LEGACY: Use direct LLM merge (keep for rollback)
+          mergeResult = await this.mergeSummaries(
+            consolidatedSummary,
+            incrementalSummary
+          );
+        }
 
         if (!mergeResult.success) {
           // Log error but don't fail - incremental summary is already saved
@@ -646,5 +711,57 @@ export class GenerateUserProfileFromChats {
     );
 
     return date;
+  }
+
+  /**
+   * Transforms ProcessedChatSummary[] to ai-service conversations format
+   * Converts the backend's SummarizerRequest structure to ai-service's flat conversations array
+   */
+  private transformToAiServiceConversations(
+    chats: ProcessedChatSummary[],
+    currentUserName: string
+  ): Array<{
+    role: 'user' | 'assistant';
+    content: string;
+    sender: string; // Sender identifier (with '(MAIN)' marker if applicable)
+  }> {
+    const conversations: Array<{
+      role: 'user' | 'assistant';
+      content: string;
+      sender: string;
+    }> = [];
+
+    // Process all chats uniformly
+    for (const chat of chats) {
+      // Include ALL messages (from both users) in chronological order
+      for (const msg of chat.messages) {
+        // Determine sender name with (MAIN) marker if applicable
+        let sender: string;
+        if (msg.senderName) {
+          // Check if this message is from the current user (being profiled)
+          // Compare normalized names (trim, case-insensitive) to handle formatting differences
+          const normalizedSenderName = msg.senderName.trim().toLowerCase();
+          const normalizedCurrentUserName = currentUserName.trim().toLowerCase();
+          if (normalizedSenderName === normalizedCurrentUserName) {
+            sender = `${msg.senderName} (MAIN)`;
+          } else {
+            sender = msg.senderName;
+          }
+        } else {
+          // Fallback: if senderName is missing, we can't determine if it's MAIN
+          sender = 'Usuario';
+        }
+
+        // All messages are treated as 'user' role in ai-service format
+        // (ai-service will handle the distinction based on sender name)
+        conversations.push({
+          role: 'user',
+          content: msg.content,
+          sender,
+        });
+      }
+    }
+
+    return conversations;
   }
 }
