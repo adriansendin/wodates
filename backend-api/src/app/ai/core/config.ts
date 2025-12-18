@@ -3,6 +3,7 @@ import { SummarizerModel } from './SummarizerModel';
 import { EmbeddingModel } from './EmbeddingModel';
 import { ChatModelOllama } from './providers/ChatModelOllama';
 import { ChatModelOpenAI } from './providers/ChatModelOpenAI';
+import { ChatModelHttp } from './providers/ChatModelHttp';
 import { SummarizerModelOllama } from './providers/SummarizerModelOllama';
 import { EmbeddingModelOllama } from './providers/EmbeddingModelOllama';
 import { EmbeddingModelOpenAI } from './providers/EmbeddingModelOpenAI';
@@ -18,6 +19,14 @@ export function createChatModel(logger?: any): ChatModel {
   const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
 
   switch (providerName) {
+    case 'ai-service': {
+      return new ChatModelHttp(
+        AIConfig.aiService.baseUrl,
+        AIConfig.aiService.timeout,
+        logger
+      );
+    }
+
     case 'ollama': {
       return new ChatModelOllama(
         AIConfig.ollama.model,
@@ -38,7 +47,7 @@ export function createChatModel(logger?: any): ChatModel {
 
     default:
       throw new Error(
-        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`
+        `Unknown AI provider: ${providerName}. Supported providers: ai-service, ollama, openai`
       );
   }
 }
@@ -50,6 +59,17 @@ export function createSummarizerModel(
   const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
 
   switch (providerName) {
+    case 'ai-service': {
+      // ai-service support for summarization not yet implemented
+      // Fallback to ollama for now (summarization is not used by Doc Love)
+      if (logger) {
+        logger.warn(
+          'ai-service provider not yet implemented for summarization, falling back to ollama'
+        );
+      }
+      // Fall through to ollama case
+    }
+
     case 'ollama': {
       // Use dedicated profile chats to resume model (or fallback to chat model)
       // This allows using a different, more powerful model for profile summarization
@@ -89,8 +109,30 @@ export function createSummarizerModel(
     }
 
     default:
-      throw new Error(
-        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`
+      // Allow unknown providers - they may not be used in this flow
+      // Fallback to ollama as safe default
+      if (logger) {
+        logger.warn(
+          `Unknown AI provider for summarization: ${providerName}, falling back to ollama`
+        );
+      }
+      const modelName =
+        modelOverride || AIConfig.ollama.profileChatsToResumeModel;
+      return new SummarizerModelOllama(
+        modelName,
+        AIConfig.ollama.baseUrl,
+        AIConfig.ollama.summarizationTimeout,
+        {
+          ...AIConfig.ollama.parameters,
+          temperature: AIConfig.ollama.summarizerParameters.temperature,
+          num_predict: AIConfig.ollama.summarizerParameters.num_predict,
+          num_ctx: AIConfig.ollama.summarizerParameters.num_ctx,
+          seed: AIConfig.ollama.summarizerParameters.seed,
+          top_p: AIConfig.ollama.summarizerParameters.top_p,
+          top_k: AIConfig.ollama.summarizerParameters.top_k,
+          repeat_penalty: AIConfig.ollama.summarizerParameters.repeat_penalty,
+        },
+        logger
       );
   }
 }
@@ -99,6 +141,17 @@ export function createEmbeddingModel(logger?: any): EmbeddingModel {
   const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
 
   switch (providerName) {
+    case 'ai-service': {
+      // ai-service support for embeddings not yet implemented
+      // Fallback to ollama for now (embeddings are not used by Doc Love)
+      if (logger) {
+        logger.warn(
+          'ai-service provider not yet implemented for embeddings, falling back to ollama'
+        );
+      }
+      // Fall through to ollama case
+    }
+
     case 'ollama': {
       // Use dedicated embeddings configuration (separate from chat model)
       // Uses AIModelConstants.EMBEDDING.DEFAULT_MODEL (yxchia/multilingual-e5-base)
@@ -127,8 +180,19 @@ export function createEmbeddingModel(logger?: any): EmbeddingModel {
     }
 
     default:
-      throw new Error(
-        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`
+      // Allow unknown providers - they may not be used in this flow
+      // Fallback to ollama as safe default
+      if (logger) {
+        logger.warn(
+          `Unknown AI provider for embeddings: ${providerName}, falling back to ollama`
+        );
+      }
+      return new EmbeddingModelOllama(
+        AIConfig.ollama.embeddings.model,
+        AIConfig.ollama.embeddings.dimension,
+        AIConfig.ollama.baseUrl,
+        AIConfig.ollama.embeddings.timeout,
+        logger
       );
   }
 }

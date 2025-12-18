@@ -80,10 +80,10 @@ export const AIConfig = {
    */
   aiService: {
     baseUrl:
-      process.env.AI_SERVICE_URL || 'http://localhost:8000',
+      process.env.AI_SERVICE_BASE_URL || process.env.AI_SERVICE_URL || 'http://127.0.0.1:8010',
     timeout: process.env.AI_SERVICE_TIMEOUT
       ? parseInt(process.env.AI_SERVICE_TIMEOUT, 10)
-      : 600000, // 10 minutes default (for long-running operations like summarization)
+      : 60000, // 60 seconds default (for chat operations)
   },
 
   /**

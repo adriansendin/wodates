@@ -47,8 +47,19 @@ export function createAIProvider(logger?: any): IAProvider {
     // }
 
     default:
-      throw new Error(
-        `Unknown AI provider: ${providerName}. Supported providers: ollama, openai`
+      // Allow unknown providers - they may not be used in this flow
+      // Fallback to ollama as safe default
+      if (logger) {
+        logger.warn(
+          `Unknown AI provider: ${providerName}, falling back to ollama`
+        );
+      }
+      return new LocalOllamaProvider(
+        AIConfig.ollama.model,
+        AIConfig.ollama.baseUrl,
+        AIConfig.ollama.timeout,
+        AIConfig.ollama.parameters,
+        logger
       );
   }
 }
