@@ -16,11 +16,13 @@ import { matchRoutes } from './routes/match-routes';
 import { storageRoutes } from './routes/storage-routes';
 import { userVerificationRoutes } from './routes/user-verification-routes';
 import { adminVerificationRoutes } from './routes/admin-verification-routes';
+import { questionBankRoutes } from './routes/question-bank-routes';
 import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
 import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
 import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepository';
 import { SupabaseMessageRepository } from '../data/repositories/SupabaseMessageRepository';
 import { SupabaseBlockedUserRepository } from '../data/repositories/SupabaseBlockedUserRepository';
+import { SupabaseQuestionBankRepository } from '../data/repositories/SupabaseQuestionBankRepository';
 import { LikeUser } from '../domain/use-cases/feed/LikeUser';
 import { PassUser } from '../domain/use-cases/feed/PassUser';
 import { SendMessage } from '../domain/use-cases/chat/SendMessage';
@@ -118,6 +120,7 @@ async function buildApp() {
   const matchRepository = new SupabaseMatchRepository();
   const messageRepository = new SupabaseMessageRepository();
   const blockedUserRepository = new SupabaseBlockedUserRepository();
+  const questionBankRepository = new SupabaseQuestionBankRepository();
 
   // Initialize AI services (for Doc Love chatbot)
   let docLoveChatService: DocLoveChatService | undefined;
@@ -234,6 +237,10 @@ async function buildApp() {
   await fastify.register(userVerificationRoutes, { prefix: '/api/v1' });
   await fastify.register(storageRoutes, { prefix: '/api/v1' });
   await fastify.register(adminVerificationRoutes, { prefix: '/admin' });
+  await fastify.register(
+    (fastify) => questionBankRoutes(fastify, questionBankRepository),
+    { prefix: '/api/v1' }
+  );
 
   // Health check
   fastify.get('/health', async () => {
