@@ -40,11 +40,6 @@ export const AIModelConstants = {
  */
 export const AIConfig = {
   /**
-   * Default provider selection
-   */
-  defaultProvider: process.env.NODE_ENV === 'development' ? 'ollama' : 'openai',
-
-  /**
    * Context configuration (used by DocLoveService)
    * Controls what context is included when generating AI responses
    */
@@ -84,160 +79,9 @@ export const AIConfig = {
     timeout: process.env.AI_SERVICE_TIMEOUT
       ? parseInt(process.env.AI_SERVICE_TIMEOUT, 10)
       : 60000, // 60 seconds default (for chat operations)
-  },
-
-  /**
-   * Ollama provider configuration
-   */
-  ollama: {
-    baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
-    model: process.env.AI_MODEL_DOC_LOVE || 'llama3.2:1b',
-    timeout: process.env.OLLAMA_TIMEOUT
-      ? parseInt(process.env.OLLAMA_TIMEOUT, 10)
-      : 60000, // 60 seconds default
-
-    /**
-     * Summarization timeout configuration
-     * Used for generating user profile summaries from chats and merging summaries
-     * Can be overridden via OLLAMA_SUMMARIZATION_TIMEOUT env var (in milliseconds)
-     * Default: 10 minutes (600000ms) for large prompts with 7B+ models
-     */
-    summarizationTimeout: process.env.OLLAMA_SUMMARIZATION_TIMEOUT
-      ? parseInt(process.env.OLLAMA_SUMMARIZATION_TIMEOUT, 10)
-      : 600000, // 10 minutes default
-
-    /**
-     * Ollama API parameters
-     * Optimized for speed by default
-     */
-    parameters: {
-      temperature: process.env.OLLAMA_TEMPERATURE
-        ? parseFloat(process.env.OLLAMA_TEMPERATURE)
-        : 0.1, // Very low for deterministic, fast responses
-      num_predict: process.env.OLLAMA_NUM_PREDICT
-        ? parseInt(process.env.OLLAMA_NUM_PREDICT, 10)
-        : 500, // Response length limit
-      top_p: process.env.OLLAMA_TOP_P
-        ? parseFloat(process.env.OLLAMA_TOP_P)
-        : 0.5, // Low for faster generation
-      num_ctx: process.env.OLLAMA_NUM_CTX
-        ? parseInt(process.env.OLLAMA_NUM_CTX, 10)
-        : 512, // Context window size (reduced for speed)
-    },
-
-    /**
-     * Summarizer-specific parameters
-     * Used for generating user profile summaries from chats
-     * Can be overridden via OLLAMA_SUMMARIZER_NUM_CTX, OLLAMA_SUMMARIZER_NUM_PREDICT, OLLAMA_SUMMARIZER_TEMPERATURE, OLLAMA_SUMMARIZER_SEED, OLLAMA_SUMMARIZER_TOP_P, OLLAMA_SUMMARIZER_TOP_K, and OLLAMA_SUMMARIZER_REPEAT_PENALTY
-     */
-    summarizerParameters: {
-      num_ctx: process.env.OLLAMA_SUMMARIZER_NUM_CTX
-        ? parseInt(process.env.OLLAMA_SUMMARIZER_NUM_CTX, 10)
-        : 32768, // Context window for profile summarization
-      num_predict: process.env.OLLAMA_SUMMARIZER_NUM_PREDICT
-        ? parseInt(process.env.OLLAMA_SUMMARIZER_NUM_PREDICT, 10)
-        : 1500, // Response length for summarization
-      temperature: process.env.OLLAMA_SUMMARIZER_TEMPERATURE
-        ? parseFloat(process.env.OLLAMA_SUMMARIZER_TEMPERATURE)
-        : 0, // Temperature for summarization (lower = more deterministic)
-      seed: process.env.OLLAMA_SUMMARIZER_SEED
-        ? parseInt(process.env.OLLAMA_SUMMARIZER_SEED, 10)
-        : 12345, // Seed for deterministic outputs (default: 1234)
-      top_p: process.env.OLLAMA_SUMMARIZER_TOP_P
-        ? parseFloat(process.env.OLLAMA_SUMMARIZER_TOP_P)
-        : 1, // Top-p sampling for summarization (default: 1)
-      top_k: process.env.OLLAMA_SUMMARIZER_TOP_K
-        ? parseInt(process.env.OLLAMA_SUMMARIZER_TOP_K, 10)
-        : 1, // Top-k sampling for summarization (default: 1)
-      repeat_penalty: process.env.OLLAMA_SUMMARIZER_REPEAT_PENALTY
-        ? parseFloat(process.env.OLLAMA_SUMMARIZER_REPEAT_PENALTY)
-        : 1.05, // Repeat penalty for summarization (default: 1.1)
-    },
-
-    /**
-     * Merge-specific parameters
-     * Used when merging consolidated summary with incremental summary
-     * Can be overridden via OLLAMA_MERGE_NUM_CTX, OLLAMA_MERGE_NUM_PREDICT, OLLAMA_MERGE_TEMPERATURE, OLLAMA_MERGE_SEED, OLLAMA_MERGE_TOP_P, OLLAMA_MERGE_TOP_K, and OLLAMA_MERGE_REPEAT_PENALTY
-     * Note: top_k and repeat_penalty use OLLAMA_MERGE_* (specific to merge operations)
-     */
-    mergeParameters: {
-      num_ctx: process.env.OLLAMA_MERGE_NUM_CTX
-        ? parseInt(process.env.OLLAMA_MERGE_NUM_CTX, 10)
-        : 4096, // Context window for merging summaries (needs more context for two profiles)
-      num_predict: process.env.OLLAMA_MERGE_NUM_PREDICT
-        ? parseInt(process.env.OLLAMA_MERGE_NUM_PREDICT, 10)
-        : 1500, // Response length for merge operations
-      temperature: process.env.OLLAMA_MERGE_TEMPERATURE
-        ? parseFloat(process.env.OLLAMA_MERGE_TEMPERATURE)
-        : 0, // Temperature for merge operations (0 = deterministic)
-      seed: process.env.OLLAMA_MERGE_SEED
-        ? parseInt(process.env.OLLAMA_MERGE_SEED, 10)
-        : 12345, // Seed for deterministic outputs (default: 1234)
-      top_p: process.env.OLLAMA_MERGE_TOP_P
-        ? parseFloat(process.env.OLLAMA_MERGE_TOP_P)
-        : 1, // Top-p sampling for merge operations (default: 1)
-      top_k: process.env.OLLAMA_MERGE_TOP_K
-        ? parseInt(process.env.OLLAMA_MERGE_TOP_K, 10)
-        : 1, // Top-k sampling for merge operations (default: 1)
-      repeat_penalty: process.env.OLLAMA_MERGE_REPEAT_PENALTY
-        ? parseFloat(process.env.OLLAMA_MERGE_REPEAT_PENALTY)
-        : 1.0, // Repeat penalty for merge operations (default: 1.0)
-    },
-
-    /**
-     * Profile chats to resume model configuration
-     * Model used for generating user profile summaries from chats
-     *
-     * To override, set AI_MODEL_PROFILE_CHATS_TO_RESUME in .env
-     * Falls back to ollama.model (AI_MODEL_DOC_LOVE) if not specified
-     */
-    profileChatsToResumeModel:
-      process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME ||
-      process.env.AI_MODEL_DOC_LOVE ||
-      'gemma3:4b',
-
-    /**
-     * Profile merge resumes model configuration
-     * Model used for merging consolidated summary with incremental summary
-     *
-     * To override, set AI_MODEL_PROFILE_MERGE_RESUMES in .env
-     * Falls back to profileChatsToResumeModel, then to ollama.model (AI_MODEL_DOC_LOVE) if not specified
-     */
-    profileMergeResumesModel:
-      process.env.AI_MODEL_PROFILE_MERGE_RESUMES ||
-      process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME ||
-      process.env.AI_MODEL_DOC_LOVE ||
-      'gemma3:4b',
-
-    /**
-     * Ollama embeddings configuration
-     * Separate from chat model - uses multilingual-e5-base for embeddings
-     *
-     * To override the default model, set OLLAMA_EMBEDDING_MODEL in .env
-     * WARNING: Changing the model may require regenerating all existing embeddings
-     */
-    embeddings: {
-      model:
-        process.env.OLLAMA_EMBEDDING_MODEL ||
-        AIModelConstants.EMBEDDING.DEFAULT_MODEL,
-      dimension: AIModelConstants.EMBEDDING.DIMENSION,
-      timeout: process.env.OLLAMA_EMBEDDING_TIMEOUT
-        ? parseInt(process.env.OLLAMA_EMBEDDING_TIMEOUT, 10)
-        : 30000, // 30 seconds default (embeddings are usually faster than chat)
-    },
-  },
-
-  /**
-   * OpenAI provider configuration
-   */
-  openai: {
-    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    temperature: process.env.OPENAI_TEMPERATURE
-      ? parseFloat(process.env.OPENAI_TEMPERATURE)
-      : 0.1, // Very low for deterministic, fast responses
-    maxTokens: process.env.OPENAI_MAX_TOKENS
-      ? parseInt(process.env.OPENAI_MAX_TOKENS, 10)
-      : 200, // Short responses for speed
+    profileTimeout: process.env.AI_SERVICE_PROFILE_TIMEOUT
+      ? parseInt(process.env.AI_SERVICE_PROFILE_TIMEOUT, 10)
+      : 660000, // 11 minutes default (for profile generation/merging operations)
   },
 
   /**
@@ -282,7 +126,7 @@ Nunca, bajo ninguna circunstancia, hablas de ti como si fueras una persona o tuv
 
     /**
      * Instructions for generating user personality summaries
-     * Used by SummarizerModel to create/update user AI profiles
+     * Used by ai-service to create/update user AI profiles
      *
      * IMPORTANTE: el resultado se usará como entrada directa de un modelo de embeddings.
      * Debe ser TEXTO PLANO en español, muy claro, estructurado por líneas/secciones fijas

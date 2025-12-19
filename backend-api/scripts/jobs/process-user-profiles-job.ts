@@ -1037,19 +1037,16 @@ async function main() {
       logger
     );
 
-    // Initialize use case with undefined summarizerModel (uses ai-service via AiServiceProfileClient)
+    // Initialize use case (uses ai-service via AiServiceProfileClient)
     const generateUserProfile = new GenerateUserProfileFromChats(
       getAllUserChats,
       userAIProfileRepository,
       userRepository,
-      undefined, // Not needed when using ai-service
-      docLoveHelper,
       logger
     );
 
-    // Initialize embedding service with undefined embeddingModel (uses ai-service via AiServiceEmbeddingClient)
+    // Initialize embedding service (uses ai-service via AiServiceEmbeddingClient)
     const embeddingService = new UserAIProfileEmbeddingService(
-      undefined, // Not needed when using ai-service
       userAIProfileRepository,
       logger
     );

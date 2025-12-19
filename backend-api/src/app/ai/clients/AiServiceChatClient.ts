@@ -1,5 +1,4 @@
 import { AIConfig } from '../ai-settings';
-import { ChatMessage } from '../core/ChatModel';
 
 /**
  * AiServiceChatClient - HTTP client for ai-service chat operations

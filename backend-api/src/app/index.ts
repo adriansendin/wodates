@@ -29,14 +29,7 @@ import { BlockUser } from '../domain/use-cases/chat/BlockUser';
 import { MatchOverviewService } from './services/match-overview-service';
 import { DocLoveHelper } from './services/doc-love-helper';
 import { DocLoveChatService } from './ai/chat/DocLoveChatService';
-import {
-  createChatModel,
-  createSummarizerModel,
-  createEmbeddingModel,
-} from './ai/core/config';
-import { SummarizerModel } from './ai/core/SummarizerModel';
-import { EmbeddingModel } from './ai/core/EmbeddingModel';
-import { AIConfig } from './ai/ai-settings';
+import { createChatModel } from './ai/core/config';
 import { UserAIProfileEmbeddingService } from './ai/profile/UserAIProfileEmbeddingService';
 import { SupabaseUserAIProfileRepository } from '../data/repositories/SupabaseUserAIProfileRepository';
 import { SupabaseUserRepository } from '../data/repositories/SupabaseUserRepository';
@@ -46,6 +39,16 @@ import { GenerateUserProfileFromChats } from '../domain/use-cases/chat/GenerateU
 import { startJobScheduler } from './jobs/scheduler';
 
 async function buildApp() {
+  // Startup guard: AI_PROVIDER must be 'ai-service'
+  const aiProvider = process.env.AI_PROVIDER;
+  if (aiProvider !== 'ai-service') {
+    throw new Error(
+      `AI_PROVIDER must be 'ai-service'. Got: ${aiProvider || 'undefined'}. ` +
+      'Direct LLM providers (ollama, openai) have been removed. ' +
+      'All AI operations must go through ai-service HTTP API.'
+    );
+  }
+
   const logLevel =
     process.env.FASTIFY_LOG_LEVEL ??
     (process.env.NODE_ENV === 'development' ? 'warn' : 'info');
@@ -120,26 +123,13 @@ async function buildApp() {
   let docLoveChatService: DocLoveChatService | undefined;
 
   try {
-    // Create AI models
-    const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
+    // Create chat model (ChatModelHttp wrapper for ai-service)
     const chatModel = createChatModel(fastify.log);
-    
-    // When using ai-service, summarizer and embedding models are not needed
-    // They are handled via AiService*Client directly
-    let summarizerModel: SummarizerModel | undefined;
-    let embeddingModel: EmbeddingModel | undefined;
-    
-    if (providerName !== 'ai-service') {
-      summarizerModel = createSummarizerModel(fastify.log);
-      embeddingModel = createEmbeddingModel(fastify.log);
-    }
-
     const docLoveHelper = new DocLoveHelper();
 
     // Initialize Doc Love chat service (for online chat)
     docLoveChatService = new DocLoveChatService(
       docLoveHelper,
-      chatModel,
       messageRepository,
       matchRepository,
       // UserRepository is optional - pass undefined for now
@@ -151,34 +141,23 @@ async function buildApp() {
     // Initialize User AI Profile Embedding Service
     // This service generates embeddings from summaries stored in user_ai_profiles table
     // Should be called asynchronously (via jobs/cron/webhooks) when summaries are updated
-    // When using ai-service, embeddingModel is not needed (service uses AiServiceEmbeddingClient)
-    if (embeddingModel) {
-      const userAIProfileRepository = new SupabaseUserAIProfileRepository();
-      const userAIProfileEmbeddingService = new UserAIProfileEmbeddingService(
-        embeddingModel,
-        userAIProfileRepository,
-        fastify.log
-      );
-      // Store reference for potential future use (e.g., admin endpoints, cron jobs, webhooks)
-      // Currently not exposed, but available if needed
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      void userAIProfileEmbeddingService;
-    }
-
-    // Show active LLM in console (similar to server startup messages)
-    const activeModel = chatModel.model;
-    console.log(
-      `🤖 AI Provider: ${providerName.toUpperCase()} | Model: ${activeModel}`
+    const userAIProfileRepository = new SupabaseUserAIProfileRepository();
+    const userAIProfileEmbeddingService = new UserAIProfileEmbeddingService(
+      userAIProfileRepository,
+      fastify.log
     );
-    if (providerName === 'ai-service') {
-      fastify.log.info(
-        `AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), using ai-service for all operations`
-      );
-    } else {
-      fastify.log.info(
-        `AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), SummarizerModel=${summarizerModel?.name} (${summarizerModel?.model}), EmbeddingModel=${embeddingModel?.name} (${embeddingModel?.model})`
-      );
-    }
+    // Store reference for potential future use (e.g., admin endpoints, cron jobs, webhooks)
+    // Currently not exposed, but available if needed
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    void userAIProfileEmbeddingService;
+
+    // Show active AI provider in console
+    console.log(
+      `🤖 AI Provider: AI-SERVICE | Model: ${chatModel.model}`
+    );
+    fastify.log.info(
+      `AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), using ai-service for all operations`
+    );
   } catch (error) {
     // Log error but don't fail startup - AI features will just not work
     fastify.log.warn(
@@ -223,18 +202,10 @@ async function buildApp() {
         fastify.log
       );
       
-      // When using ai-service, summarizerModel is not needed (use case uses AiServiceProfileClient)
-      const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
-      const summarizerModel = providerName !== 'ai-service' 
-        ? createSummarizerModel(fastify.log)
-        : undefined;
-
       generateUserProfile = new GenerateUserProfileFromChats(
         getAllUserChats,
         userAIProfileRepository,
         userRepository,
-        summarizerModel,
-        docLoveHelper,
         fastify.log
       );
     }

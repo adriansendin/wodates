@@ -35,12 +35,12 @@ export interface AiServiceMergeProfilesResponse {
 
 export class AiServiceProfileClient {
   private readonly baseUrl: string;
-  private readonly timeout: number;
+  private readonly profileTimeout: number;
   private readonly logger?: any;
 
-  constructor(baseUrl?: string, timeout?: number, logger?: any) {
+  constructor(baseUrl?: string, _timeout?: number, logger?: any) {
     this.baseUrl = baseUrl || AIConfig.aiService.baseUrl;
-    this.timeout = timeout || AIConfig.aiService.timeout;
+    this.profileTimeout = AIConfig.aiService.profileTimeout;
     this.logger = logger;
   }
 
@@ -55,7 +55,7 @@ export class AiServiceProfileClient {
     request: AiServiceGenerateProfileRequest
   ): Promise<AiServiceGenerateProfileResponse> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    const timeoutId = setTimeout(() => controller.abort(), this.profileTimeout);
 
     try {
       if (this.logger) {
@@ -129,7 +129,7 @@ export class AiServiceProfileClient {
       if (error instanceof Error) {
         if (error.name === 'AbortError' || error.message.includes('aborted')) {
           throw new Error(
-            `ai-service /profile/generate timeout after ${this.timeout}ms`
+            `ai-service /profile/generate timeout after ${this.profileTimeout}ms`
           );
         }
         throw error;
@@ -150,7 +150,7 @@ export class AiServiceProfileClient {
     request: AiServiceMergeProfilesRequest
   ): Promise<AiServiceMergeProfilesResponse> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    const timeoutId = setTimeout(() => controller.abort(), this.profileTimeout);
 
     try {
       if (this.logger) {
@@ -211,7 +211,7 @@ export class AiServiceProfileClient {
       if (error instanceof Error) {
         if (error.name === 'AbortError' || error.message.includes('aborted')) {
           throw new Error(
-            `ai-service /profile/merge timeout after ${this.timeout}ms`
+            `ai-service /profile/merge timeout after ${this.profileTimeout}ms`
           );
         }
         throw error;

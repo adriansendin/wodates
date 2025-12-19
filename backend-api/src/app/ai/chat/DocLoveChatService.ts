@@ -5,7 +5,7 @@ import { MessageRepository } from '../../../domain/repositories/MessageRepositor
 import { MatchRepository } from '../../../domain/repositories/MatchRepository';
 import { UserRepository } from '../../../domain/repositories/UserRepository';
 import { DocLoveHelper } from '../../services/doc-love-helper';
-import { ChatModel, ChatMessage } from '../core/ChatModel';
+import { ChatMessage } from '../core/ChatModel';
 import { AIConfig } from '../ai-settings';
 import { AiServiceChatClient } from '../clients/AiServiceChatClient';
 
@@ -13,38 +13,27 @@ import { AiServiceChatClient } from '../clients/AiServiceChatClient';
  * DocLoveChatService - Orchestrates Doc Love online chat
  *
  * This service handles real-time chat conversations with Doc Love.
- * It builds prompts, calls ChatModel, and persists bot replies.
+ * It builds prompts, calls ai-service HTTP API, and persists bot replies.
  *
  * This is part of the ai/chat layer, focused on online chat orchestration.
  */
 export class DocLoveChatService {
-  private readonly useAiService: boolean;
-  private aiServiceChatClient?: AiServiceChatClient;
+  private readonly aiServiceChatClient: AiServiceChatClient;
 
   constructor(
     private docLoveHelper: DocLoveHelper,
-    private chatModel: ChatModel,
     private messageRepository: MessageRepository,
     private matchRepository: MatchRepository,
     private userRepository?: UserRepository,
     private logger?: any
   ) {
-    // Feature flag: USE_AI_SERVICE=true to use ai-service, false/undefined to use direct LLM
-    this.useAiService = process.env.USE_AI_SERVICE === 'true';
-    
-    if (this.useAiService) {
-      this.aiServiceChatClient = new AiServiceChatClient(
-        undefined, // Use default from AIConfig
-        undefined, // Use default timeout
-        logger
-      );
-      if (this.logger) {
-        this.logger.info('DocLoveChatService: Using ai-service for chat generation');
-      }
-    } else {
-      if (this.logger) {
-        this.logger.info('DocLoveChatService: Using direct LLM (ChatModel) for chat generation');
-      }
+    this.aiServiceChatClient = new AiServiceChatClient(
+      undefined, // Use default from AIConfig
+      undefined, // Use default timeout
+      logger
+    );
+    if (this.logger) {
+      this.logger.info('DocLoveChatService: Using ai-service for chat generation');
     }
   }
 
@@ -132,54 +121,36 @@ export class DocLoveChatService {
         ? await this.getActiveMatches(userId, docLoveId)
         : [];
 
-      // Build chat request
-      const chatRequest = {
-        userId,
-        docLoveUserId: docLoveId,
-        conversationHistory,
-        lastUserMessage: userMessage.content,
-        ...(userContext && { userContext }),
-        activeMatches,
-      };
-
       // Log before calling LLM
       if (this.logger) {
         this.logger.info(
           {
             matchId,
             userId,
-            useAiService: this.useAiService,
-            provider: this.useAiService ? 'ai-service' : this.chatModel.name,
-            model: this.useAiService ? 'ai-service' : this.chatModel.model,
+            provider: 'ai-service',
+            model: 'ai-service',
             historyLength: conversationHistory.length,
             userContextIncluded: !!userContext,
             activeMatchesCount: activeMatches.length,
           },
-          'Calling LLM to generate Doc Love response'
+          'Calling ai-service to generate Doc Love response'
         );
       }
 
-      let chatResponse: { content: string; provider: string; model?: string };
+      // Use ai-service HTTP client
+      const systemPrompt = this.buildSystemPrompt(userContext, activeMatches);
+      const messages = this.buildMessages(conversationHistory, userMessage.content);
 
-      if (this.useAiService && this.aiServiceChatClient) {
-        // NEW: Use ai-service HTTP client
-        const systemPrompt = this.buildSystemPrompt(userContext, activeMatches);
-        const messages = this.buildMessages(conversationHistory, userMessage.content);
+      const aiServiceResponse = await this.aiServiceChatClient.generateChat({
+        messages,
+        system: systemPrompt,
+      });
 
-        const aiServiceResponse = await this.aiServiceChatClient.generateChat({
-          messages,
-          system: systemPrompt,
-        });
-
-        chatResponse = {
-          content: aiServiceResponse.content,
-          provider: 'ai-service',
-          model: 'ai-service',
-        };
-      } else {
-        // LEGACY: Use direct ChatModel (keep for rollback)
-        chatResponse = await this.chatModel.generateChat(chatRequest);
-      }
+      const chatResponse = {
+        content: aiServiceResponse.content,
+        provider: 'ai-service',
+        model: 'ai-service',
+      };
 
       if (this.logger) {
         this.logger.info(
@@ -227,7 +198,7 @@ export class DocLoveChatService {
   }
 
   /**
-   * Gets conversation history formatted for ChatModel
+   * Gets conversation history formatted for ai-service
    */
   private async getConversationHistory(
     matchId: string,
