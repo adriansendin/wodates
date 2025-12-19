@@ -34,6 +34,8 @@ import {
   createSummarizerModel,
   createEmbeddingModel,
 } from './ai/core/config';
+import { SummarizerModel } from './ai/core/SummarizerModel';
+import { EmbeddingModel } from './ai/core/EmbeddingModel';
 import { AIConfig } from './ai/ai-settings';
 import { UserAIProfileEmbeddingService } from './ai/profile/UserAIProfileEmbeddingService';
 import { SupabaseUserAIProfileRepository } from '../data/repositories/SupabaseUserAIProfileRepository';
@@ -119,9 +121,18 @@ async function buildApp() {
 
   try {
     // Create AI models
+    const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
     const chatModel = createChatModel(fastify.log);
-    const summarizerModel = createSummarizerModel(fastify.log);
-    const embeddingModel = createEmbeddingModel(fastify.log);
+    
+    // When using ai-service, summarizer and embedding models are not needed
+    // They are handled via AiService*Client directly
+    let summarizerModel: SummarizerModel | undefined;
+    let embeddingModel: EmbeddingModel | undefined;
+    
+    if (providerName !== 'ai-service') {
+      summarizerModel = createSummarizerModel(fastify.log);
+      embeddingModel = createEmbeddingModel(fastify.log);
+    }
 
     const docLoveHelper = new DocLoveHelper();
 
@@ -140,26 +151,34 @@ async function buildApp() {
     // Initialize User AI Profile Embedding Service
     // This service generates embeddings from summaries stored in user_ai_profiles table
     // Should be called asynchronously (via jobs/cron/webhooks) when summaries are updated
-    const userAIProfileRepository = new SupabaseUserAIProfileRepository();
-    const userAIProfileEmbeddingService = new UserAIProfileEmbeddingService(
-      embeddingModel,
-      userAIProfileRepository,
-      fastify.log
-    );
-    // Store reference for potential future use (e.g., admin endpoints, cron jobs, webhooks)
-    // Currently not exposed, but available if needed
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    void userAIProfileEmbeddingService;
+    // When using ai-service, embeddingModel is not needed (service uses AiServiceEmbeddingClient)
+    if (embeddingModel) {
+      const userAIProfileRepository = new SupabaseUserAIProfileRepository();
+      const userAIProfileEmbeddingService = new UserAIProfileEmbeddingService(
+        embeddingModel,
+        userAIProfileRepository,
+        fastify.log
+      );
+      // Store reference for potential future use (e.g., admin endpoints, cron jobs, webhooks)
+      // Currently not exposed, but available if needed
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      void userAIProfileEmbeddingService;
+    }
 
     // Show active LLM in console (similar to server startup messages)
-    const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
     const activeModel = chatModel.model;
     console.log(
       `🤖 AI Provider: ${providerName.toUpperCase()} | Model: ${activeModel}`
     );
-    fastify.log.info(
-      `AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), SummarizerModel=${summarizerModel.name} (${summarizerModel.model}), EmbeddingModel=${embeddingModel.name} (${embeddingModel.model})`
-    );
+    if (providerName === 'ai-service') {
+      fastify.log.info(
+        `AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), using ai-service for all operations`
+      );
+    } else {
+      fastify.log.info(
+        `AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), SummarizerModel=${summarizerModel?.name} (${summarizerModel?.model}), EmbeddingModel=${embeddingModel?.name} (${embeddingModel?.model})`
+      );
+    }
   } catch (error) {
     // Log error but don't fail startup - AI features will just not work
     fastify.log.warn(
@@ -203,7 +222,12 @@ async function buildApp() {
         docLoveHelper,
         fastify.log
       );
-      const summarizerModel = createSummarizerModel(fastify.log);
+      
+      // When using ai-service, summarizerModel is not needed (use case uses AiServiceProfileClient)
+      const providerName = process.env.AI_PROVIDER || AIConfig.defaultProvider;
+      const summarizerModel = providerName !== 'ai-service' 
+        ? createSummarizerModel(fastify.log)
+        : undefined;
 
       generateUserProfile = new GenerateUserProfileFromChats(
         getAllUserChats,

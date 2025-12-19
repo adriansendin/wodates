@@ -19,7 +19,7 @@ export class UserAIProfileEmbeddingService {
   private aiServiceEmbeddingClient?: AiServiceEmbeddingClient;
 
   constructor(
-    private embeddingModel: EmbeddingModel,
+    private embeddingModel: EmbeddingModel | undefined,
     private aiProfileRepository: UserAIProfileRepository,
     private logger?: any
   ) {
@@ -114,6 +114,9 @@ export class UserAIProfileEmbeddingService {
           };
         } else {
           // LEGACY: Use direct EmbeddingModel (keep for rollback)
+          if (!this.embeddingModel) {
+            throw new Error('EmbeddingModel is required when not using ai-service');
+          }
           const modelResponse = await this.embeddingModel.generateEmbedding({
             text: summaryText,
           });

@@ -84,10 +84,23 @@ export class AiServiceProfileClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(
-          `ai-service /profile/generate returned ${response.status}: ${errorText}`
-        );
+        let errorMessage = `ai-service /profile/generate returned ${response.status}`;
+        try {
+          const errorData = await response.json();
+          // FastAPI returns errors in {detail: "message"} format
+          if (errorData.detail) {
+            errorMessage += `: ${errorData.detail}`;
+          } else if (typeof errorData === 'string') {
+            errorMessage += `: ${errorData}`;
+          } else {
+            errorMessage += `: ${JSON.stringify(errorData)}`;
+          }
+        } catch {
+          // If JSON parsing fails, try text
+          const errorText = await response.text().catch(() => 'Unknown error');
+          errorMessage += `: ${errorText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

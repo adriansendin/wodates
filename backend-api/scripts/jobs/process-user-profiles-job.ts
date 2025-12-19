@@ -37,7 +37,7 @@
  * 2. Busca archivos ZIP en Storage (bucket 'external_chats') con estados procesables
  * 3. Descarga cada ZIP y extrae el archivo '_chat.txt'
  * 4. Parsea el contenido del chat (formato WhatsApp)
- * 5. Genera resumen incremental desde chats externos usando SummarizerModel
+ * 5. Genera resumen incremental desde chats externos usando ai-service (PROCESO 2 actualmente deshabilitado)
  * 6. Hace merge con summary consolidado si existe (usando LLM dedicado)
  * 7. Genera embedding del resumen final y lo guarda
  * 8. Actualiza el estado del archivo a 'processed'
@@ -79,11 +79,10 @@ import { SupabaseUserAIProfileRepository } from '../../src/data/repositories/Sup
 import { GetAllUserChats } from '../../src/domain/use-cases/chat/GetAllUserChats';
 import { GetUnprocessedMessages } from '../../src/domain/use-cases/chat/GetUnprocessedMessages';
 import { GenerateUserProfileFromChats } from '../../src/domain/use-cases/chat/GenerateUserProfileFromChats';
-import { createSummarizerModel, createEmbeddingModel } from '../../src/app/ai/core/config';
 import { UserAIProfileEmbeddingService } from '../../src/app/ai/profile/UserAIProfileEmbeddingService';
 import { ExternalChatFilesService } from '../../src/app/services/external-chat-files-service';
-import { SummarizerModel, SummarizerRequest } from '../../src/app/ai/core/SummarizerModel';
-import { AIConfig } from '../../src/app/ai/ai-settings';
+import { AiServiceProfileClient } from '../../src/app/ai/clients/AiServiceProfileClient';
+import { AiServiceEmbeddingClient } from '../../src/app/ai/clients/AiServiceEmbeddingClient';
 
 type SupabaseConfig = {
   url: string;
@@ -558,7 +557,10 @@ function parseChatText(chatText: string): Array<{ role: 'user'; content: string;
 
 /**
  * Transforms chat text to SummarizerRequest format with importedConversations
+ * NOTE: This function is only used in PROCESO 2 which is currently disabled.
+ * When PROCESO 2 is re-enabled, it should be refactored to use ai-service.
  */
+/*
 function transformChatTextToSummarizerRequest(
   chatText: string,
   user: { name?: string; bio?: string; birthDate?: string },
@@ -605,10 +607,14 @@ function transformChatTextToSummarizerRequest(
   
   return result;
 }
+*/
 
 /**
  * Merges two summaries using LLM (similar to GenerateUserProfileFromChats.mergeSummaries)
+ * NOTE: This function calls Ollama directly and is only used in PROCESO 2 which is currently disabled.
+ * When PROCESO 2 is re-enabled, it should be refactored to use AiServiceProfileClient.mergeProfiles.
  */
+/*
 async function mergeSummaries(
   consolidatedSummary: string,
   incrementalSummary: string,
@@ -730,10 +736,14 @@ async function mergeSummaries(
     throw new Error('Unknown error calling Ollama API');
   }
 }
+*/
 
 /**
  * Processes chat content: generates summary, merges if needed, and generates embedding
+ * NOTE: This function uses SummarizerModel directly and is only used in PROCESO 2 which is currently disabled.
+ * When PROCESO 2 is re-enabled, it should be refactored to use AiServiceProfileClient.
  */
+/*
 async function processChatContent(
   chatContent: string,
   userId: string,
@@ -846,6 +856,7 @@ async function processChatContent(
     writeToLog(`Failed to generate embedding: ${embeddingError instanceof Error ? embeddingError.message : String(embeddingError)}`, 'WARN');
   }
 }
+*/
 
 async function main() {
   const startTime = Date.now();
@@ -1013,20 +1024,32 @@ async function main() {
       logger
     );
 
-    const summarizerModel = createSummarizerModel(logger);
+    // Initialize ai-service clients (exclusive use - no legacy models)
+    const aiServiceProfileClient = new AiServiceProfileClient(
+      undefined, // Use default from AIConfig
+      undefined, // Use default timeout
+      logger
+    );
+    
+    const aiServiceEmbeddingClient = new AiServiceEmbeddingClient(
+      undefined, // Use default from AIConfig
+      undefined, // Use default timeout
+      logger
+    );
+
+    // Initialize use case with undefined summarizerModel (uses ai-service via AiServiceProfileClient)
     const generateUserProfile = new GenerateUserProfileFromChats(
       getAllUserChats,
       userAIProfileRepository,
       userRepository,
-      summarizerModel,
+      undefined, // Not needed when using ai-service
       docLoveHelper,
       logger
     );
 
-    // Initialize embedding service for generating embeddings from summaries
-    const embeddingModel = createEmbeddingModel(logger);
+    // Initialize embedding service with undefined embeddingModel (uses ai-service via AiServiceEmbeddingClient)
     const embeddingService = new UserAIProfileEmbeddingService(
-      embeddingModel,
+      undefined, // Not needed when using ai-service
       userAIProfileRepository,
       logger
     );

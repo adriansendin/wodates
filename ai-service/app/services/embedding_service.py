@@ -1,64 +1,50 @@
 """
 Embedding Service - Business logic for embedding operations
 
-Handles generation of vector embeddings from text (specifically consolidated profile summaries).
+Handles generation of embeddings from text.
 """
 
-from app.llm.llm_client import LLMClient
 from app.llm.ollama_client import OllamaClient
-from app.schemas.embeddings import (
-    GenerateEmbeddingRequest,
-    GenerateEmbeddingResponse,
-)
+from app.schemas.embeddings import GenerateEmbeddingRequest, GenerateEmbeddingResponse
 from app.core.settings import settings
 
 
 class EmbeddingService:
-    """Service for generating embeddings."""
+    """Service for embedding operations."""
 
-    def __init__(self, llm_client: LLMClient | None = None):
+    def __init__(self, ollama_client: OllamaClient | None = None):
         """
         Initialize the embedding service.
 
         Args:
-            llm_client: LLM client implementation (defaults to OllamaClient)
+            ollama_client: Ollama client implementation (defaults to OllamaClient)
         """
-        self.llm_client: LLMClient = llm_client or OllamaClient()
+        self.ollama_client: OllamaClient = ollama_client or OllamaClient()
 
     async def generate_embedding(
         self, request: GenerateEmbeddingRequest
     ) -> GenerateEmbeddingResponse:
         """
-        Generate an embedding vector from text.
-
-        This is a pure AI primitive: text → vector.
-        The service does NOT:
-        - Check if the text is a valid summary
-        - Validate profile state
-        - Decide when to generate embeddings
-        - Interact with databases
-
-        The backend is responsible for:
-        - Ensuring the text is a consolidated summary (not incremental)
-        - Deciding when to call this endpoint
-        - Storing the resulting embedding
+        Generate an embedding for the given text.
 
         Args:
             request: Request containing text to embed
 
         Returns:
-            Response with embedding vector (768-dimensional)
+            Response with generated embedding vector
 
         Raises:
-            Exception: If the embedding generation fails
+            ValueError: If the embedding generation fails
+            Exception: For other unexpected errors
         """
-        # Generate embedding using LLM client
-        embedding = await self.llm_client.generate_embedding(
+        # Generate embedding using Ollama
+        embedding = await self.ollama_client.generate_embedding(
             text=request.text,
             model=settings.ollama_embedding_model,
-            timeout=settings.ollama_embedding_timeout / 1000,
+            timeout=settings.ollama_embedding_timeout / 1000,  # ms → seconds
         )
 
+        # Return the embedding vector
         return GenerateEmbeddingResponse(
             embedding=embedding,
             dimension=settings.embedding_dimension,

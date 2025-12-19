@@ -83,9 +83,17 @@ class Settings(BaseSettings):
         description="Model for merging profiles. Uses AI_MODEL_PROFILE_MERGE_RESUMES from .env if available."
     )
     
-    ollama_timeout: int = 60000  # milliseconds
+    ollama_timeout: int = Field(
+        default=60000,  # milliseconds
+        validation_alias="OLLAMA_TIMEOUT",
+        description="Timeout for Ollama chat operations. Uses OLLAMA_TIMEOUT from .env if available."
+    )
     ollama_embedding_model: str = "yxchia/multilingual-e5-base"
-    ollama_embedding_timeout: int = 30000  # milliseconds
+    ollama_embedding_timeout: int = Field(
+        default=30000,  # milliseconds
+        validation_alias="OLLAMA_EMBEDDING_TIMEOUT",
+        description="Timeout for Ollama embedding operations. Uses OLLAMA_EMBEDDING_TIMEOUT from .env if available."
+    )
 
     # Ollama API Parameters
     ollama_temperature: float = 0.1
@@ -104,6 +112,11 @@ class Settings(BaseSettings):
     ollama_merge_num_predict: int = 1500
     ollama_merge_temperature: float = 0.0
     ollama_merge_seed: int = 12345
+    ollama_merge_timeout: int = Field(
+        default=600000,  # 10 minutes in milliseconds
+        validation_alias="OLLAMA_MERGE_TIMEOUT",
+        description="Timeout for profile merge operations. Uses OLLAMA_MERGE_TIMEOUT from .env if available."
+    )
 
     # Embedding Configuration
     embedding_dimension: int = 768  # Fixed dimension for multilingual-e5-base

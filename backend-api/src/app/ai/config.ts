@@ -36,6 +36,15 @@ export function createAIProvider(logger?: any): IAProvider {
       return new OpenAIProvider(apiKey, AIConfig.openai.model);
     }
 
+    case 'ai-service': {
+      // When using ai-service, providers are handled via AiService*Client
+      // This factory should not be called when AI_PROVIDER=ai-service
+      throw new Error(
+        'createAIProvider should not be called when AI_PROVIDER=ai-service. ' +
+        'Use AiService*Client directly instead.'
+      );
+    }
+
     // case 'gemini': {
     //   const apiKey = process.env.GEMINI_API_KEY;
     //   if (!apiKey) {

@@ -60,14 +60,12 @@ export function createSummarizerModel(
 
   switch (providerName) {
     case 'ai-service': {
-      // ai-service support for summarization not yet implemented
-      // Fallback to ollama for now (summarization is not used by Doc Love)
-      if (logger) {
-        logger.warn(
-          'ai-service provider not yet implemented for summarization, falling back to ollama'
-        );
-      }
-      // Fall through to ollama case
+      // When using ai-service, summarization is handled via AiServiceProfileClient
+      // This factory should not be called when AI_PROVIDER=ai-service
+      throw new Error(
+        'createSummarizerModel should not be called when AI_PROVIDER=ai-service. ' +
+        'Use AiServiceProfileClient directly instead.'
+      );
     }
 
     case 'ollama': {
@@ -142,14 +140,12 @@ export function createEmbeddingModel(logger?: any): EmbeddingModel {
 
   switch (providerName) {
     case 'ai-service': {
-      // ai-service support for embeddings not yet implemented
-      // Fallback to ollama for now (embeddings are not used by Doc Love)
-      if (logger) {
-        logger.warn(
-          'ai-service provider not yet implemented for embeddings, falling back to ollama'
-        );
-      }
-      // Fall through to ollama case
+      // When using ai-service, embeddings are handled via AiServiceEmbeddingClient
+      // This factory should not be called when AI_PROVIDER=ai-service
+      throw new Error(
+        'createEmbeddingModel should not be called when AI_PROVIDER=ai-service. ' +
+        'Use AiServiceEmbeddingClient directly instead.'
+      );
     }
 
     case 'ollama': {

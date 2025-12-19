@@ -4,7 +4,6 @@ Profile Service - Business logic for profile operations
 Handles generation and merging of user profiles from conversations.
 """
 
-from app.llm.llm_client import LLMClient
 from app.llm.ollama_client import OllamaClient
 from app.schemas.profile import (
     ConversationMessage,
@@ -107,14 +106,8 @@ Ahora genera SOLO el perfil final fusionado siguiendo todas estas reglas.
 class ProfileService:
     """Service for profile operations."""
 
-    def __init__(self, llm_client: LLMClient | None = None):
-        """
-        Initialize the profile service.
-
-        Args:
-            llm_client: LLM client implementation (defaults to OllamaClient)
-        """
-        self.llm_client: LLMClient = llm_client or OllamaClient()
+    def __init__(self, llm_client: OllamaClient | None = None):
+        self.llm_client = llm_client or OllamaClient()
 
     async def generate_profile(
         self, request: GenerateProfileRequest
@@ -142,9 +135,9 @@ class ProfileService:
         # Generate profile using LLM with summarization parameters
         profile_text = await self.llm_client.chat(
             messages=[{"role": "user", "content": full_prompt}],
-            model=settings.ollama_model_profile_chats,  # Uses AI_MODEL_PROFILE_CHATS_TO_RESUME
+            model=settings.ollama_model,  # Can be overridden with profile-specific model
             temperature=settings.ollama_summarizer_temperature,
-            max_tokens=settings.ollama_summarizer_num_predict,  # Protocol uses max_tokens
+            max_tokens=settings.ollama_summarizer_num_predict,  # num_predict mapped to max_tokens
             timeout=settings.ollama_timeout / 1000,
         )
 
@@ -170,10 +163,10 @@ class ProfileService:
         # Generate merged profile using LLM with merge-specific parameters
         merged_profile = await self.llm_client.chat(
             messages=[{"role": "user", "content": merge_prompt}],
-            model=settings.ollama_model_profile_merge,  # Uses AI_MODEL_PROFILE_MERGE_RESUMES
+            model=settings.ollama_model,  # Can be overridden with merge-specific model
             temperature=settings.ollama_merge_temperature,
-            max_tokens=settings.ollama_merge_num_predict,  # Protocol uses max_tokens
-            timeout=settings.ollama_timeout / 1000,
+            max_tokens=settings.ollama_merge_num_predict,  # num_predict mapped to max_tokens
+            timeout=settings.ollama_merge_timeout / 1000,  # Use merge-specific timeout (convert ms to seconds)
         )
 
         return MergeProfilesResponse(merged_profile=merged_profile.strip())

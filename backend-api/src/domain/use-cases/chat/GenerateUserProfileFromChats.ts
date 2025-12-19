@@ -32,7 +32,7 @@ export class GenerateUserProfileFromChats {
     private getAllUserChats: GetAllUserChats,
     private userAIProfileRepository: UserAIProfileRepository,
     private userRepository: UserRepository,
-    private summarizerModel: SummarizerModel,
+    private summarizerModel: SummarizerModel | undefined,
     private docLoveHelper: DocLoveHelper,
     private logger?: any,
     mergeModelOverride?: string
@@ -181,6 +181,9 @@ export class GenerateUserProfileFromChats {
         };
       } else {
         // LEGACY: Use direct SummarizerModel (keep for rollback)
+        if (!this.summarizerModel) {
+          throw new Error('SummarizerModel is required when not using ai-service');
+        }
         summaryResponse = await this.summarizerModel.generateSummary(summarizerRequest);
       }
 
@@ -320,9 +323,28 @@ export class GenerateUserProfileFromChats {
       // No consolidated summary and no incremental (shouldn't happen, but handle gracefully)
       return success(summaryResponse.summary);
     } catch (error) {
+      // Log the actual error for debugging
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Unknown error';
+      
+      if (this.logger) {
+        this.logger.error(
+          {
+            userId,
+            error: errorMessage,
+            errorStack: error instanceof Error ? error.stack : undefined,
+          },
+          'Error generating user profile from chats'
+        );
+      }
+
       return failure(
         new InternalError(
-          'Unexpected error generating user profile from chats',
+          `Unexpected error generating user profile from chats: ${errorMessage}`,
           error
         )
       );
