@@ -6,6 +6,7 @@ Reads from environment variables with sensible defaults.
 """
 
 import logging
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -68,28 +69,28 @@ class Settings(BaseSettings):
         validation_alias="AI_MODEL_DOC_LOVE",
         description="Model for agent conversations. Uses AI_MODEL_DOC_LOVE from .env if available."
     )
-    
+
     # Model for profile generation from chats
     ollama_model_profile_chats: str = Field(
         default="llama3.2:1b",
         validation_alias="AI_MODEL_PROFILE_CHATS_TO_RESUME",
         description="Model for generating profiles from conversations. Uses AI_MODEL_PROFILE_CHATS_TO_RESUME from .env if available."
     )
-    
+
     # Model for profile merging
     ollama_model_profile_merge: str = Field(
         default="llama3.2:1b",
         validation_alias="AI_MODEL_PROFILE_MERGE_RESUMES",
         description="Model for merging profiles. Uses AI_MODEL_PROFILE_MERGE_RESUMES from .env if available."
     )
-    
+
     # Model for feed affinity sentences
     ollama_model_affinity_sentences: str = Field(
         default="gemma3:1b",
         validation_alias="OLLAMA_AFFINITY",
         description="Model for generating affinity sentences in feed. Uses OLLAMA_AFFINITY from .env if available."
     )
-    
+
     ollama_timeout: int = Field(
         default=60000,  # milliseconds
         validation_alias="OLLAMA_TIMEOUT",

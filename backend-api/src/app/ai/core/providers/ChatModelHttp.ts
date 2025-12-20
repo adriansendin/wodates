@@ -14,11 +14,7 @@ export class ChatModelHttp implements ChatModel {
   private readonly timeout: number;
   private readonly logger?: any;
 
-  constructor(
-    baseUrl?: string,
-    timeout?: number,
-    logger?: any
-  ) {
+  constructor(baseUrl?: string, timeout?: number, logger?: any) {
     this.model = 'ai-service';
     this.baseUrl = baseUrl || AIConfig.aiService.baseUrl;
     this.timeout = timeout || AIConfig.aiService.timeout;
@@ -163,9 +159,7 @@ export class ChatModelHttp implements ChatModel {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(
-          `ai-service returned ${response.status}: ${errorText}`
-        );
+        throw new Error(`ai-service returned ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();

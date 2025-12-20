@@ -15,17 +15,19 @@ const QuestionBankQuerySchema = z.object({
 });
 
 export class QuestionBankController {
-  constructor(private readonly questionBankRepository: QuestionBankRepository) {}
+  constructor(
+    private readonly questionBankRepository: QuestionBankRepository
+  ) {}
 
   async getAll(request: FastifyRequest, reply: FastifyReply) {
     try {
       const query = QuestionBankQuerySchema.parse(request.query ?? {});
 
       const result = await this.questionBankRepository.findAll({
-        category: query.category,
-        deprecated: query.deprecated,
-        limit: query.limit,
-        offset: query.offset,
+        ...(query.category !== undefined && { category: query.category }),
+        ...(query.deprecated !== undefined && { deprecated: query.deprecated }),
+        ...(query.limit !== undefined && { limit: query.limit }),
+        ...(query.offset !== undefined && { offset: query.offset }),
       });
 
       if (result.success) {

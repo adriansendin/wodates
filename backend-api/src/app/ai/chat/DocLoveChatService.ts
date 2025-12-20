@@ -33,7 +33,9 @@ export class DocLoveChatService {
       logger
     );
     if (this.logger) {
-      this.logger.info('DocLoveChatService: Using ai-service for chat generation');
+      this.logger.info(
+        'DocLoveChatService: Using ai-service for chat generation'
+      );
     }
   }
 
@@ -139,7 +141,10 @@ export class DocLoveChatService {
 
       // Use ai-service HTTP client
       const systemPrompt = this.buildSystemPrompt(userContext, activeMatches);
-      const messages = this.buildMessages(conversationHistory, userMessage.content);
+      const messages = this.buildMessages(
+        conversationHistory,
+        userMessage.content
+      );
 
       const aiServiceResponse = await this.aiServiceChatClient.generateChat({
         messages,
@@ -380,7 +385,8 @@ export class DocLoveChatService {
     }
 
     // Add last user message if not already in history
-    const lastHistoryMessage = conversationHistory[conversationHistory.length - 1];
+    const lastHistoryMessage =
+      conversationHistory[conversationHistory.length - 1];
     const isLastMessageInHistory =
       lastHistoryMessage &&
       lastHistoryMessage.role === 'user' &&

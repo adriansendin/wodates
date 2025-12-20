@@ -63,7 +63,10 @@ export class SupabaseQuestionBankRepository implements QuestionBankRepository {
       }
 
       if (options?.offset) {
-        query = query.range(options.offset, options.offset + (options.limit || 100) - 1);
+        query = query.range(
+          options.offset,
+          options.offset + (options.limit || 100) - 1
+        );
       }
 
       const { data, error } = await query;
@@ -135,7 +138,9 @@ export class SupabaseQuestionBankRepository implements QuestionBankRepository {
       }
 
       if (!data) {
-        return failure(new InternalError('Supabase did not return question row'));
+        return failure(
+          new InternalError('Supabase did not return question row')
+        );
       }
 
       return success(this.mapQuestionBank(data));

@@ -4,15 +4,14 @@ Profile Service - Business logic for profile operations
 Handles generation and merging of user profiles from conversations.
 """
 
+from app.core.settings import settings
 from app.llm.ollama_client import OllamaClient
 from app.schemas.profile import (
-    ConversationMessage,
     GenerateProfileRequest,
     GenerateProfileResponse,
     MergeProfilesRequest,
     MergeProfilesResponse,
 )
-from app.core.settings import settings
 
 # Prompt for creating new profile from conversations
 CREATE_PROFILE_PROMPT = """

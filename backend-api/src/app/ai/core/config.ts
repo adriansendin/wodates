@@ -11,12 +11,12 @@ import { AIConfig } from '../ai-settings';
 
 export function createChatModel(logger?: any): ChatModel {
   const providerName = process.env.AI_PROVIDER;
-  
+
   if (providerName !== 'ai-service') {
     throw new Error(
       `AI_PROVIDER must be 'ai-service'. Got: ${providerName || 'undefined'}. ` +
-      'Direct LLM providers (ollama, openai) have been removed. ' +
-      'All AI operations must go through ai-service HTTP API.'
+        'Direct LLM providers (ollama, openai) have been removed. ' +
+        'All AI operations must go through ai-service HTTP API.'
     );
   }
 

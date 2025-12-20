@@ -46,8 +46,8 @@ async function buildApp() {
   if (aiProvider !== 'ai-service') {
     throw new Error(
       `AI_PROVIDER must be 'ai-service'. Got: ${aiProvider || 'undefined'}. ` +
-      'Direct LLM providers (ollama, openai) have been removed. ' +
-      'All AI operations must go through ai-service HTTP API.'
+        'Direct LLM providers (ollama, openai) have been removed. ' +
+        'All AI operations must go through ai-service HTTP API.'
     );
   }
 
@@ -155,9 +155,7 @@ async function buildApp() {
     void userAIProfileEmbeddingService;
 
     // Show active AI provider in console
-    console.log(
-      `🤖 AI Provider: AI-SERVICE | Model: ${chatModel.model}`
-    );
+    console.log(`🤖 AI Provider: AI-SERVICE | Model: ${chatModel.model}`);
     fastify.log.info(
       `AI services initialized: ChatModel=${chatModel.name} (${chatModel.model}), using ai-service for all operations`
     );
@@ -204,7 +202,7 @@ async function buildApp() {
         docLoveHelper,
         fastify.log
       );
-      
+
       generateUserProfile = new GenerateUserProfileFromChats(
         getAllUserChats,
         userAIProfileRepository,

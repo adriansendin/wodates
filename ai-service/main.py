@@ -8,7 +8,7 @@ Orquesta llamadas a LLMs, genera perfiles, embeddings y explicaciones de afinida
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import agent, chat, profile, explanations, embeddings
+from app.api import agent, chat, embeddings, explanations, profile
 from app.core.settings import settings
 
 app = FastAPI(

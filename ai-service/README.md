@@ -130,6 +130,29 @@ Para desarrollo con recarga automática:
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+### Verificación de código
+
+Para verificar que todo compila correctamente (equivalente a `npm run check` en otros módulos):
+
+```bash
+# Instalar dependencias de desarrollo primero
+pip install -r requirements-dev.txt
+
+# Ejecutar verificación
+python check.py
+```
+
+Esto ejecuta:
+- **Type checking** con `mypy` (equivalente a `tsc --noEmit`)
+- **Linting** con `ruff` (equivalente a `eslint`)
+
+También puedes ejecutar los comandos individualmente:
+```bash
+python -m mypy app main.py      # Solo type checking
+python -m ruff check app main.py  # Solo linting
+python -m ruff format app main.py # Formatear código
+```
+
 ## Integración con el backend Node.js
 
 El backend principal (Node.js/Fastify) debe hacer llamadas HTTP a este servicio:

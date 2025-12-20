@@ -4,9 +4,9 @@ Embedding Service - Business logic for embedding operations
 Handles generation of embeddings from text.
 """
 
+from app.core.settings import settings
 from app.llm.ollama_client import OllamaClient
 from app.schemas.embeddings import GenerateEmbeddingRequest, GenerateEmbeddingResponse
-from app.core.settings import settings
 
 
 class EmbeddingService:

@@ -26,7 +26,9 @@ export class UserAIProfileEmbeddingService {
       logger
     );
     if (this.logger && typeof this.logger.info === 'function') {
-      this.logger.info('UserAIProfileEmbeddingService: Using ai-service for embedding generation');
+      this.logger.info(
+        'UserAIProfileEmbeddingService: Using ai-service for embedding generation'
+      );
     }
   }
 
@@ -87,9 +89,10 @@ export class UserAIProfileEmbeddingService {
       try {
         const summaryText = profile.summary;
 
-        const aiServiceResponse = await this.aiServiceEmbeddingClient.generateEmbedding({
-          text: summaryText,
-        });
+        const aiServiceResponse =
+          await this.aiServiceEmbeddingClient.generateEmbedding({
+            text: summaryText,
+          });
 
         embedding = aiServiceResponse.embedding;
 

@@ -53,7 +53,7 @@ async def generate_chat(
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Failed to generate chat response: {str(e)}", exc_info=True)
-        
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate chat response: {str(e)}",

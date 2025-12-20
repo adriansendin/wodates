@@ -75,7 +75,9 @@ export const AIConfig = {
    */
   aiService: {
     baseUrl:
-      process.env.AI_SERVICE_BASE_URL || process.env.AI_SERVICE_URL || 'http://127.0.0.1:8010',
+      process.env.AI_SERVICE_BASE_URL ||
+      process.env.AI_SERVICE_URL ||
+      'http://127.0.0.1:8010',
     timeout: process.env.AI_SERVICE_TIMEOUT
       ? parseInt(process.env.AI_SERVICE_TIMEOUT, 10)
       : 60000, // 60 seconds default (for chat operations)
@@ -99,21 +101,21 @@ export const AIConfig = {
     'Intereses y valores alineados.',
   ],
 
+  /**
+   * Prompt configuration (shared across all providers)
+   */
+  prompt: {
     /**
-     * Prompt configuration (shared across all providers)
+     * Instructions for generating affinity sentences for feed candidates
+     * Used by backend to build complete prompt with user profiles
+     * The backend constructs the full prompt and sends it to ai-service
      */
-    prompt: {
+    affinitySentences: {
       /**
-       * Instructions for generating affinity sentences for feed candidates
-       * Used by backend to build complete prompt with user profiles
-       * The backend constructs the full prompt and sends it to ai-service
+       * Base prompt template for affinity sentences
+       * The backend will inject the user profiles into this template
        */
-      affinitySentences: {
-        /**
-         * Base prompt template for affinity sentences
-         * The backend will inject the user profiles into this template
-         */
-        basePrompt: `ROL:
+      basePrompt: `ROL:
         Eres un asistente que genera micro-frases de afinidad (2 frases muy cortas) para justificar por qué un candidato aparece en el feed de un usuario, basándote únicamente en información explícita de sus perfiles AI.
         
         OBJETIVO:
@@ -140,17 +142,16 @@ export const AIConfig = {
         Devuelve SOLO las dos frases finales, una por línea.
         Sin numeración, sin viñetas, sin encabezados, sin texto adicional.
         `,
-        
 
-        /**
-         * Builds the complete prompt with user profiles
-         * This function is called by the backend to construct the full prompt
-         */
-        buildPrompt: (
-          currentUserProfile: string,
-          candidateUserProfile: string
-        ): string => {
-          return `${AIConfig.prompt.affinitySentences.basePrompt}
+      /**
+       * Builds the complete prompt with user profiles
+       * This function is called by the backend to construct the full prompt
+       */
+      buildPrompt: (
+        currentUserProfile: string,
+        candidateUserProfile: string
+      ): string => {
+        return `${AIConfig.prompt.affinitySentences.basePrompt}
 
 PERFIL USUARIO ACTUAL (quien ve el feed):
 """
@@ -163,14 +164,14 @@ ${candidateUserProfile}
 """
 
 Ahora genera las frases basándote en estos perfiles.`;
-        },
       },
+    },
 
-      /**
-       * System instructions for Doc Love
-       * This is the core personality and behavior definition
-       */
-      systemInstructions: `
+    /**
+     * System instructions for Doc Love
+     * This is the core personality and behavior definition
+     */
+    systemInstructions: `
 Eres **Doc Love**, una herramienta diseñada para conocer al usuario y ayudarle a encontrar una relación seria y estable. No eres una persona y no tienes experiencias, emociones ni vida propia.
 
 Estilo:

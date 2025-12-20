@@ -4,10 +4,10 @@ Agent Service - Business logic for agent operations
 Handles generation of next questions in conversations.
 """
 
+from app.core.settings import settings
 from app.llm.llm_client import LLMClient
 from app.llm.ollama_client import OllamaClient
-from app.schemas.agent import ConversationMessage, NextQuestionRequest, NextQuestionResponse
-from app.core.settings import settings
+from app.schemas.agent import NextQuestionRequest, NextQuestionResponse
 
 # System prompt for Doc Love agent (from backend configuration)
 SYSTEM_PROMPT = """
@@ -79,7 +79,7 @@ class AgentService:
                 f"{key}: {value}" for key, value in request.user_context.items()
             ]
             if context_parts:
-                system_prompt += f"\n\nContexto del usuario:\n" + "\n".join(context_parts)
+                system_prompt += "\n\nContexto del usuario:\n" + "\n".join(context_parts)
 
         # Generate response using LLM (using protocol-compliant parameters)
         response_text = await self.llm_client.chat(

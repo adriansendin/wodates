@@ -120,10 +120,7 @@ export class FeedController {
     });
   }
 
-  async getAffinitySentences(
-    request: FastifyRequest,
-    reply: FastifyReply
-  ) {
+  async getAffinitySentences(request: FastifyRequest, reply: FastifyReply) {
     try {
       // Check if affinity sentences feature is enabled
       if (!AIConfig.affinitySentencesEnabled) {
@@ -158,8 +155,14 @@ export class FeedController {
             {
               userId,
               candidateId,
-              currentUserHasProfile: !!currentUserProfileResult.data?.summary,
-              candidateHasProfile: !!candidateProfileResult.data?.summary,
+              currentUserHasProfile: !!(
+                currentUserProfileResult.success &&
+                currentUserProfileResult.data?.summary
+              ),
+              candidateHasProfile: !!(
+                candidateProfileResult.success &&
+                candidateProfileResult.data?.summary
+              ),
             },
             'Missing AI profiles for affinity sentences, returning empty array'
           );
@@ -181,9 +184,8 @@ export class FeedController {
       // Call ai-service chat endpoint with the complete prompt
       // Following the same pattern as DocLove chat - backend builds prompt, ai-service just calls LLM
       // Use the affinity sentences model from config
-      const affinityModel =
-        process.env.OLLAMA_AFFINITY || 'gemma3:1b';
-      
+      const affinityModel = process.env.OLLAMA_AFFINITY || 'gemma3:1b';
+
       if (this.logger) {
         this.logger.debug(
           {
@@ -271,13 +273,16 @@ export class FeedController {
    */
   private parseAffinitySentences(text: string): string[] {
     // Remove common prefixes and markers
-    let cleaned = text
-      .replace(/^\d+[\.\)]\s*/gm, '') // Remove numbering
+    const cleaned = text
+      .replace(/^\d+[.)]\s*/gm, '') // Remove numbering
       .replace(/^[-•*]\s*/gm, '') // Remove bullets
       .trim();
 
     // Split by newlines first
-    const lines = cleaned.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
+    const lines = cleaned
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
 
     if (lines.length === 0) {
       return [];
@@ -295,9 +300,10 @@ export class FeedController {
         sentences.push(...parts);
       } else {
         // Ensure sentence ends with period
-        const sentence = line.endsWith('.') || line.endsWith('!') || line.endsWith('?')
-          ? line
-          : line + '.';
+        const sentence =
+          line.endsWith('.') || line.endsWith('!') || line.endsWith('?')
+            ? line
+            : line + '.';
         sentences.push(sentence);
       }
     }

@@ -60,7 +60,7 @@ async def generate_next_question(request: NextQuestionRequest) -> NextQuestionRe
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Failed to generate next question: {str(e)}", exc_info=True)
-        
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate next question: {str(e)}",

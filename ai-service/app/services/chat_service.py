@@ -4,10 +4,10 @@ Chat Service - Business logic for chat operations
 Handles generation of chat responses from conversation messages.
 """
 
+from app.core.settings import settings
 from app.llm.llm_client import LLMClient
 from app.llm.ollama_client import OllamaClient
 from app.schemas.chat import GenerateChatRequest, GenerateChatResponse
-from app.core.settings import settings
 
 
 class ChatService:
@@ -46,14 +46,14 @@ class ChatService:
         # Determine which model to use
         # If model is specified in request, use it; otherwise use default
         model = request.model or settings.ollama_model
-        
+
         # Use different parameters for affinity sentences (faster, lower temperature)
         # Check if it's the affinity sentences model
         is_affinity_model = (
             request.model == settings.ollama_model_affinity_sentences
             or request.model == "gemma3:1b"
         )
-        
+
         temperature = 0.3 if is_affinity_model else settings.ollama_temperature
         max_tokens = 150 if is_affinity_model else settings.ollama_num_predict
         top_p = 0.7 if is_affinity_model else settings.ollama_top_p

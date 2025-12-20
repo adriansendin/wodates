@@ -77,3 +77,4 @@ def test_settings_normalize_ollama_base_url():
     settings = Settings(ollama_base_url="http://localhost:11434///")
     assert settings.ollama_base_url == "http://localhost:11434"
 
+

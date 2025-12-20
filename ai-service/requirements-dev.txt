@@ -1,0 +1,12 @@
+# Development dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Type checking
+mypy>=1.8.0
+
+# Linting and formatting
+ruff>=0.1.0
+
+# Task runner (similar to npm scripts)
+taskipy>=1.12.0
+

@@ -13,9 +13,10 @@ export const CreateQuestionBankSchema = QuestionBankSchema.omit({
   createdAt: true,
 });
 
-export const UpdateQuestionBankSchema = CreateQuestionBankSchema.partial().extend({
-  deprecated: z.boolean().optional(),
-});
+export const UpdateQuestionBankSchema =
+  CreateQuestionBankSchema.partial().extend({
+    deprecated: z.boolean().optional(),
+  });
 
 export type QuestionBank = z.infer<typeof QuestionBankSchema>;
 export type CreateQuestionBank = z.infer<typeof CreateQuestionBankSchema>;

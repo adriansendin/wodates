@@ -93,7 +93,10 @@ export class AiServiceEmbeddingClient {
 
       // Validate all values are numbers
       for (let i = 0; i < data.embedding.length; i++) {
-        if (typeof data.embedding[i] !== 'number' || !Number.isFinite(data.embedding[i])) {
+        if (
+          typeof data.embedding[i] !== 'number' ||
+          !Number.isFinite(data.embedding[i])
+        ) {
           throw new Error(
             `ai-service /embeddings/generate returned invalid embedding value at index ${i}: expected finite number`
           );

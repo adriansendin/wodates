@@ -55,7 +55,10 @@ class NextQuestionRequest(BaseModel):
             return None
 
         if not isinstance(v, dict):
-            return v  # Let Pydantic handle the type error
+            # Let Pydantic handle the type error by returning as-is
+            # This will cause Pydantic validation to fail with a proper error
+            # We need to cast to satisfy mypy, but Pydantic will catch the error
+            return v  # type: ignore[return-value, no-any-return]
 
         normalized: dict[str, str] = {}
         for key, value in v.items():

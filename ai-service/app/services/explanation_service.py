@@ -4,13 +4,13 @@ Explanation Service - Business logic for affinity explanations
 Handles generation of human-readable explanations for user affinity.
 """
 
+from app.core.settings import settings
 from app.llm.llm_client import LLMClient
 from app.llm.ollama_client import OllamaClient
 from app.schemas.explanations import (
     GenerateExplanationRequest,
     GenerateExplanationResponse,
 )
-from app.core.settings import settings
 
 EXPLANATION_PROMPT = """
 Analiza la compatibilidad entre dos usuarios basándote en sus perfiles.

@@ -6,11 +6,11 @@ This adapter translates the generic LLM contract to Ollama-specific API calls.
 """
 
 import logging
-import httpx
 from typing import Any
 
+import httpx
+
 from app.core.settings import settings
-from app.llm.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -148,13 +148,13 @@ class OllamaClient:
             payload["options"] = options
 
         chat_url = self._build_url("/api/chat")
-        
+
         # Log the request details at INFO level for debugging
         logger.info(
             f"Calling Ollama /api/chat: url='{chat_url}', model='{model}', "
             f"base_url='{self.base_url}'"
         )
-        
+
         async with httpx.AsyncClient(timeout=timeout_seconds) as client:
             try:
                 response = await client.post(
@@ -171,13 +171,13 @@ class OllamaClient:
                         error_detail = f", error_body={error_body}"
                     except Exception:
                         error_detail = f", response_text={e.response.text[:200]}"
-                
+
                 logger.error(
                     f"Ollama API request failed: method=POST, url='{chat_url}', "
                     f"status_code={e.response.status_code if e.response else 'N/A'}, "
                     f"base_url='{self.base_url}', model='{model}'{error_detail}"
                 )
-                
+
                 # Provide more helpful error message
                 if e.response and e.response.status_code == 404:
                     # Check if model is available
@@ -193,7 +193,7 @@ class OllamaClient:
                             f"This might indicate an issue with Ollama version or configuration. "
                             f"URL attempted: '{chat_url}'"
                         ) from e
-                
+
                 raise
             except httpx.RequestError as e:
                 # Log network/connection errors
@@ -212,7 +212,13 @@ class OllamaClient:
                     "expected 'message.content' in response"
                 )
 
-            return data["message"]["content"]
+            content = data["message"]["content"]
+            if not isinstance(content, str):
+                raise ValueError(
+                    "Invalid response format from Ollama /api/chat: "
+                    "expected 'message.content' to be a string"
+                )
+            return content
 
     async def generate_embedding(
         self,
@@ -261,7 +267,19 @@ class OllamaClient:
             if "embedding" not in data:
                 raise ValueError("Invalid response format from Ollama embeddings")
 
-            return data["embedding"]
+            embedding = data["embedding"]
+            if not isinstance(embedding, list):
+                raise ValueError(
+                    "Invalid response format from Ollama embeddings: "
+                    "expected 'embedding' to be a list"
+                )
+            # Validate that all elements are numbers
+            if not all(isinstance(x, (int, float)) for x in embedding):
+                raise ValueError(
+                    "Invalid response format from Ollama embeddings: "
+                    "expected all embedding values to be numbers"
+                )
+            return [float(x) for x in embedding]
 
     async def verify_model_available(self, model: str | None = None) -> bool:
         """

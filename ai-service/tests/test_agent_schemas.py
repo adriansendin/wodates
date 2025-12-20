@@ -101,3 +101,4 @@ def test_next_question_request_with_float_age():
     assert request.user_context["age"] == "28.5"
     assert isinstance(request.user_context["age"], str)
 
+

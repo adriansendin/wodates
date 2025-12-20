@@ -32,7 +32,9 @@ export class GenerateUserProfileFromChats {
       logger
     );
     if (this.logger && typeof this.logger.info === 'function') {
-      this.logger.info('GenerateUserProfileFromChats: Using ai-service for profile generation');
+      this.logger.info(
+        'GenerateUserProfileFromChats: Using ai-service for profile generation'
+      );
     }
   }
 
@@ -95,10 +97,11 @@ export class GenerateUserProfileFromChats {
         user.name || 'Usuario'
       );
 
-      const aiServiceResponse = await this.aiServiceProfileClient.generateProfile({
-        conversations,
-        main_user_marker: '(MAIN)',
-      });
+      const aiServiceResponse =
+        await this.aiServiceProfileClient.generateProfile({
+          conversations,
+          main_user_marker: '(MAIN)',
+        });
 
       const summaryResponse = {
         summary: aiServiceResponse.profile,
@@ -145,10 +148,11 @@ export class GenerateUserProfileFromChats {
 
         let mergeResult: Result<string, DomainError>;
         try {
-          const aiServiceResponse = await this.aiServiceProfileClient.mergeProfiles({
-            consolidated_profile: consolidatedSummary,
-            incremental_profile: incrementalSummary,
-          });
+          const aiServiceResponse =
+            await this.aiServiceProfileClient.mergeProfiles({
+              consolidated_profile: consolidatedSummary,
+              incremental_profile: incrementalSummary,
+            });
 
           mergeResult = success(aiServiceResponse.merged_profile);
         } catch (error) {
@@ -238,7 +242,7 @@ export class GenerateUserProfileFromChats {
           : typeof error === 'string'
             ? error
             : 'Unknown error';
-      
+
       if (this.logger) {
         this.logger.error(
           {
@@ -287,7 +291,9 @@ export class GenerateUserProfileFromChats {
           // Check if this message is from the current user (being profiled)
           // Compare normalized names (trim, case-insensitive) to handle formatting differences
           const normalizedSenderName = msg.senderName.trim().toLowerCase();
-          const normalizedCurrentUserName = currentUserName.trim().toLowerCase();
+          const normalizedCurrentUserName = currentUserName
+            .trim()
+            .toLowerCase();
           if (normalizedSenderName === normalizedCurrentUserName) {
             sender = `${msg.senderName} (MAIN)`;
           } else {
