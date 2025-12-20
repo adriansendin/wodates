@@ -24,6 +24,10 @@ class GenerateChatRequest(BaseModel):
         default=None,
         description="Optional system prompt/instructions (e.g., DocLove personality)",
     )
+    model: str | None = Field(
+        default=None,
+        description="Optional model name to override default (e.g., 'gemma3:1b' for affinity sentences)",
+    )
 
 
 class GenerateChatResponse(BaseModel):

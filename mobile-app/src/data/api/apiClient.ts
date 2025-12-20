@@ -51,10 +51,15 @@ export class ApiClient {
     );
   }
 
-  async get<T>(url: string, token?: string): Promise<Result<T, DomainError>> {
+  async get<T>(
+    url: string,
+    token?: string,
+    timeout?: number
+  ): Promise<Result<T, DomainError>> {
     try {
       const response: AxiosResponse<T> = await this.client.get(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
+        timeout: timeout,
       });
       return success(response.data);
     } catch (error) {

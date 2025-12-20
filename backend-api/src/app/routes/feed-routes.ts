@@ -15,7 +15,8 @@ export async function feedRoutes(fastify: FastifyInstance) {
   const feedController = new FeedController(
     feedService,
     fastify.likeUser,
-    fastify.passUser
+    fastify.passUser,
+    fastify.log
   );
 
   fastify.get(
@@ -129,5 +130,38 @@ export async function feedRoutes(fastify: FastifyInstance) {
       preHandler: fastify.authMiddleware,
     },
     feedController.passUser.bind(feedController)
+  );
+
+  fastify.get(
+    '/feed/affinity-sentences/:candidateId',
+    {
+      schema: {
+        description: 'Get affinity sentences for a feed candidate',
+        tags: ['feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['candidateId'],
+          properties: {
+            candidateId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              sentences: {
+                type: 'array',
+                items: { type: 'string' },
+                minItems: 2,
+                maxItems: 2,
+              },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    feedController.getAffinitySentences.bind(feedController)
   );
 }

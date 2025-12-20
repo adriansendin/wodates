@@ -78,3 +78,4 @@ class LLMClient(Protocol):
             True if the service is available, False otherwise
         """
         ...
+

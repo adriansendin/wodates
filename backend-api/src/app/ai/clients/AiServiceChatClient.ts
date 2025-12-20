@@ -16,7 +16,8 @@ export interface AiServiceChatRequest {
     role: 'user' | 'assistant';
     content: string;
   }>;
-  system?: string;
+  system?: string | undefined;
+  model?: string | undefined; // Optional model override (e.g., 'gemma3:1b' for affinity sentences)
 }
 
 export interface AiServiceChatResponse {
@@ -67,6 +68,7 @@ export class AiServiceChatClient {
         body: JSON.stringify({
           messages: request.messages,
           system: request.system,
+          model: request.model,
         }),
         signal: controller.signal,
       });

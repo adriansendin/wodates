@@ -1,18 +1,16 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "module": "esnext",               // ✅ anula el "preserve" de Expo
+    "module": "esnext",
     "allowJs": true,
     "esModuleInterop": true,
     "jsx": "react-native",
-    "lib": ["DOM", "ESNext"],
-    "moduleDetection": "force",
+    "lib": ["esnext", "dom"],
     "moduleResolution": "bundler",
-    "customConditions": ["react-native"],
     "noEmit": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "target": "ESNext",
+    "target": "esnext",
     "strict": true,
     "baseUrl": ".",
     "paths": {
@@ -22,5 +20,5 @@
     "types": ["jest"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "cypress"]
 }

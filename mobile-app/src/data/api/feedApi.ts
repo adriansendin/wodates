@@ -27,6 +27,10 @@ export interface PassResponse {
   result: unknown;
 }
 
+export interface AffinitySentencesResponse {
+  sentences: string[];
+}
+
 export class FeedApi {
   constructor(private apiClient: ApiClient) {}
 
@@ -66,6 +70,17 @@ export class FeedApi {
     token: string
   ): Promise<Result<PassResponse, DomainError>> {
     return this.apiClient.post('/passes', { targetUserId }, token);
+  }
+
+  async getAffinitySentences(
+    candidateId: string,
+    token: string
+  ): Promise<Result<AffinitySentencesResponse, DomainError>> {
+    return this.apiClient.get<AffinitySentencesResponse>(
+      `/feed/affinity-sentences/${candidateId}`,
+      token,
+      60000 // 60 seconds timeout (matches backend and ai-service)
+    );
   }
 }
 

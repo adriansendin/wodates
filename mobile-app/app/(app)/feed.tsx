@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -80,14 +80,21 @@ export default function FeedScreen() {
   const setActiveChatsCount = useMatchesStore((state) => state.setActiveChatsCount);
   const [isLiking, setIsLiking] = useState(false);
   const [isPassing, setIsPassing] = useState(false);
+  const [affinitySentences, setAffinitySentences] = useState<string[]>([]);
+  const [isLoadingSentences, setIsLoadingSentences] = useState(false);
 
-  const apiClient = new ApiClient(API_URL);
-  const feedApi = new FeedApi(apiClient);
+  // Memoize API clients to prevent useEffect loops
+  const apiClient = useMemo(() => new ApiClient(API_URL), []);
+  const feedApi = useMemo(() => new FeedApi(apiClient), [apiClient]);
   const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
+  
+  // Track current candidate ID to prevent stale updates
+  const currentCandidateIdRef = useRef<string | null>(null);
 
   // Load matches to get activeChatsCount
   useEffect(() => {
     const loadMatchesForCount = async () => {
+      // Guard: only call if we have valid session
       if (!tokens?.accessToken || !user?.id) {
         return;
       }
@@ -98,7 +105,10 @@ export default function FeedScreen() {
           setActiveChatsCount(result.data.activeChatsCount);
         }
       } catch (error) {
-        console.error('Failed to load matches count', error);
+        // Reduce log spam: only log if it's not a rate limit error
+        if (error instanceof Error && !error.message.includes('429')) {
+          console.error('Failed to load matches count', error);
+        }
       }
     };
 
@@ -109,6 +119,83 @@ export default function FeedScreen() {
     loadFeed();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load affinity sentences when current user changes
+  useEffect(() => {
+    const currentUser = users[currentIndex];
+    
+    // Guard: only call if we have valid session AND a real candidate
+    if (!currentUser?.id || !tokens?.accessToken || !user?.id) {
+      setAffinitySentences([]);
+      currentCandidateIdRef.current = null;
+      return;
+    }
+
+    // Guard: prevent duplicate calls for the same candidate
+    if (currentCandidateIdRef.current === currentUser.id) {
+      return;
+    }
+
+    // Update ref to track current candidate
+    currentCandidateIdRef.current = currentUser.id;
+
+    // AbortController to cancel previous request if user changes quickly
+    const abortController = new AbortController();
+    const candidateId = currentUser.id; // Capture for stale check
+
+    const loadAffinitySentences = async () => {
+      setIsLoadingSentences(true);
+      setAffinitySentences([]); // Clear previous sentences
+
+      try {
+        const result = await feedApi.getAffinitySentences(
+          candidateId,
+          tokens.accessToken
+        );
+
+        // Check if request was aborted or candidate changed
+        if (abortController.signal.aborted || currentCandidateIdRef.current !== candidateId) {
+          return;
+        }
+
+        if (result.success) {
+          // Backend always returns sentences (even if fallback)
+          // No need for frontend fallback - backend handles all error cases
+          setAffinitySentences(result.data.sentences);
+        } else {
+          // If backend returns an error, log it but don't show fallback
+          // The backend should always return sentences (even fallback ones)
+          // If we get here, it's a real error (network, auth, etc.)
+          console.error('Backend returned error for affinity sentences:', result.error);
+          // Clear sentences on error (backend should handle fallback)
+          setAffinitySentences([]);
+        }
+      } catch (error) {
+        // Check if request was aborted or candidate changed
+        if (abortController.signal.aborted || currentCandidateIdRef.current !== candidateId) {
+          return;
+        }
+        // Log error for debugging
+        if (error instanceof Error && !error.message.includes('429')) {
+          console.error('Failed to load affinity sentences:', error);
+        }
+        // Clear sentences on error (backend should handle fallback)
+        // If network fails, backend can't return fallback, so we clear
+        setAffinitySentences([]);
+      } finally {
+        if (!abortController.signal.aborted && currentCandidateIdRef.current === candidateId) {
+          setIsLoadingSentences(false);
+        }
+      }
+    };
+
+    loadAffinitySentences();
+
+    // Cleanup: abort request if user changes
+    return () => {
+      abortController.abort();
+    };
+  }, [currentIndex, users, tokens?.accessToken, user?.id, feedApi]);
 
   const loadFeed = async () => {
     if (!tokens?.accessToken) {
@@ -290,6 +377,21 @@ export default function FeedScreen() {
             {`📍 ${(currentUser as any).location.city}`}
           </Text>
         ) : null}
+        
+        {/* Affinity sentences */}
+        <View style={styles.affinityContainer}>
+          {isLoadingSentences ? (
+            <View style={styles.affinityPlaceholder}>
+              <ActivityIndicator size="small" color="#fff" />
+            </View>
+          ) : affinitySentences.length > 0 ? (
+            affinitySentences.map((sentence, index) => (
+              <Text key={index} style={styles.affinitySentence}>
+                {sentence}
+              </Text>
+            ))
+          ) : null}
+        </View>
       </View>
 
       {/* Botones de acción */}
@@ -454,6 +556,23 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
     opacity: 0.9,
+    marginBottom: 8,
+  },
+  affinityContainer: {
+    marginTop: 8,
+  },
+  affinityPlaceholder: {
+    paddingVertical: 4,
+  },
+  affinitySentence: {
+    fontSize: 13,
+    color: '#fff',
+    lineHeight: 18,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    opacity: 0.85,
+    marginBottom: 4,
   },
   // Botones de acción
   actions: {

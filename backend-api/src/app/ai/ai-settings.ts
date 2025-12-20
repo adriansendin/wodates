@@ -85,14 +85,92 @@ export const AIConfig = {
   },
 
   /**
-   * Prompt configuration (shared across all providers)
+   * Feature flag for affinity sentences generation
+   * If false, affinity sentences feature is disabled and returns empty array
    */
-  prompt: {
+  affinitySentencesEnabled: process.env.OLLAMA_AFFINITY_ENABLED === 'true',
+
+  /**
+   * Fallback sentences for affinity sentences when generation fails
+   * Used when profiles are missing, LLM fails, or parsing fails
+   */
+  affinitySentencesFallback: [
+    'Perfil compatible con tus preferencias 92.',
+    'Intereses y valores alineados.',
+  ],
+
     /**
-     * System instructions for Doc Love
-     * This is the core personality and behavior definition
+     * Prompt configuration (shared across all providers)
      */
-    systemInstructions: `
+    prompt: {
+      /**
+       * Instructions for generating affinity sentences for feed candidates
+       * Used by backend to build complete prompt with user profiles
+       * The backend constructs the full prompt and sends it to ai-service
+       */
+      affinitySentences: {
+        /**
+         * Base prompt template for affinity sentences
+         * The backend will inject the user profiles into this template
+         */
+        basePrompt: `ROL:
+        Eres un asistente que genera micro-frases de afinidad (2 frases muy cortas) para justificar por qué un candidato aparece en el feed de un usuario, basándote únicamente en información explícita de sus perfiles AI.
+        
+        OBJETIVO:
+        Generar EXACTAMENTE 2 frases muy cortas (máximo 12 palabras cada una) que expliquen por qué dos usuarios podrían encajar, usando solo coincidencias explícitas entre sus perfiles estructurados.
+        
+        REGLAS CRÍTICAS:
+        - Genera EXACTAMENTE 2 frases, cada una con máximo 12 palabras.
+        - Usa SOLO información explícita presente en AMBOS perfiles. NO inventes ni infieras.
+        - Cada frase debe poder justificarse con información explícita en los DOS perfiles.
+        - NO generalices ni abstraigas conceptos (ej. creatividad, energía, equilibrio, libertad) si no aparecen literalmente.
+        - NO unas conceptos distintos bajo una idea común.
+        - Evita revelar datos sensibles o identificables (nombres, empresas, lugares concretos).
+        - NO menciones IA, modelos, embeddings ni porcentajes de afinidad.
+        - Lenguaje natural, directo y específico.
+        
+        REGLA DE FALLBACK (OBLIGATORIA):
+        Si NO existen al menos 2 coincidencias explícitas entre ambos perfiles,
+        debes devolver EXACTAMENTE estas dos frases (sin modificarlas):
+        
+        Intereses distintos; aún falta información para ver afinidad.
+        Conocerlos mejor aclarará si encajáis en estilo de vida.
+        
+        FORMATO DE SALIDA:
+        Devuelve SOLO las dos frases finales, una por línea.
+        Sin numeración, sin viñetas, sin encabezados, sin texto adicional.
+        `,
+        
+
+        /**
+         * Builds the complete prompt with user profiles
+         * This function is called by the backend to construct the full prompt
+         */
+        buildPrompt: (
+          currentUserProfile: string,
+          candidateUserProfile: string
+        ): string => {
+          return `${AIConfig.prompt.affinitySentences.basePrompt}
+
+PERFIL USUARIO ACTUAL (quien ve el feed):
+"""
+${currentUserProfile}
+"""
+
+PERFIL CANDIDATO (quien aparece en el feed):
+"""
+${candidateUserProfile}
+"""
+
+Ahora genera las frases basándote en estos perfiles.`;
+        },
+      },
+
+      /**
+       * System instructions for Doc Love
+       * This is the core personality and behavior definition
+       */
+      systemInstructions: `
 Eres **Doc Love**, una herramienta diseñada para conocer al usuario y ayudarle a encontrar una relación seria y estable. No eres una persona y no tienes experiencias, emociones ni vida propia.
 
 Estilo:
