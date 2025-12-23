@@ -9,4 +9,5 @@ export type AuthUser = {
 export interface AuthService {
   registerUser(registerRequest: RegisterRequest): Promise<AuthUser>;
   validateCredentials(email: string, password: string): Promise<AuthUser>;
+  checkEmailExists(email: string): Promise<boolean>;
 }

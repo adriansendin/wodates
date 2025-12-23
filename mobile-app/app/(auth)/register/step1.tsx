@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
+import { FeedbackBanner } from '../../../src/components/FeedbackBanner';
+import { ApiClient } from '../../../src/data/api/apiClient';
+import { AuthApi } from '../../../src/data/api/authApi';
+import { getApiUrl } from '../../../src/utils/apiConfig';
 
 export default function Step1Screen() {
   const router = useRouter();
@@ -12,13 +16,18 @@ export default function Step1Screen() {
   const [name, setName] = useState(data.name);
   const [email, setEmail] = useState(data.email);
   const [password, setPassword] = useState(data.password);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const apiClient = useMemo(() => new ApiClient(getApiUrl()), []);
+  const authApi = useMemo(() => new AuthApi(apiClient), [apiClient]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Por favor ingresa tu nombre');
       return;
@@ -39,9 +48,42 @@ export default function Step1Screen() {
       return;
     }
 
+    // Verificar si el email ya existe
+    setErrorMessage(null);
+    setIsCheckingEmail(true);
+    try {
+      const result = await authApi.checkEmail(email.trim());
+      
+      if (result.success) {
+        if (result.data.exists) {
+          setIsCheckingEmail(false);
+          setErrorMessage('Correo electrónico ya está registrado');
+          return;
+        }
+      } else {
+        // Si hay un error al verificar, mostramos un mensaje pero permitimos continuar
+        // El backend también verificará al registrar
+        console.warn('[Step1] Error checking email:', result.error);
+        setIsCheckingEmail(false);
+        // No mostramos error aquí, simplemente continuamos
+        // El backend verificará al registrar
+      }
+    } catch (error) {
+      // Si hay un error de red, no mostramos error, simplemente continuamos
+      // El backend también verificará al registrar
+      console.error('[Step1] Network error checking email:', error);
+      setIsCheckingEmail(false);
+      // No mostramos error aquí, simplemente continuamos
+      // El backend verificará al registrar
+    } finally {
+      setIsCheckingEmail(false);
+    }
+
+    // Si el email no existe o hubo un error, continuar con el registro
+    // El backend verificará el email al registrar
     updateData({ name, email, password });
     nextStep();
-    router.push('/(auth)/register/step2');
+    router.push('/(auth)/register/step7');
   };
 
   return (
@@ -57,12 +99,16 @@ export default function Step1Screen() {
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
         >
-          <ProgressBar totalSteps={7} currentStep={1} />
+          <ProgressBar totalSteps={5} currentStep={4} />
 
           <View style={styles.content}>
-            <Text style={styles.title}>¡Bienvenido/a!</Text>
-            <Text style={styles.subtitle}>Comencemos creando tu cuenta</Text>
-
+            {errorMessage && (
+              <FeedbackBanner
+                type="error"
+                message={errorMessage}
+                onClose={() => setErrorMessage(null)}
+              />
+            )}
             <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Nombre</Text>
@@ -103,8 +149,16 @@ export default function Step1Screen() {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleNext}>
-              <Text style={styles.buttonText}>Continuar</Text>
+            <TouchableOpacity 
+              style={[styles.button, isCheckingEmail && styles.buttonDisabled]} 
+              onPress={handleNext}
+              disabled={isCheckingEmail}
+            >
+              {isCheckingEmail ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>Continuar</Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -191,6 +245,9 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#7F8C8D',
     fontSize: 14,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
 

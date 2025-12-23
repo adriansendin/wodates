@@ -49,9 +49,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   message: {
-    color: '#155724',
     fontSize: 14,
     flex: 1,
+    color: '#721C24',
   },
   closeButton: {
     padding: 8,

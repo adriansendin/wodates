@@ -134,6 +134,32 @@ export class SupabaseAuthService implements AuthService {
     }
   }
 
+  async checkEmailExists(email: string): Promise<boolean> {
+    try {
+      // Use admin API to list users and check if email exists
+      // Note: This may be slow with many users, but Supabase Admin API
+      // doesn't provide a direct method to check by email
+      const normalizedEmail = email.toLowerCase().trim();
+      const { data, error } = await this.adminClient.auth.admin.listUsers();
+      
+      if (error) {
+        console.error('[SupabaseAuthService] Error checking email:', error);
+        // If we can't check, assume it doesn't exist to allow registration attempt
+        return false;
+      }
+
+      // Check if any user has this email (case-insensitive)
+      const userExists = data.users.some(
+        user => user.email?.toLowerCase().trim() === normalizedEmail
+      );
+      return userExists;
+    } catch (error) {
+      console.error('[SupabaseAuthService] Unexpected error checking email:', error);
+      // If we can't check, assume it doesn't exist to allow registration attempt
+      return false;
+    }
+  }
+
   async validateCredentials(
     email: string,
     password: string

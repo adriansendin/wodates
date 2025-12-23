@@ -51,6 +51,11 @@ export class InMemoryAuthService implements AuthService {
     return stored.user;
   }
 
+  async checkEmailExists(email: string): Promise<boolean> {
+    const emailKey = email.toLowerCase();
+    return this.users.has(emailKey);
+  }
+
   reset(): void {
     this.users.clear();
   }

@@ -30,4 +30,10 @@ export class AuthApi {
   ): Promise<Result<{ message: string }, DomainError>> {
     return this.apiClient.post('/auth/logout', {}, token);
   }
+
+  async checkEmail(
+    email: string
+  ): Promise<Result<{ exists: boolean; email: string }, DomainError>> {
+    return this.apiClient.post('/auth/check-email', { email });
+  }
 }

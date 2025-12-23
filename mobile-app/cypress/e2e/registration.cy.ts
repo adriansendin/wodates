@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 const registerResponse = {
   user: {
     id: '33333333-3333-3333-3333-333333333333',
@@ -34,54 +36,48 @@ const profileResponse = {
 };
 
 const completeRegistrationSteps = () => {
-  // Step 1: Basic credentials
-  cy.get('input[placeholder="Tu nombre"]').type(registerResponse.user.name);
-  cy.get('input[placeholder="tu@email.com"]').clear().type(registerResponse.user.email);
-  cy.get('input[type="password"]').type('Password1!');
-  
-  cy.contains('Continuar').click({ force: true });
-  cy.location('pathname').should('include', 'step2');
-  cy.contains('¿Cuándo naciste?').should('be.visible');
-
-  // Step 2: Birth date (accept default date - default is already set)
-  cy.get('[data-testid="continuar-step2-button"]').click({ force: true });
-  cy.location('pathname', { timeout: 10000 }).should('include', 'step3');
+  // Step 1: City selection
   cy.contains('¿Dónde vives?').should('be.visible');
-
-  // Step 3: Location
   cy.contains('Madrid').click({ force: true });
   cy.get('[data-testid="continuar-step3-button"]').click({ force: true });
   cy.location('pathname').should('include', 'step4');
+  
+  // Step 2: Gender and Looking For (combined screen)
   cy.contains('¿Cuál es tu género?').should('be.visible');
-
-  // Step 4: Gender (keep default selection)
-  cy.get('[data-testid="continuar-step4-button"]').click({ force: true });
-  cy.location('pathname').should('include', 'step5');
   cy.contains('¿A quién buscas?').should('be.visible');
-
-  // Step 5: Preferences (keep default selection)
-  cy.get('[data-testid="continuar-step5-button"]').click({ force: true });
-  cy.location('pathname').should('include', 'step6');
+  // Gender is already selected by default (male), so we just need to select "Looking For"
+  cy.contains('Ambos').click({ force: true });
+  cy.get('[data-testid="continuar-step4-button"]').click({ force: true });
+  cy.location('pathname').should('include', 'step2');
+  
+  // Step 3: Birth date and Age range (combined screen)
+  cy.contains('¿Cuándo naciste?').should('be.visible');
   cy.contains('¿Qué rango de edad buscas?').should('be.visible');
+  // Birth date and age range are already set to defaults, so we can continue
+  cy.get('[data-testid="continuar-step2-button"]').click({ force: true });
+  cy.location('pathname', { timeout: 10000 }).should('include', 'step1');
+  cy.contains('Comencemos creando tu cuenta').should('be.visible');
 
-  // Step 6: Desired age range (keep defaults)
-  cy.get('[data-testid="continuar-step6-button"]').click({ force: true });
+  // Step 4: Basic credentials
+  cy.get('input[placeholder="Tu nombre"]').type(registerResponse.user.name);
+  cy.get('input[placeholder="tu@email.com"]').clear().type(registerResponse.user.email);
+  cy.get('input[type="password"]').type('Password1!');
+  cy.contains('Continuar').click({ force: true });
   cy.location('pathname').should('include', 'step7');
   cy.contains('Añade tu foto de perfil').should('be.visible');
 
-  // Step 7: Avatar (skip upload for web flow)
-  cy.contains('Omitir por ahora').click({ force: true });
+  // Step 5: Avatar (skip upload for web flow)
+  cy.contains('Continuar').click({ force: true });
   cy.location('pathname').should('include', '/register/complete');
   cy.contains('Perfil básico completado').should('be.visible');
 };
 
 describe('Registration', () => {
   beforeEach(() => {
-    cy.visit('/(auth)/register/step1');
-    cy.contains('Comencemos creando tu cuenta').should('be.visible');
-    cy.get('input[placeholder="Tu nombre"]').should('be.visible');
-    cy.get('input[placeholder="tu@email.com"]').should('be.visible');
-    cy.get('input[type="password"]').should('be.visible');
+    cy.visit('/(auth)/register/step3');
+    cy.contains('¿Dónde vives?').should('be.visible');
+    cy.contains('Barcelona').should('be.visible');
+    cy.contains('Madrid').should('be.visible');
   });
 
   it('creates an account and redirects to the matches screen', () => {
@@ -112,7 +108,7 @@ describe('Registration', () => {
   });
 
   it('shows the backend error when registration fails', () => {
-    const errorMessage = 'Este correo ya esta registrado';
+    const errorMessage = 'Este correo1 ya esta registrado';
 
     cy.intercept('POST', '**/auth/register', {
       statusCode: 409,

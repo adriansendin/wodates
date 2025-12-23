@@ -142,6 +142,33 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
   );
 
   fastify.post(
+    '/check-email',
+    {
+      schema: {
+        description: 'Check if email already exists',
+        tags: ['auth'],
+        body: {
+          type: 'object',
+          required: ['email'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              exists: { type: 'boolean' },
+              email: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    authController.checkEmail.bind(authController)
+  );
+
+  fastify.post(
     '/logout',
     {
       schema: {

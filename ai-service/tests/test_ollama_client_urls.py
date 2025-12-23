@@ -78,3 +78,6 @@ def test_settings_normalize_ollama_base_url():
     assert settings.ollama_base_url == "http://localhost:11434"
 
 
+
+
+

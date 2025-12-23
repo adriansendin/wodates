@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
 import { GENDER_OPTIONS, GenderOption } from '../../../src/domain/entities/Gender';
+import { LOOKING_FOR_OPTIONS, LookingForOption } from '../../../src/domain/entities/LookingFor';
 
 const GENDER_LABELS: Record<GenderOption, string> = {
   male: 'Hombre',
@@ -11,16 +12,26 @@ const GENDER_LABELS: Record<GenderOption, string> = {
   non_binary: 'No binario',
 };
 
+const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
+  both: 'Ambos',
+  male: 'Hombres',
+  female: 'Mujeres',
+};
+
 export default function Step4Screen() {
   const router = useRouter();
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
   const [gender, setGender] = useState<GenderOption | ''>(data.gender || 'male');
+  const [lookingFor, setLookingFor] = useState<LookingForOption | ''>(data.lookingFor || '');
 
   const handleNext = () => {
-    updateData({ gender });
+    if (!lookingFor) {
+      return;
+    }
+    updateData({ gender, lookingFor });
     nextStep();
-    router.push('/(auth)/register/step5');
+    router.push('/(auth)/register/step2');
   };
 
   const handleBack = () => {
@@ -32,44 +43,90 @@ export default function Step4Screen() {
     setGender(value);
   };
 
+  const selectLookingFor = (value: LookingForOption | '') => {
+    setLookingFor(value);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ProgressBar totalSteps={7} currentStep={4} />
+        <ProgressBar totalSteps={5} currentStep={2} />
 
         <View style={styles.content}>
-          <Text style={styles.title}>¿Cuál es tu género?</Text>
+          {/* Sección de Género */}
+          <View style={styles.section}>
+            <Text style={styles.title}>¿Cuál es tu género?</Text>
 
-          <View style={styles.optionsContainer}>
-            {GENDER_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.option,
-                  gender === option && styles.optionSelected,
-                ]}
-                onPress={() => selectGender(option)}
-              >
-                <View style={styles.radio}>
-                  {gender === option && <View style={styles.radioInner} />}
-                </View>
-                <Text style={[
-                  styles.optionText,
-                  gender === option && styles.optionTextSelected,
-                ]}>
-                  {GENDER_LABELS[option]}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <View style={styles.optionsContainer}>
+              {GENDER_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.option,
+                    gender === option && styles.optionSelected,
+                  ]}
+                  onPress={() => selectGender(option)}
+                >
+                  <View style={styles.radio}>
+                    {gender === option && <View style={styles.radioInner} />}
+                  </View>
+                  <Text style={[
+                    styles.optionText,
+                    gender === option && styles.optionTextSelected,
+                  ]}>
+                    {GENDER_LABELS[option]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Sección de A quién buscas */}
+          <View style={styles.section}>
+            <Text style={styles.title}>¿A quién buscas?</Text>
+
+            <View style={styles.optionsContainer}>
+              {LOOKING_FOR_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.option,
+                    lookingFor === option && styles.optionSelected,
+                  ]}
+                  onPress={() => selectLookingFor(option)}
+                >
+                  <View style={styles.radio}>
+                    {lookingFor === option && <View style={styles.radioInner} />}
+                  </View>
+                  <Text style={[
+                    styles.optionText,
+                    lookingFor === option && styles.optionTextSelected,
+                  ]}>
+                    {LOOKING_FOR_LABELS[option]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <Text style={styles.infoText}>
-            Podrás cambiar esta preferencia más adelante.
+            Podrás cambiar estas preferencias más adelante.
           </Text>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity testID="continuar-step4-button" style={styles.button} onPress={handleNext}>
-              <Text style={styles.buttonText}>Continuar</Text>
+            <TouchableOpacity 
+              testID="continuar-step4-button" 
+              style={[
+                styles.button,
+                !lookingFor && styles.buttonDisabled
+              ]} 
+              onPress={handleNext}
+              disabled={!lookingFor}
+            >
+              <Text style={[
+                styles.buttonText,
+                !lookingFor && styles.buttonTextDisabled
+              ]}>Continuar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -181,6 +238,15 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     lineHeight: 20,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  buttonDisabled: {
+    backgroundColor: '#BDC3C7',
+  },
+  buttonTextDisabled: {
+    color: '#FFFFFF',
   },
 });
 

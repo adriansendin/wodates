@@ -111,6 +111,36 @@ export class AuthController {
     return reply.send({ message: 'Logged out successfully' });
   }
 
+  async checkEmail(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const { email } = request.body as { email: string };
+      
+      if (!email || typeof email !== 'string') {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'Email is required',
+        });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid email format',
+        });
+      }
+
+      const exists = await this.authService.checkEmailExists(email);
+      
+      return reply.send({
+        exists,
+        email,
+      });
+    } catch (error) {
+      return this.handleUnexpectedError(reply, error);
+    }
+  }
+
   private generateToken(userId: string, email: string): string {
     // In v0.1, we'll create a simple token
     // In production, use proper JWT with secret

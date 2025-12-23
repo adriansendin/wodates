@@ -122,16 +122,10 @@ export default function Step7Screen() {
     router.back();
   };
 
-  const handleSkip = () => {
-    updateData({ avatarUrl: null });
-    nextStep();
-    router.push('/(auth)/register/complete');
-  };
-
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ProgressBar totalSteps={7} currentStep={7} />
+        <ProgressBar totalSteps={5} currentStep={5} />
 
         <View style={styles.content}>
           <Text style={styles.title}>Añade tu foto de perfil</Text>
@@ -163,14 +157,6 @@ export default function Step7Screen() {
               ) : (
                 <Text style={styles.buttonText}>Continuar</Text>
               )}
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.skipButton} 
-              onPress={handleSkip}
-              disabled={isUploading}
-            >
-              <Text style={styles.skipButtonText}>Omitir por ahora</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -268,19 +254,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  skipButton: {
-    borderWidth: 2,
-    borderColor: '#F45C5C',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  skipButtonText: {
-    color: '#F45C5C',
     fontSize: 16,
     fontWeight: 'bold',
   },
