@@ -59,6 +59,13 @@ type FormState = {
   bio: string;
   city: string;
   show_bio_in_feed: boolean;
+  // Family plan
+  has_children: boolean | null;
+  wants_children: 'yes' | 'no' | 'not_sure' | null;
+  cares_about_partner_children: 'yes' | 'no' | null;
+  // Habits
+  smoking: 'no' | 'occasionally' | 'regularly' | null;
+  cares_about_partner_smoking: 'yes' | 'no' | null;
 };
 
 type Feedback = {
@@ -105,6 +112,44 @@ const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
   rejected: 'Reintentar verificación',
 };
 
+// Family plan labels
+const WANTS_CHILDREN_LABELS: Record<'yes' | 'no' | 'not_sure', string> = {
+  yes: 'Sí',
+  no: 'No',
+  not_sure: 'No lo tengo claro',
+};
+
+const CARES_ABOUT_PARTNER_CHILDREN_LABELS: Record<'yes' | 'no', string> = {
+  yes: 'Sí, no quiero que tenga hijos',
+  no: 'Me da igual',
+};
+
+
+// Habits labels
+const SMOKING_LABELS: Record<'no' | 'occasionally' | 'regularly', string> = {
+  no: 'No',
+  occasionally: 'Solo ocasionalmente',
+  regularly: 'Fumo habitualmente',
+};
+
+const CARES_ABOUT_PARTNER_SMOKING_LABELS: Record<'yes' | 'no', string> = {
+  yes: 'Sí, no quiero que fume',
+  no: 'Me da igual',
+};
+
+const getWantsChildrenLabel = (value: 'yes' | 'no' | 'not_sure' | null) =>
+  value ? WANTS_CHILDREN_LABELS[value] : 'Seleccionar';
+
+const getCaresAboutPartnerChildrenLabel = (value: 'yes' | 'no' | null) =>
+  value ? CARES_ABOUT_PARTNER_CHILDREN_LABELS[value] : 'Seleccionar';
+
+
+const getSmokingLabel = (value: 'no' | 'occasionally' | 'regularly' | null) =>
+  value ? SMOKING_LABELS[value] : 'Seleccionar';
+
+const getCaresAboutPartnerSmokingLabel = (value: 'yes' | 'no' | null) =>
+  value ? CARES_ABOUT_PARTNER_SMOKING_LABELS[value] : 'Seleccionar';
+
 const emptyForm: FormState = {
   gender: 'male',
   looking_for: 'both',
@@ -113,6 +158,13 @@ const emptyForm: FormState = {
   bio: '',
   city: '',
   show_bio_in_feed: true,
+  // Family plan
+  has_children: null,
+  wants_children: null,
+  cares_about_partner_children: null,
+  // Habits
+  smoking: null,
+  cares_about_partner_smoking: null,
 };
 
 const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
@@ -123,6 +175,13 @@ const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
   bio: nextProfile?.bio ?? '',
   city: nextProfile?.city ?? '',
   show_bio_in_feed: nextProfile?.show_bio_in_feed ?? true,
+  // Family plan
+  has_children: nextProfile?.has_children ?? null,
+  wants_children: nextProfile?.wants_children ?? null,
+  cares_about_partner_children: nextProfile?.cares_about_partner_children ?? null,
+  // Habits
+  smoking: nextProfile?.smoking ?? null,
+  cares_about_partner_smoking: nextProfile?.cares_about_partner_smoking ?? null,
 });
 
 const isValidDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -161,6 +220,13 @@ export default function ProfileScreen() {
   const [isGenderModalVisible, setIsGenderModalVisible] = useState(false);
   const [isLookingForModalVisible, setIsLookingForModalVisible] =
     useState(false);
+  // Family plan modals
+  const [isHasChildrenModalVisible, setIsHasChildrenModalVisible] = useState(false);
+  const [isWantsChildrenModalVisible, setIsWantsChildrenModalVisible] = useState(false);
+  const [isCaresAboutPartnerChildrenModalVisible, setIsCaresAboutPartnerChildrenModalVisible] = useState(false);
+  // Habits modals
+  const [isSmokingModalVisible, setIsSmokingModalVisible] = useState(false);
+  const [isCaresAboutPartnerSmokingModalVisible, setIsCaresAboutPartnerSmokingModalVisible] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isContactModalVisible, setIsContactModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -380,6 +446,33 @@ export default function ProfileScreen() {
     autoSave('show_bio_in_feed', newValue);
   };
 
+  // Family plan handlers
+  const handleSelectHasChildren = (value: boolean) => {
+    setForm((prev) => ({ ...prev, has_children: value }));
+    autoSave('has_children', value);
+  };
+
+  const handleSelectWantsChildren = (value: 'yes' | 'no' | 'not_sure') => {
+    setForm((prev) => ({ ...prev, wants_children: value }));
+    autoSave('wants_children', value);
+  };
+
+  const handleSelectCaresAboutPartnerChildren = (value: 'yes' | 'no') => {
+    setForm((prev) => ({ ...prev, cares_about_partner_children: value }));
+    autoSave('cares_about_partner_children', value);
+  };
+
+  // Habits handlers
+  const handleSelectSmoking = (value: 'no' | 'occasionally' | 'regularly') => {
+    setForm((prev) => ({ ...prev, smoking: value }));
+    autoSave('smoking', value);
+  };
+
+  const handleSelectCaresAboutPartnerSmoking = (value: 'yes' | 'no') => {
+    setForm((prev) => ({ ...prev, cares_about_partner_smoking: value }));
+    autoSave('cares_about_partner_smoking', value);
+  };
+
   const handleSelectAvatar = () => {
     if (Platform.OS === 'web') {
       // For web, show options for file selection
@@ -456,6 +549,23 @@ export default function ProfileScreen() {
             break;
           case 'show_bio_in_feed':
             payload.show_bio_in_feed = value;
+            break;
+          // Family plan
+          case 'has_children':
+            payload.has_children = value;
+            break;
+          case 'wants_children':
+            payload.wants_children = value;
+            break;
+          case 'cares_about_partner_children':
+            payload.cares_about_partner_children = value;
+            break;
+          // Habits
+          case 'smoking':
+            payload.smoking = value;
+            break;
+          case 'cares_about_partner_smoking':
+            payload.cares_about_partner_smoking = value;
             break;
           default:
             return; // Don't auto-save other fields
@@ -697,6 +807,226 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+      {/* Family Plan Modals */}
+      <Modal
+        visible={isHasChildrenModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsHasChildrenModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Tienes hijos?</Text>
+            {[
+              { value: false, label: 'No' },
+              { value: true, label: 'Sí' },
+            ].map((option) => {
+              const isActive = form.has_children === option.value;
+              return (
+                <TouchableOpacity
+                  key={String(option.value)}
+                  style={[
+                    styles.modalOption,
+                    isActive ? styles.modalOptionActive : null,
+                  ]}
+                  onPress={() => {
+                    handleSelectHasChildren(option.value);
+                    setIsHasChildrenModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      isActive ? styles.modalOptionTextActive : null,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setIsHasChildrenModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={isWantsChildrenModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsWantsChildrenModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Quieres tener hijos en el futuro?</Text>
+            {(['yes', 'no', 'not_sure'] as const).map((value) => {
+              const isActive = form.wants_children === value;
+              return (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.modalOption,
+                    isActive ? styles.modalOptionActive : null,
+                  ]}
+                  onPress={() => {
+                    handleSelectWantsChildren(value);
+                    setIsWantsChildrenModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      isActive ? styles.modalOptionTextActive : null,
+                    ]}
+                  >
+                    {WANTS_CHILDREN_LABELS[value]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setIsWantsChildrenModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={isCaresAboutPartnerChildrenModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsCaresAboutPartnerChildrenModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Te importa si la otra persona tiene hijos?</Text>
+            {(['yes', 'no'] as const).map((value) => {
+              const isActive = form.cares_about_partner_children === value;
+              return (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.modalOption,
+                    isActive ? styles.modalOptionActive : null,
+                  ]}
+                  onPress={() => {
+                    handleSelectCaresAboutPartnerChildren(value);
+                    setIsCaresAboutPartnerChildrenModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      isActive ? styles.modalOptionTextActive : null,
+                    ]}
+                  >
+                    {CARES_ABOUT_PARTNER_CHILDREN_LABELS[value]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setIsCaresAboutPartnerChildrenModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      {/* Habits Modals */}
+      <Modal
+        visible={isSmokingModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsSmokingModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Fumas?</Text>
+            {(['no', 'occasionally', 'regularly'] as const).map((value) => {
+              const isActive = form.smoking === value;
+              return (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.modalOption,
+                    isActive ? styles.modalOptionActive : null,
+                  ]}
+                  onPress={() => {
+                    handleSelectSmoking(value);
+                    setIsSmokingModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      isActive ? styles.modalOptionTextActive : null,
+                    ]}
+                  >
+                    {SMOKING_LABELS[value]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setIsSmokingModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={isCaresAboutPartnerSmokingModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsCaresAboutPartnerSmokingModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Te importa si la otra persona fuma?</Text>
+            {(['yes', 'no'] as const).map((value) => {
+              const isActive = form.cares_about_partner_smoking === value;
+              return (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.modalOption,
+                    isActive ? styles.modalOptionActive : null,
+                  ]}
+                  onPress={() => {
+                    handleSelectCaresAboutPartnerSmoking(value);
+                    setIsCaresAboutPartnerSmokingModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      isActive ? styles.modalOptionTextActive : null,
+                    ]}
+                  >
+                    {CARES_ABOUT_PARTNER_SMOKING_LABELS[value]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setIsCaresAboutPartnerSmokingModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <ScrollView
         contentContainerStyle={styles.container}
         refreshControl={
@@ -889,6 +1219,112 @@ export default function ProfileScreen() {
             <Text style={styles.toggleHelperText}>
               Si lo desactivas, tu bio no será visible para otros usuarios.
             </Text>
+          </View>
+
+          {/* Plan familiar */}
+          <Text style={styles.sectionTitle}>Plan familiar</Text>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>¿Tienes hijos?</Text>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                styles.selectTrigger,
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setIsHasChildrenModalVisible(true)}
+            >
+              <Text
+                style={
+                  form.has_children !== null ? styles.selectValue : styles.selectPlaceholder
+                }
+              >
+                {form.has_children === null ? 'Seleccionar' : form.has_children ? 'Sí' : 'No'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>¿Quieres tener hijos en el futuro?</Text>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                styles.selectTrigger,
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setIsWantsChildrenModalVisible(true)}
+            >
+              <Text
+                style={
+                  form.wants_children ? styles.selectValue : styles.selectPlaceholder
+                }
+              >
+                {getWantsChildrenLabel(form.wants_children)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>¿Te importa si la otra persona tiene hijos?</Text>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                styles.selectTrigger,
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setIsCaresAboutPartnerChildrenModalVisible(true)}
+            >
+              <Text
+                style={
+                  form.cares_about_partner_children ? styles.selectValue : styles.selectPlaceholder
+                }
+              >
+                {getCaresAboutPartnerChildrenLabel(form.cares_about_partner_children)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Hábitos importantes */}
+          <Text style={styles.sectionTitle}>Hábitos importantes</Text>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>¿Fumas?</Text>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                styles.selectTrigger,
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setIsSmokingModalVisible(true)}
+            >
+              <Text
+                style={
+                  form.smoking ? styles.selectValue : styles.selectPlaceholder
+                }
+              >
+                {getSmokingLabel(form.smoking)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>¿Te importa si la otra persona fuma?</Text>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                styles.selectTrigger,
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setIsCaresAboutPartnerSmokingModalVisible(true)}
+            >
+              <Text
+                style={
+                  form.cares_about_partner_smoking ? styles.selectValue : styles.selectPlaceholder
+                }
+              >
+                {getCaresAboutPartnerSmokingLabel(form.cares_about_partner_smoking)}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.autoSaveMessage}>

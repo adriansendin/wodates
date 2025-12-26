@@ -99,7 +99,7 @@ export default function Step1Screen() {
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
         >
-          <ProgressBar totalSteps={5} currentStep={4} />
+          <ProgressBar totalSteps={7} currentStep={6} />
 
           <View style={styles.content}>
             {errorMessage && (

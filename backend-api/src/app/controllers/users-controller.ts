@@ -7,6 +7,14 @@ import {
 import { LOOKING_FOR_VALUES } from '../../domain/entities/LookingFor';
 import { GENDER_VALUES } from '../../domain/entities/User';
 import {
+  WANTS_CHILDREN_VALUES,
+  CARES_ABOUT_PARTNER_CHILDREN_VALUES,
+} from '../../domain/entities/FamilyPlan';
+import {
+  SMOKING_VALUES,
+  CARES_ABOUT_PARTNER_SMOKING_VALUES,
+} from '../../domain/entities/Habits';
+import {
   SupabaseUserService,
   UpdateUserProfileInput,
 } from '../services/supabase-user-service';
@@ -97,6 +105,13 @@ const UpdateProfileSchema = z
     bio: nullableText(500).optional(),
     city: nullableString(100).optional(),
     show_bio_in_feed: z.boolean().optional(),
+    // Family plan
+    has_children: z.boolean().nullable().optional(),
+    wants_children: nullableEnum(WANTS_CHILDREN_VALUES).optional(),
+    cares_about_partner_children: nullableEnum(CARES_ABOUT_PARTNER_CHILDREN_VALUES).optional(),
+    // Habits
+    smoking: nullableEnum(SMOKING_VALUES).optional(),
+    cares_about_partner_smoking: nullableEnum(CARES_ABOUT_PARTNER_SMOKING_VALUES).optional(),
   })
   .refine(
     (data) => {
@@ -169,6 +184,23 @@ export class UsersController {
       }
       if ('show_bio_in_feed' in payload) {
         updateInput.show_bio_in_feed = payload.show_bio_in_feed ?? null;
+      }
+      // Family plan
+      if ('has_children' in payload) {
+        updateInput.has_children = payload.has_children ?? null;
+      }
+      if ('wants_children' in payload) {
+        updateInput.wants_children = payload.wants_children ?? null;
+      }
+      if ('cares_about_partner_children' in payload) {
+        updateInput.cares_about_partner_children = payload.cares_about_partner_children ?? null;
+      }
+      // Habits
+      if ('smoking' in payload) {
+        updateInput.smoking = payload.smoking ?? null;
+      }
+      if ('cares_about_partner_smoking' in payload) {
+        updateInput.cares_about_partner_smoking = payload.cares_about_partner_smoking ?? null;
       }
 
       const profile = await this.userService.updateProfile(

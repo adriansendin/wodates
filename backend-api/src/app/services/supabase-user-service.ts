@@ -2,6 +2,14 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { DomainError, InternalError } from '../../domain/errors/DomainError';
 import { LookingForValue } from '../../domain/entities/LookingFor';
 import { GENDER_VALUES, Gender } from '../../domain/entities/User';
+import {
+  WantsChildren,
+  CaresAboutPartnerChildren,
+} from '../../domain/entities/FamilyPlan';
+import {
+  Smoking,
+  CaresAboutPartnerSmoking,
+} from '../../domain/entities/Habits';
 
 type SupabaseConfig = {
   url: string;
@@ -26,6 +34,13 @@ type UserProfileRow = {
   city: string | null;
   show_bio_in_feed: boolean | null;
   verification_status: VerificationStatus;
+  // Family plan
+  has_children: boolean | null;
+  wants_children: WantsChildren | null;
+  cares_about_partner_children: CaresAboutPartnerChildren | null;
+  // Habits
+  smoking: Smoking | null;
+  cares_about_partner_smoking: CaresAboutPartnerSmoking | null;
 };
 
 export type UserProfile = {
@@ -41,6 +56,13 @@ export type UserProfile = {
   city: string | null;
   show_bio_in_feed: boolean | null;
   verification_status: VerificationStatus;
+  // Family plan
+  has_children: boolean | null;
+  wants_children: WantsChildren | null;
+  cares_about_partner_children: CaresAboutPartnerChildren | null;
+  // Habits
+  smoking: Smoking | null;
+  cares_about_partner_smoking: CaresAboutPartnerSmoking | null;
 };
 
 export type UpdateUserProfileInput = {
@@ -52,6 +74,13 @@ export type UpdateUserProfileInput = {
   bio?: string | null;
   city?: string | null;
   show_bio_in_feed?: boolean | null;
+  // Family plan
+  has_children?: boolean | null;
+  wants_children?: WantsChildren | null;
+  cares_about_partner_children?: CaresAboutPartnerChildren | null;
+  // Habits
+  smoking?: Smoking | null;
+  cares_about_partner_smoking?: CaresAboutPartnerSmoking | null;
 };
 
 /**
@@ -129,6 +158,23 @@ export class SupabaseUserService {
       if ('show_bio_in_feed' in input) {
         updatePayload.show_bio_in_feed = input.show_bio_in_feed ?? null;
       }
+      // Family plan
+      if ('has_children' in input) {
+        updatePayload.has_children = input.has_children ?? null;
+      }
+      if ('wants_children' in input) {
+        updatePayload.wants_children = input.wants_children ?? null;
+      }
+      if ('cares_about_partner_children' in input) {
+        updatePayload.cares_about_partner_children = input.cares_about_partner_children ?? null;
+      }
+      // Habits
+      if ('smoking' in input) {
+        updatePayload.smoking = input.smoking ?? null;
+      }
+      if ('cares_about_partner_smoking' in input) {
+        updatePayload.cares_about_partner_smoking = input.cares_about_partner_smoking ?? null;
+      }
       if (Object.keys(updatePayload).length === 0) {
         // Get auth user data even if no profile updates
         const authUser = await this.getAuthUser(userId);
@@ -140,7 +186,7 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status'
+          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking'
         )
         .single();
 
@@ -206,7 +252,7 @@ export class SupabaseUserService {
       .from('users')
       .upsert(defaults, { onConflict: 'id' })
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking'
       )
       .single();
 
@@ -233,7 +279,7 @@ export class SupabaseUserService {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -362,6 +408,13 @@ export class SupabaseUserService {
       city: row.city,
       show_bio_in_feed: row.show_bio_in_feed,
       verification_status: row.verification_status ?? 'pending',
+      // Family plan
+      has_children: row.has_children ?? null,
+      wants_children: row.wants_children ?? null,
+      cares_about_partner_children: row.cares_about_partner_children ?? null,
+      // Habits
+      smoking: row.smoking ?? null,
+      cares_about_partner_smoking: row.cares_about_partner_smoking ?? null,
     };
   }
 

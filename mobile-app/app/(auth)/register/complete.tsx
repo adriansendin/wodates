@@ -94,13 +94,18 @@ export default function CompleteScreen() {
         await profileApi.getProfile(tokens.accessToken);
       }
 
-      // Actualizar perfil con rango de edad
+      // Actualizar perfil con rango de edad, plan familiar y hábitos
       const profileUpdates: Record<string, any> = {
         min_age: data.minAge,
         max_age: data.maxAge,
+        has_children: data.hasChildren,
+        wants_children: data.wantsChildren,
+        cares_about_partner_children: data.caresAboutPartnerChildren,
+        smoking: data.smoking,
+        cares_about_partner_smoking: data.caresAboutPartnerSmoking,
       };
 
-      console.log('[Register] Updating profile with age range and avatar...');
+      console.log('[Register] Updating profile with age range, family plan, habits and avatar...');
       const updateResult = await profileApi.updateProfile(profileUpdates, token);
 
       if (!updateResult.success) {

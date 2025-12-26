@@ -326,15 +326,15 @@ export default function FeedScreen() {
         <View style={styles.emptyIconContainer}>
           <Text style={styles.emptyIcon}>💬</Text>
         </View>
-        <Text style={styles.emptyTitle}>Conoce a tus matches</Text>
+        <Text style={styles.emptyTitle}>Conoce a tu match</Text>
         <Text style={styles.emptySubtext}>
-          Tienes {activeChatsCount} conversación{activeChatsCount > 1 ? 'es' : ''} activa{activeChatsCount > 1 ? 's' : ''}. Conecta con tus matches antes de descubrir más personas.
+          Tienes {activeChatsCount} conversación{activeChatsCount > 1 ? 'es' : ''} activa{activeChatsCount > 1 ? 's' : ''}.
         </Text>
         <TouchableOpacity 
           style={styles.discoverButton}
           onPress={() => router.push('/(app)/matches')}
         >
-          <Text style={styles.discoverButtonText}>Ver mis matches</Text>
+          <Text style={styles.discoverButtonText}>Ver mi match</Text>
         </TouchableOpacity>
       </View>
     );

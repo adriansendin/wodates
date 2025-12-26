@@ -125,7 +125,7 @@ export default function Step7Screen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ProgressBar totalSteps={5} currentStep={5} />
+        <ProgressBar totalSteps={7} currentStep={7} />
 
         <View style={styles.content}>
           <Text style={styles.title}>Añade tu foto de perfil</Text>

@@ -21,6 +21,13 @@ export const UserProfileSchema = z.object({
   city: z.string().nullable(),
   show_bio_in_feed: z.boolean().nullable(),
   verification_status: VerificationStatusSchema.default('pending'),
+  // Family plan
+  has_children: z.boolean().nullable(),
+  wants_children: z.enum(['yes', 'no', 'not_sure']).nullable(),
+  cares_about_partner_children: z.enum(['yes', 'no']).nullable(),
+  // Habits
+  smoking: z.enum(['no', 'occasionally', 'regularly']).nullable(),
+  cares_about_partner_smoking: z.enum(['yes', 'no']).nullable(),
 });
 
 export const UpdateUserProfileSchema = z.object({
@@ -32,6 +39,13 @@ export const UpdateUserProfileSchema = z.object({
   bio: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   show_bio_in_feed: z.boolean().nullable().optional(),
+  // Family plan
+  has_children: z.boolean().nullable().optional(),
+  wants_children: z.enum(['yes', 'no', 'not_sure']).nullable().optional(),
+  cares_about_partner_children: z.enum(['yes', 'no']).nullable().optional(),
+  // Habits
+  smoking: z.enum(['no', 'occasionally', 'regularly']).nullable().optional(),
+  cares_about_partner_smoking: z.enum(['yes', 'no']).nullable().optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;

@@ -14,6 +14,13 @@ export interface RegistrationData {
   minAge: number;
   maxAge: number;
   avatarUrl: string | null;
+  // Plan familiar
+  hasChildren: boolean | null;
+  wantsChildren: 'yes' | 'no' | 'not_sure' | null;
+  caresAboutPartnerChildren: 'yes' | 'no' | null;
+  // Hábitos importantes
+  smoking: 'no' | 'occasionally' | 'regularly' | null;
+  caresAboutPartnerSmoking: 'yes' | 'no' | null;
 }
 
 interface RegistrationState {
@@ -41,6 +48,13 @@ const initialData: RegistrationData = {
   minAge: 18,
   maxAge: 99,
   avatarUrl: null,
+  // Plan familiar
+  hasChildren: null,
+  wantsChildren: null,
+  caresAboutPartnerChildren: null,
+  // Hábitos importantes
+  smoking: null,
+  caresAboutPartnerSmoking: null,
 };
 
 export const useRegistrationStore = create<
@@ -55,7 +69,7 @@ export const useRegistrationStore = create<
 
   nextStep: () =>
     set((state) => ({
-      currentStep: Math.min(state.currentStep + 1, 5),
+      currentStep: Math.min(state.currentStep + 1, 7),
     })),
 
   previousStep: () =>

@@ -54,7 +54,7 @@ export default function Step2Screen() {
 
     updateData({ birthDate: date, minAge, maxAge });
     nextStep();
-    router.push('/(auth)/register/step1');
+    router.push('/(auth)/register/step5');
   };
 
   const handleBack = () => {
@@ -69,7 +69,7 @@ export default function Step2Screen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <ProgressBar totalSteps={5} currentStep={3} />
+        <ProgressBar totalSteps={7} currentStep={3} />
 
         <View style={styles.content}>
           {/* Sección de Fecha de Nacimiento */}
