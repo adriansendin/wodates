@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { ChatApi } from '../../src/data/api/chatApi';
 import { BlockApi } from '../../src/data/api/blockApi';
+import { MatchApi } from '../../src/data/api/matchApi';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { useChatStore } from '../../src/domain/stores/chatStore';
 import { Message, MessageSchema } from '../../src/domain/entities/Message';
@@ -122,6 +123,8 @@ export default function ChatScreen() {
     messages,
     setMessages,
     addMessage,
+    addMessages,
+    prependMessages,
     setLoading,
     setError,
     clearError,
@@ -141,12 +144,20 @@ export default function ChatScreen() {
   const [showUploadSuccessModal, setShowUploadSuccessModal] = useState(false);
   const [showUploadErrorModal, setShowUploadErrorModal] = useState(false);
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string>('');
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const oldestMessageCursorRef = useRef<string | null>(null);
   const flatListRef = useRef<FlatList<Message>>(null);
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const chatApi = useMemo(() => new ChatApi(apiClient), [apiClient]);
   const blockApi = useMemo(() => new BlockApi(apiClient), [apiClient]);
+  const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
   const isInitialLoad = useRef(true);
+  const hasScrolledToBottom = useRef(false);
+  const lastMessageIdRef = useRef<string | null>(null);
+  const isUserAtBottom = useRef(true);
+  const contentSizeChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const matchMessages = useMemo(
     () => (matchId ? messages[matchId] || [] : []),
@@ -155,28 +166,74 @@ export default function ChatScreen() {
 
   useEffect(() => {
     isInitialLoad.current = true;
+    hasScrolledToBottom.current = false;
+    lastMessageIdRef.current = null;
+    isUserAtBottom.current = true;
+    oldestMessageCursorRef.current = null;
+    setHasMoreMessages(true);
+    setIsLoadingOlder(false);
   }, [matchId]);
 
-  // Scroll to end when messages change
+  // Scroll inicial solo una vez, sin animación
+  // Este efecto se ejecuta cuando los mensajes cambian, pero esperamos a que el contenido esté renderizado
   useEffect(() => {
-    if (matchMessages.length > 0) {
-      // Use setTimeout to ensure the layout has been updated
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+    if (matchMessages.length > 0 && !hasScrolledToBottom.current && isInitialLoad.current) {
+      // Usar múltiples requestAnimationFrame para asegurar que el layout esté completamente renderizado
+      const timeoutId = setTimeout(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (flatListRef.current && matchMessages.length > 0 && !hasScrolledToBottom.current) {
+              const lastIndex = matchMessages.length - 1;
+              // Intentar scrollToIndex primero (más preciso)
+              try {
+                flatListRef.current.scrollToIndex({ 
+                  index: lastIndex, 
+                  animated: false,
+                  viewPosition: 1 // 1 = al final de la vista
+                });
+              } catch (e) {
+                // Si falla scrollToIndex, usar scrollToEnd
+                flatListRef.current.scrollToEnd({ animated: false });
+              }
+              
+              // Segundo intento después de un delay
+              setTimeout(() => {
+                if (flatListRef.current && !hasScrolledToBottom.current) {
+                  try {
+                    flatListRef.current.scrollToIndex({ 
+                      index: lastIndex, 
+                      animated: false,
+                      viewPosition: 1
+                    });
+                  } catch (e) {
+                    flatListRef.current.scrollToEnd({ animated: false });
+                  }
+                  hasScrolledToBottom.current = true;
+                  lastMessageIdRef.current = matchMessages[lastIndex].id;
+                  isInitialLoad.current = false;
+                }
+              }, 300);
+            }
+          });
+        });
+      }, 800);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [matchMessages.length]);
+  }, [matchMessages.length, matchMessages]);
 
   // Handle keyboard show/hide events
   useEffect(() => {
-    const keyboardWillShowListener = Keyboard.addListener(
+      const keyboardWillShowListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e) => {
         setKeyboardHeight(e.endCoordinates.height);
-        // Scroll to bottom when keyboard appears
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        // Scroll to bottom when keyboard appears (solo si ya se hizo scroll inicial)
+        if (hasScrolledToBottom.current) {
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
       }
     );
 
@@ -204,12 +261,24 @@ export default function ChatScreen() {
 
     try {
       clearError();
-      const result = await chatApi.getMessages(matchId, 50, undefined, tokens.accessToken);
+      const result = await chatApi.getMessages(matchId, 25, undefined, tokens.accessToken);
       if (!result.success) {
         const messageText = result.error.message || 'Could not load messages.';
-        setError(messageText);
-        if (isInitialLoad.current) {
-          Alert.alert('Error', messageText);
+        
+        // Si es rate limit (429), no mostrar error y esperar más tiempo antes del siguiente intento
+        // El statusCode puede estar en el error si es un DomainError
+        const isRateLimit = result.error.statusCode === 429 || 
+                          messageText.toLowerCase().includes('rate limit');
+        
+        if (isRateLimit) {
+          // No mostrar error al usuario, solo log
+          console.warn('[ChatScreen] Rate limit exceeded, will retry later');
+          // No hacer return aquí, dejar que el finally se ejecute
+        } else {
+          setError(messageText);
+          if (isInitialLoad.current) {
+            Alert.alert('Error', messageText);
+          }
         }
         return;
       }
@@ -227,13 +296,70 @@ export default function ChatScreen() {
       const orderedMessages = [...validation.data].sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       );
-      setMessages(matchId, orderedMessages);
+      
+      // Detectar si llegó un mensaje nuevo comparando con el último ID conocido
+      const previousLastId = lastMessageIdRef.current;
+      const latestMessageId = orderedMessages.length > 0 
+        ? orderedMessages[orderedMessages.length - 1].id 
+        : null;
+      
+      const hasNewMessage = !isInitialLoad.current && 
+        latestMessageId !== null && 
+        latestMessageId !== previousLastId;
+      
+      // En carga inicial: reemplazar todos los mensajes
+      // En polling: preservar mensajes anteriores cargados y solo añadir los nuevos al final
+      if (isInitialLoad.current) {
+        setMessages(matchId, orderedMessages);
+      } else {
+        // Preservar todos los mensajes actuales (incluyendo los anteriores cargados)
+        // y solo añadir mensajes nuevos que no existen
+        const currentMessages = matchId ? messages[matchId] || [] : [];
+        const currentIds = new Set(currentMessages.map((msg) => msg.id));
+        
+        // Filtrar solo mensajes nuevos que no están en la lista actual
+        const newMessages = orderedMessages.filter((msg) => !currentIds.has(msg.id));
+        
+        if (newMessages.length > 0) {
+          // Añadir solo los mensajes nuevos al final, preservando todos los anteriores
+          addMessages(matchId, newMessages);
+        }
+        // Si no hay mensajes nuevos, no hacer nada para preservar los mensajes anteriores cargados
+      }
 
       if (orderedMessages.length > 0) {
         const latestMessage = orderedMessages[orderedMessages.length - 1];
+        const oldestMessage = orderedMessages[0];
         updateMatch(matchId, { lastMessage: latestMessage, unreadCount: 0 });
+        
+        // Actualizar referencias
+        lastMessageIdRef.current = latestMessage.id;
+        if (isInitialLoad.current) {
+          oldestMessageCursorRef.current = oldestMessage.id;
+          // Verificar si hay más mensajes (si recibimos menos de 25, no hay más)
+          setHasMoreMessages(result.data.messages.length === 25);
+        }
+        
+        // Auto-scroll solo si llegó un mensaje nuevo Y el usuario está abajo
+        if (hasNewMessage && isUserAtBottom.current && hasScrolledToBottom.current) {
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
       } else {
         updateMatch(matchId, { lastMessage: undefined, unreadCount: 0 });
+        if (isInitialLoad.current) {
+          setHasMoreMessages(false);
+        }
+      }
+
+      // Mark messages as read when opening the chat (only on initial load)
+      if (isInitialLoad.current && tokens?.accessToken) {
+        // Await to ensure it completes before user can navigate away
+        matchApi.markAsRead(matchId, tokens.accessToken).catch((error) => {
+          console.error('[ChatScreen] Failed to mark messages as read:', error);
+          // Log error but don't block UI
+        });
       }
     } catch (error) {
       console.error('Failed to load chat messages', error);
@@ -244,10 +370,66 @@ export default function ChatScreen() {
     } finally {
       if (isInitialLoad.current) {
         setLoading(false);
-        isInitialLoad.current = false;
+        // El scroll se maneja en el useEffect y onContentSizeChange
+        // No hacer scroll aquí para evitar conflictos
       }
     }
-  }, [chatApi, clearError, matchId, setError, setLoading, setMessages, tokens?.accessToken, updateMatch]);
+  }, [chatApi, clearError, matchId, matchApi, setError, setLoading, setMessages, addMessages, messages, tokens?.accessToken, updateMatch]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!tokens?.accessToken || !matchId || isLoadingOlder || !oldestMessageCursorRef.current || !hasMoreMessages) {
+      return;
+    }
+
+    setIsLoadingOlder(true);
+    clearError();
+
+    try {
+      const result = await chatApi.getMessages(
+        matchId,
+        25,
+        oldestMessageCursorRef.current,
+        tokens.accessToken
+      );
+
+      if (!result.success) {
+        setError(result.error.message || 'Could not load older messages.');
+        return;
+      }
+
+      const validation = DisplayMessageSchema.array().safeParse(result.data.messages);
+      if (!validation.success) {
+        setError('Invalid messages received from server.');
+        console.warn('Invalid messages payload', validation.error);
+        return;
+      }
+
+      if (validation.data.length === 0) {
+        setHasMoreMessages(false);
+        return;
+      }
+
+      // Ordenar a ASC (antiguos → nuevos)
+      const orderedOlderMessages = [...validation.data].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+
+      // Prepend al inicio de la lista
+      prependMessages(matchId, orderedOlderMessages);
+
+      // Actualizar cursor al mensaje más antiguo de los nuevos
+      const newOldestMessage = orderedOlderMessages[0];
+      oldestMessageCursorRef.current = newOldestMessage.id;
+
+      // Verificar si hay más mensajes (si recibimos menos de 25, no hay más)
+      setHasMoreMessages(validation.data.length === 25);
+    } catch (error) {
+      console.error('Failed to load older messages', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  }, [chatApi, clearError, matchId, prependMessages, setError, tokens?.accessToken, isLoadingOlder, hasMoreMessages]);
 
   useEffect(() => {
     if (!matchId) {
@@ -255,9 +437,21 @@ export default function ChatScreen() {
     }
 
     loadMessages();
-    const interval = setInterval(loadMessages, 5000);
-    return () => clearInterval(interval);
-  }, [loadMessages, matchId]);
+    // Aumentar intervalo a 15 segundos para evitar rate limiting
+    // (100 requests/min = ~1 request cada 0.6 segundos, pero con 15s tenemos margen)
+    const interval = setInterval(loadMessages, 15000);
+    
+    // Mark as read when component unmounts (user leaves chat)
+    return () => {
+      clearInterval(interval);
+      // Mark messages as read when leaving the chat
+      if (tokens?.accessToken && matchId) {
+        matchApi.markAsRead(matchId, tokens.accessToken).catch((error) => {
+          console.error('[ChatScreen] Failed to mark messages as read on unmount:', error);
+        });
+      }
+    };
+  }, [loadMessages, matchId, matchApi, tokens?.accessToken]);
 
   // Check if this match still exists (detect if blocked)
   useEffect(() => {
@@ -335,6 +529,14 @@ export default function ChatScreen() {
       console.log('[ChatScreen] Adding message to store');
       addMessage(matchId, validation.data);
       updateMatch(matchId, { lastMessage: validation.data, unreadCount: 0 });
+      
+      // Actualizar referencia y hacer scroll cuando se envía un mensaje
+      lastMessageIdRef.current = validation.data.id;
+      if (hasScrolledToBottom.current) {
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
     } catch (error) {
       console.error('[ChatScreen] Failed to send message', error);
       const fallbackMessage = 'Network error. Please try again.';
@@ -564,12 +766,89 @@ export default function ChatScreen() {
                 minIndexForVisible: 0,
                 autoscrollToTopThreshold: 10,
               }}
-              onContentSizeChange={() => {
-                // Auto-scroll to bottom when content size changes
-                if (matchMessages.length > 0) {
-                  flatListRef.current?.scrollToEnd({ animated: true });
+              onContentSizeChange={(contentWidth, contentHeight) => {
+                // Scroll al final cuando el contenido cambie (solo en carga inicial)
+                // Usar debounce para esperar a que el tamaño se estabilice (todos los mensajes renderizados)
+                if (matchMessages.length > 0 && !hasScrolledToBottom.current && isInitialLoad.current) {
+                  // Limpiar timeout anterior si existe
+                  if (contentSizeChangeTimeoutRef.current) {
+                    clearTimeout(contentSizeChangeTimeoutRef.current);
+                  }
+                  
+                  // Esperar 500ms sin cambios en el tamaño antes de hacer scroll
+                  // Esto asegura que todos los mensajes estén renderizados
+                  contentSizeChangeTimeoutRef.current = setTimeout(() => {
+                    requestAnimationFrame(() => {
+                      requestAnimationFrame(() => {
+                        if (flatListRef.current && !hasScrolledToBottom.current && matchMessages.length > 0) {
+                          const lastIndex = matchMessages.length - 1;
+                          // Intentar scrollToIndex primero (más preciso)
+                          try {
+                            flatListRef.current.scrollToIndex({ 
+                              index: lastIndex, 
+                              animated: false,
+                              viewPosition: 1 // 1 = al final de la vista
+                            });
+                          } catch (e) {
+                            // Si falla scrollToIndex, usar scrollToEnd
+                            flatListRef.current.scrollToEnd({ animated: false });
+                          }
+                          
+                          // Segundo intento después de un delay para asegurar que llegue al final
+                          setTimeout(() => {
+                            if (flatListRef.current && !hasScrolledToBottom.current) {
+                              try {
+                                flatListRef.current.scrollToIndex({ 
+                                  index: lastIndex, 
+                                  animated: false,
+                                  viewPosition: 1
+                                });
+                              } catch (e) {
+                                flatListRef.current.scrollToEnd({ animated: false });
+                              }
+                              // Tercer intento final para asegurar
+                              setTimeout(() => {
+                                if (flatListRef.current && !hasScrolledToBottom.current) {
+                                  flatListRef.current.scrollToEnd({ animated: false });
+                                  hasScrolledToBottom.current = true;
+                                  lastMessageIdRef.current = matchMessages[lastIndex].id;
+                                  isInitialLoad.current = false;
+                                }
+                              }, 200);
+                            }
+                          }, 300);
+                        }
+                      });
+                    });
+                  }, 500);
                 }
               }}
+              onScroll={(event) => {
+                // Detectar si el usuario está cerca del final de la lista
+                const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+                const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
+                isUserAtBottom.current = distanceFromEnd < 100; // 100px de margen
+              }}
+              scrollEventThrottle={16}
+              ListHeaderComponent={
+                hasMoreMessages && matchMessages.length > 0 ? (
+                  <View style={styles.loadOlderContainer}>
+                    <TouchableOpacity
+                      style={styles.loadOlderButton}
+                      onPress={loadOlderMessages}
+                      disabled={isLoadingOlder}
+                    >
+                      {isLoadingOlder ? (
+                        <ActivityIndicator size="small" color="#e91e63" />
+                      ) : (
+                        <Text style={styles.loadOlderButtonText}>
+                          Cargar mensajes anteriores
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ) : null
+              }
               ListEmptyComponent={
                 <View style={styles.emptyStateContainer}>
                   {isLoading ? (
@@ -629,10 +908,12 @@ export default function ChatScreen() {
                 }
               }}
               onFocus={() => {
-                // Scroll to bottom when input is focused
-                setTimeout(() => {
-                  flatListRef.current?.scrollToEnd({ animated: true });
-                }, 300);
+                // Scroll to bottom when input is focused (solo si ya se hizo scroll inicial)
+                if (hasScrolledToBottom.current) {
+                  setTimeout(() => {
+                    flatListRef.current?.scrollToEnd({ animated: true });
+                  }, 300);
+                }
               }}
             />
             <TouchableOpacity
@@ -1024,5 +1305,26 @@ const styles = StyleSheet.create({
   successIcon: {
     marginBottom: 16,
     alignSelf: 'center',
+  },
+  loadOlderContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  loadOlderButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e91e63',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    minWidth: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadOlderButtonText: {
+    color: '#e91e63',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

@@ -84,4 +84,24 @@ export class MatchApi {
       data: parseResult.data,
     };
   }
+
+  async markAsRead(
+    matchId: string,
+    token: string
+  ): Promise<Result<void, DomainError>> {
+    const response = await this.apiClient.put<void>(
+      `/matches/${matchId}/read`,
+      undefined,
+      token
+    );
+
+    if (!response.success) {
+      return response;
+    }
+
+    return {
+      success: true,
+      data: undefined,
+    };
+  }
 }

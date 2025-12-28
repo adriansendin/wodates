@@ -53,4 +53,44 @@ export class MatchesController {
       });
     }
   }
+
+  async markAsRead(request: FastifyRequest, reply: FastifyReply) {
+    const userId = request.user!.id;
+    const matchId = (request.params as { matchId: string }).matchId;
+
+    request.log.info({ userId, matchId }, 'PUT /matches/:matchId/read - Starting request');
+
+    try {
+      const result = await this.matchOverviewService.markAsRead(matchId, userId);
+
+      if (!result.success) {
+        request.log.error(
+          { userId, matchId, error: result.error },
+          'PUT /matches/:matchId/read - Service returned error'
+        );
+        const error = result.error;
+        return reply.status(error.statusCode).send({
+          error: error.code,
+          message: error.message,
+          details: error.details,
+        });
+      }
+
+      request.log.info(
+        { userId, matchId },
+        'PUT /matches/:matchId/read - Success'
+      );
+
+      return reply.status(204).send();
+    } catch (error) {
+      request.log.error(
+        { userId, matchId, error },
+        'PUT /matches/:matchId/read - Unexpected error'
+      );
+      return reply.status(500).send({
+        error: 'INTERNAL_SERVER_ERROR',
+        message: 'An unexpected error occurred',
+      });
+    }
+  }
 }

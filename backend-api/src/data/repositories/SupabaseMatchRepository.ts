@@ -601,6 +601,62 @@ export class SupabaseMatchRepository implements MatchRepository {
     }
   }
 
+  async updateLastReadMessage(
+    chatId: string,
+    userId: string,
+    messageId: string | null
+  ): Promise<Result<void, DomainError>> {
+    try {
+      const { error } = await this.client
+        .from('chat_participants')
+        .update({ last_read_message_id: messageId })
+        .eq('chat_id', chatId)
+        .eq('user_id', userId);
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to update last read message: ${this.formatSupabaseError(error)}`
+          )
+        );
+      }
+
+      return success(undefined);
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error updating last read message', error)
+      );
+    }
+  }
+
+  async getLastReadMessageId(
+    chatId: string,
+    userId: string
+  ): Promise<Result<string | null, DomainError>> {
+    try {
+      const { data, error } = await this.client
+        .from('chat_participants')
+        .select('last_read_message_id')
+        .eq('chat_id', chatId)
+        .eq('user_id', userId)
+        .maybeSingle<{ last_read_message_id: string | null }>();
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to get last read message: ${this.formatSupabaseError(error)}`
+          )
+        );
+      }
+
+      return success(data?.last_read_message_id ?? null);
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error getting last read message', error)
+      );
+    }
+  }
+
   private formatSupabaseError(error: unknown): string {
     if (error && typeof error === 'object') {
       const message = (error as { message?: string }).message;

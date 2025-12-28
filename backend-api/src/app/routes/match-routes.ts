@@ -97,4 +97,30 @@ export async function matchRoutes(fastify: FastifyInstance) {
     },
     controller.list.bind(controller)
   );
+
+  fastify.put(
+    '/matches/:matchId/read',
+    {
+      schema: {
+        description: 'Mark all messages in a match as read',
+        tags: ['matches'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            matchId: { type: 'string', format: 'uuid' },
+          },
+          required: ['matchId'],
+        },
+        response: {
+          204: {
+            description: 'Messages marked as read successfully',
+            type: 'null',
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    controller.markAsRead.bind(controller)
+  );
 }

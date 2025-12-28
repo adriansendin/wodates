@@ -208,6 +208,9 @@ export class ApiClient {
       if (status === 409) {
         return new ConflictError(message ?? 'Conflict detected');
       }
+      if (status === 429) {
+        return new UnexpectedError(message ?? 'Rate limit exceeded');
+      }
       if (status >= 500) {
         return new ServerError(message ?? 'Server error');
       }

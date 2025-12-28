@@ -12,6 +12,7 @@ interface ChatActions {
   setMessages: (matchId: string, messages: Message[]) => void;
   addMessage: (matchId: string, message: Message) => void;
   addMessages: (matchId: string, messages: Message[]) => void;
+  prependMessages: (matchId: string, messages: Message[]) => void;
   setLoading: (loading: boolean) => void;
   setSending: (sending: boolean) => void;
   setError: (error: string | null) => void;
@@ -65,6 +66,22 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
         messages: {
           ...state.messages,
           [matchId]: [...existingMessages, ...newMessages],
+        },
+      };
+    }),
+  prependMessages: (matchId, messages) =>
+    set((state) => {
+      const existingMessages = state.messages[matchId] || [];
+      const existingIds = new Set(existingMessages.map((msg) => msg.id));
+      // Filter out messages that already exist to prevent duplicates
+      const newMessages = messages.filter((msg) => !existingIds.has(msg.id));
+      if (newMessages.length === 0) {
+        return state; // No new messages to add
+      }
+      return {
+        messages: {
+          ...state.messages,
+          [matchId]: [...newMessages, ...existingMessages],
         },
       };
     }),
