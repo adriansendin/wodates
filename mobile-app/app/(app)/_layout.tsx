@@ -54,7 +54,7 @@ export default function AppTabsLayout() {
       <Tabs.Screen
         name="matches"
         options={{
-          title: 'Matches',
+          title: 'Chats',
         }}
       />
       <Tabs.Screen

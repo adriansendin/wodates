@@ -539,15 +539,18 @@ export default function FeedScreen() {
         <View style={styles.emptyIconContainer}>
           <Text style={styles.emptyIcon}>💬</Text>
         </View>
-        <Text style={styles.emptyTitle}>Conoce a tu match</Text>
+        <Text style={styles.emptyTitle}>Modo exclusivo activado</Text>
         <Text style={styles.emptySubtext}>
-          Tienes {activeChatsCount} conversación{activeChatsCount > 1 ? 'es' : ''} activa{activeChatsCount > 1 ? 's' : ''}.
+          Ahora estás conociendo a una persona.
+        </Text>
+        <Text style={styles.emptySubtext}>
+          Para activar Discover tendrás que cerrar esa conversación.
         </Text>
         <TouchableOpacity 
           style={styles.discoverButton}
           onPress={() => router.push('/(app)/matches')}
         >
-          <Text style={styles.discoverButtonText}>Ver mi match</Text>
+          <Text style={styles.discoverButtonText}>Abrir chat</Text>
         </TouchableOpacity>
       </View>
     );
