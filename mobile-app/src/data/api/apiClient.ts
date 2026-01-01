@@ -70,7 +70,8 @@ export class ApiClient {
   async post<T>(
     url: string,
     data?: unknown,
-    token?: string
+    token?: string,
+    signal?: AbortSignal
   ): Promise<Result<T, DomainError>> {
     try {
       const fullUrl = `${this.client.defaults.baseURL}${url}`;
@@ -94,6 +95,7 @@ export class ApiClient {
 
       const response: AxiosResponse<T> = await this.client.post(url, data, {
         headers,
+        signal,
       });
       return success(response.data);
     } catch (error) {

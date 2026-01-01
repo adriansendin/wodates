@@ -61,16 +61,18 @@ export class FeedApi {
 
   async likeUser(
     targetUserId: string,
-    token: string
+    token: string,
+    signal?: AbortSignal
   ): Promise<Result<LikeResponse, DomainError>> {
-    return this.apiClient.post('/likes', { targetUserId }, token);
+    return this.apiClient.post('/likes', { targetUserId }, token, signal);
   }
 
   async passUser(
     targetUserId: string,
-    token: string
+    token: string,
+    signal?: AbortSignal
   ): Promise<Result<PassResponse, DomainError>> {
-    return this.apiClient.post('/passes', { targetUserId }, token);
+    return this.apiClient.post('/passes', { targetUserId }, token, signal);
   }
 
   async getAffinitySentences(

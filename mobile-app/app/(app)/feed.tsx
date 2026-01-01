@@ -103,10 +103,15 @@ export default function FeedScreen() {
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const feedApi = useMemo(() => new FeedApi(apiClient), [apiClient]);
   const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
-  
+
   // Track current candidate ID to prevent stale updates
   const currentCandidateIdRef = useRef<string | null>(null);
   const hasLoadedMatchesCount = useRef(false);
+
+  // Debouncing refs for like/pass actions
+  const likeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const passTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Function to load affinity sentences for current user
   const loadAffinitySentencesForCurrentUser = useCallback(async () => {
@@ -297,29 +302,58 @@ export default function FeedScreen() {
     loadAffinitySentencesForCurrentUser();
   }, [currentIndex, users, tokens?.accessToken, user?.id, loadAffinitySentencesForCurrentUser]);
 
+  // Cleanup timeouts and abort controllers on unmount
+  useEffect(() => {
+    return () => {
+      if (likeTimeoutRef.current) {
+        clearTimeout(likeTimeoutRef.current);
+      }
+      if (passTimeoutRef.current) {
+        clearTimeout(passTimeoutRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const handleLike = async () => {
     const currentUser = users[currentIndex];
     if (!currentUser) {
       return;
     }
 
-    if (!tokens?.accessToken || isLiking) {
+    // Cancel any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
+    // If already liking, skip to next user
+    if (isLiking) {
       nextUser();
-      // Load more if needed after moving to next user
       loadMoreIfNeeded();
       return;
     }
 
+    // Clear any existing timeout
+    if (likeTimeoutRef.current) {
+      clearTimeout(likeTimeoutRef.current);
+    }
+
     setIsLiking(true);
+
     try {
-      const result = await feedApi.likeUser(currentUser.id, tokens.accessToken);
+      const result = await feedApi.likeUser(currentUser.id, tokens?.accessToken || '', abortControllerRef.current?.signal);
       if (!result.success) {
         // Handle "User already liked" error silently - just skip to next user
         // ConflictError has code 'CONFLICT' and statusCode 409
-        const isConflictError = 
+        const isConflictError =
           (result.error.code === 'CONFLICT' || result.error.statusCode === 409) &&
           result.error.message.toLowerCase().includes('already liked');
-        
+
         if (isConflictError) {
           console.log(`[FeedScreen] User ${currentUser.id} already liked, removing from feed and skipping`);
           removeUser(currentUser.id);
@@ -349,10 +383,10 @@ export default function FeedScreen() {
             },
             unreadCount: 0,
           });
-          
+
           // Mostrar alerta y navegar al chat
           showAlert("It's a Match!", 'You and this person liked each other!');
-          
+
           // Navegar al chat con el nuevo match
           router.push({
             pathname: '/chat/[matchId]',
@@ -367,7 +401,7 @@ export default function FeedScreen() {
         } else {
           console.warn('Invalid match payload received', validation.error);
         }
-      } 
+      }
       // Check if it's a potential match (mutual like but not confirmed)
       else if (result.data.isPotentialMatch) {
         // Show confirmation modal instead of creating match immediately
@@ -380,16 +414,22 @@ export default function FeedScreen() {
         // Don't call nextUser() yet - wait for user's decision
         return;
       }
-      
+
       // Like was successful - remove user from feed and move to next
       removeUser(currentUser.id);
       nextUser();
       // Load more if needed after moving to next user
       loadMoreIfNeeded();
     } catch (error) {
-      showAlert('Error', 'Network error. Please try again.');
+      // Only show error if request wasn't aborted
+      if (!abortControllerRef.current?.signal.aborted) {
+        showAlert('Error', 'Network error. Please try again.');
+      }
     } finally {
-      setIsLiking(false);
+      // Debounce: keep button disabled for 300ms to prevent rapid clicking
+      likeTimeoutRef.current = setTimeout(() => {
+        setIsLiking(false);
+      }, 300);
     }
   };
 
@@ -480,23 +520,37 @@ export default function FeedScreen() {
       return;
     }
 
-    if (!tokens?.accessToken || isPassing) {
+    // Cancel any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
+    // If already passing, skip to next user
+    if (isPassing) {
       nextUser();
-      // Load more if needed after moving to next user
       loadMoreIfNeeded();
       return;
     }
 
+    // Clear any existing timeout
+    if (passTimeoutRef.current) {
+      clearTimeout(passTimeoutRef.current);
+    }
+
     setIsPassing(true);
+
     try {
-      const result = await feedApi.passUser(currentUser.id, tokens.accessToken);
+      const result = await feedApi.passUser(currentUser.id, tokens?.accessToken || '', abortControllerRef.current?.signal);
       if (!result.success) {
         // Handle "User already passed" error silently - just skip to next user
         // ConflictError has code 'CONFLICT' and statusCode 409
-        const isConflictError = 
+        const isConflictError =
           (result.error.code === 'CONFLICT' || result.error.statusCode === 409) &&
           result.error.message.toLowerCase().includes('already passed');
-        
+
         if (isConflictError) {
           console.log(`[FeedScreen] User ${currentUser.id} already passed, removing from feed and skipping`);
           removeUser(currentUser.id);
@@ -515,9 +569,15 @@ export default function FeedScreen() {
       // Load more if needed after moving to next user
       loadMoreIfNeeded();
     } catch (error) {
-      showAlert('Error', 'Network error. Please try again.');
+      // Only show error if request wasn't aborted
+      if (!abortControllerRef.current?.signal.aborted) {
+        showAlert('Error', 'Network error. Please try again.');
+      }
     } finally {
-      setIsPassing(false);
+      // Debounce: keep button disabled for 300ms to prevent rapid clicking
+      passTimeoutRef.current = setTimeout(() => {
+        setIsPassing(false);
+      }, 300);
     }
   };
 
