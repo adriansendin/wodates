@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -70,9 +70,12 @@ export default function FeedScreen() {
     currentIndex,
     isLoading,
     setUsers,
+    addUsers,
     nextUser,
     setLoading,
     setError,
+    hasMore,
+    setHasMore,
   } = useFeedStore();
   const { tokens, user } = useAuthStore();
   const addMatch = useMatchesStore((state) => state.addMatch);
@@ -116,9 +119,14 @@ export default function FeedScreen() {
   }, [tokens?.accessToken, user?.id, matchApi, setActiveChatsCount]);
 
   useEffect(() => {
-    loadFeed();
+    loadFeed(0, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load more users when approaching the end
+  useEffect(() => {
+    loadMoreIfNeeded();
+  }, [loadMoreIfNeeded]);
 
   // Load affinity sentences when current user changes
   useEffect(() => {
@@ -197,16 +205,23 @@ export default function FeedScreen() {
     };
   }, [currentIndex, users, tokens?.accessToken, user?.id, feedApi]);
 
-  const loadFeed = async () => {
+  const loadFeed = async (offset: number = 0, append: boolean = false) => {
     if (!tokens?.accessToken) {
       return;
     }
 
     setLoading(true);
     try {
-      const result = await feedApi.getFeed(10, 0, tokens.accessToken);
+      // Load 50 users initially, then 20 more when loading more
+      const limit = offset === 0 ? 50 : 20;
+      const result = await feedApi.getFeed(limit, offset, tokens.accessToken);
       if (result.success) {
-        setUsers(result.data.users);
+        if (append) {
+          addUsers(result.data.users);
+        } else {
+          setUsers(result.data.users);
+        }
+        setHasMore(result.data.pagination.hasMore);
       } else {
         setError(result.error.message);
         showAlert('Error', result.error.message);
@@ -219,6 +234,15 @@ export default function FeedScreen() {
     }
   };
 
+  // Load more users when approaching the end
+  const loadMoreIfNeeded = useCallback(async () => {
+    // Load more when we're within 5 users of the end
+    const remainingUsers = users.length - currentIndex;
+    if (remainingUsers <= 5 && hasMore && !isLoading) {
+      await loadFeed(users.length, true);
+    }
+  }, [users.length, currentIndex, hasMore, isLoading, tokens?.accessToken]);
+
   const handleLike = async () => {
     const currentUser = users[currentIndex];
     if (!currentUser) {
@@ -227,6 +251,8 @@ export default function FeedScreen() {
 
     if (!tokens?.accessToken || isLiking) {
       nextUser();
+      // Load more if needed after moving to next user
+      loadMoreIfNeeded();
       return;
     }
 
@@ -274,6 +300,8 @@ export default function FeedScreen() {
         }
       }
       nextUser();
+      // Load more if needed after moving to next user
+      loadMoreIfNeeded();
     } catch (error) {
       showAlert('Error', 'Network error. Please try again.');
     } finally {
@@ -289,6 +317,8 @@ export default function FeedScreen() {
 
     if (!tokens?.accessToken || isPassing) {
       nextUser();
+      // Load more if needed after moving to next user
+      loadMoreIfNeeded();
       return;
     }
 
@@ -301,6 +331,8 @@ export default function FeedScreen() {
       }
 
       nextUser();
+      // Load more if needed after moving to next user
+      loadMoreIfNeeded();
     } catch (error) {
       showAlert('Error', 'Network error. Please try again.');
     } finally {
@@ -341,12 +373,24 @@ export default function FeedScreen() {
   }
 
   if (!currentUser) {
+    // Try to load more if we still have more available
+    if (hasMore && !isLoading) {
+      loadMoreIfNeeded();
+    }
+    
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No more users to show</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={loadFeed}>
-          <Text style={styles.refreshButtonText}>Refresh</Text>
-        </TouchableOpacity>
+        <Text style={styles.emptyText}>
+          {hasMore 
+            ? 'Loading more users...' 
+            : 'No more users to show'}
+        </Text>
+        {!hasMore && (
+          <TouchableOpacity style={styles.refreshButton} onPress={() => loadFeed(0, false)}>
+            <Text style={styles.refreshButtonText}>Refresh</Text>
+          </TouchableOpacity>
+        )}
+        {isLoading && <ActivityIndicator size="small" color="#e91e63" style={{ marginTop: 10 }} />}
       </View>
     );
   }

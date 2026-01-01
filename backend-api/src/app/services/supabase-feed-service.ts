@@ -74,11 +74,12 @@ export class SupabaseFeedService {
         .neq('id', userId)
         .lt('active_chats_count', 1) // Exclude users with any active chats (must be 0)
         .or('is_bot.is.null,is_bot.eq.false') // Exclude bots (system users)
+        .order('id', { ascending: false }) // Order by ID descending to show newer users first
         .range(offset, offset + limit - 1);
 
       // Initial filter: optimize query by filtering candidates that current user is looking for
       if (genderFilter !== 'any') {
-        query = query.in('gender', genderFilter);
+        query = query.in('gender', genderFilter).not('gender', 'is', null);
       }
 
       // Filter by city: only show users in the same city
