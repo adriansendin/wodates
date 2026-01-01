@@ -55,7 +55,7 @@ describe('Feed and interactions', () => {
     cy.contains('Marta Foodie').should('be.visible');
 
     cy.get('[aria-label="Ignorar perfil"]').click();
-    cy.contains('No more users to show').should('be.visible');
+    cy.contains('Wodates prioriza calidad sobre cantidad. Mejora tu afinidad hablando con Doc Love').should('be.visible');
   });
 
   it('creates a match from the feed and enables chatting', () => {

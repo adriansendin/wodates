@@ -627,7 +627,7 @@ export default function FeedScreen() {
         <Text style={styles.emptyText}>
           {hasMore 
             ? 'Loading more users...' 
-            : 'No more users to show'}
+            : 'Wodates prioriza calidad sobre cantidad. Mejora tu afinidad hablando con Doc Love'}
         </Text>
         {!hasMore && (
           <TouchableOpacity style={styles.refreshButton} onPress={() => loadFeed(0, false)}>

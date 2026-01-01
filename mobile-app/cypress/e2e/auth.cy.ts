@@ -29,7 +29,7 @@ describe('Authentication', () => {
     });
 
     cy.contains('Carla Tester').should('be.visible');
-    cy.contains('No more users to show').should('not.exist');
+    cy.contains('Wodates prioriza calidad sobre cantidad. Mejora tu afinidad hablando con Doc Love').should('not.exist');
   });
 
   it('shows an inline error when the credentials are invalid', () => {
