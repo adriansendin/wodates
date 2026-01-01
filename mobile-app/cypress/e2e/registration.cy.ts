@@ -61,6 +61,7 @@ const completeRegistrationSteps = () => {
   // Step 4: Basic credentials
   cy.get('input[placeholder="Tu nombre"]').type(registerResponse.user.name);
   cy.get('input[placeholder="tu@email.com"]').clear().type(registerResponse.user.email);
+  cy.get('input[placeholder="Confirma tu email"]').clear().type(registerResponse.user.email);
   cy.get('input[type="password"]').type('Password1!');
   cy.contains('Continuar').click({ force: true });
   cy.location('pathname').should('include', 'step7');

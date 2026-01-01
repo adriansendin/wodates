@@ -1,5 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
@@ -7,14 +18,16 @@ import { ProgressBar } from '../../../src/components/ProgressBar';
 import { FeedbackBanner } from '../../../src/components/FeedbackBanner';
 import { ApiClient } from '../../../src/data/api/apiClient';
 import { AuthApi } from '../../../src/data/api/authApi';
+import { DomainError } from '../../../src/domain/errors/DomainError';
 import { getApiUrl } from '../../../src/utils/apiConfig';
 
 export default function Step1Screen() {
   const router = useRouter();
   const { data, updateData, nextStep } = useRegistrationStore();
-  
+
   const [name, setName] = useState(data.name);
   const [email, setEmail] = useState(data.email);
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState(data.password);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -28,6 +41,9 @@ export default function Step1Screen() {
   };
 
   const handleNext = async () => {
+    // Limpiar mensajes de error previos
+    setErrorMessage(null);
+
     if (!name.trim()) {
       Alert.alert('Error', 'Por favor ingresa tu nombre');
       return;
@@ -43,6 +59,16 @@ export default function Step1Screen() {
       return;
     }
 
+    if (!confirmEmail.trim()) {
+      Alert.alert('Error', 'Por favor confirma tu email');
+      return;
+    }
+
+    if (email !== confirmEmail) {
+      setErrorMessage('Los emails no coinciden');
+      return;
+    }
+
     if (!password || password.length < 6) {
       Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
       return;
@@ -53,7 +79,7 @@ export default function Step1Screen() {
     setIsCheckingEmail(true);
     try {
       const result = await authApi.checkEmail(email.trim());
-      
+
       if (result.success) {
         if (result.data.exists) {
           setIsCheckingEmail(false);
@@ -63,7 +89,8 @@ export default function Step1Screen() {
       } else {
         // Si hay un error al verificar, mostramos un mensaje pero permitimos continuar
         // El backend también verificará al registrar
-        console.warn('[Step1] Error checking email:', result.error);
+        const failure = result as { success: false; error: DomainError };
+        console.warn('[Step1] Error checking email:', failure.error);
         setIsCheckingEmail(false);
         // No mostramos error aquí, simplemente continuamos
         // El backend verificará al registrar
@@ -88,12 +115,12 @@ export default function Step1Screen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
-        style={styles.container} 
+      <KeyboardAvoidingView
+        style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
@@ -128,7 +155,32 @@ export default function Step1Screen() {
                   style={styles.input}
                   placeholder="tu@email.com"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    // Limpiar mensaje de error cuando el usuario empiece a escribir
+                    if (errorMessage === 'Los emails no coinciden') {
+                      setErrorMessage(null);
+                    }
+                  }}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Confirmar Email</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirma tu email"
+                  value={confirmEmail}
+                  onChangeText={(text) => {
+                    setConfirmEmail(text);
+                    // Limpiar mensaje de error cuando el usuario empiece a escribir
+                    if (errorMessage === 'Los emails no coinciden') {
+                      setErrorMessage(null);
+                    }
+                  }}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   returnKeyType="next"
@@ -149,8 +201,8 @@ export default function Step1Screen() {
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.button, isCheckingEmail && styles.buttonDisabled]} 
+            <TouchableOpacity
+              style={[styles.button, isCheckingEmail && styles.buttonDisabled]}
               onPress={handleNext}
               disabled={isCheckingEmail}
             >
@@ -161,8 +213,8 @@ export default function Step1Screen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.backButton} 
+            <TouchableOpacity
+              style={styles.backButton}
               onPress={() => router.back()}
             >
               <Text style={styles.backButtonText}>Volver</Text>
@@ -250,4 +302,3 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 });
-

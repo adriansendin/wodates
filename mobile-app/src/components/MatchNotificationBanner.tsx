@@ -15,12 +15,9 @@ interface MatchNotificationBannerProps {
   onPress: () => void;
 }
 
-export const MatchNotificationBanner: React.FC<MatchNotificationBannerProps> = ({
-  visible,
-  otherUserName,
-  onDismiss,
-  onPress,
-}) => {
+export const MatchNotificationBanner: React.FC<
+  MatchNotificationBannerProps
+> = ({ visible, otherUserName, onDismiss, onPress }) => {
   const slideAnim = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {
@@ -58,10 +55,7 @@ export const MatchNotificationBanner: React.FC<MatchNotificationBannerProps> = (
         onPress={onPress}
         activeOpacity={0.9}
       >
-        <LinearGradient
-          colors={['#e91e63', '#f06292']}
-          style={styles.gradient}
-        >
+        <LinearGradient colors={['#e91e63', '#f06292']} style={styles.gradient}>
           <View style={styles.content}>
             <Text style={styles.emoji}>💕</Text>
             <View style={styles.textContainer}>
@@ -147,4 +141,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
