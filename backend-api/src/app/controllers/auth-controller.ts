@@ -18,29 +18,27 @@ export class AuthController {
       const user = await this.authService.registerUser(userData);
       const token = this.generateToken(user.id, user.email);
 
-      // Create welcome match with Doc Love (non-blocking)
+      // Create welcome match with Doc Love (blocking to ensure proper onboarding)
       if (this.systemUserService) {
-        this.systemUserService
-          .createWelcomeMatch(user.id)
-          .then((result) => {
-            if (result.success) {
-              request.log.info(
-                { userId: user.id, matchId: result.data.id },
-                'Welcome match created with Doc Love'
-              );
-            } else {
-              request.log.warn(
-                { userId: user.id, error: result.error },
-                'Failed to create welcome match with Doc Love'
-              );
-            }
-          })
-          .catch((error) => {
-            request.log.error(
-              { userId: user.id, error },
-              'Unexpected error creating welcome match'
+        try {
+          const matchResult = await this.systemUserService.createWelcomeMatch(user.id);
+          if (matchResult.success) {
+            request.log.info(
+              { userId: user.id, matchId: matchResult.data.id },
+              'Welcome match created with Doc Love'
             );
-          });
+          } else {
+            request.log.warn(
+              { userId: user.id, error: matchResult.error },
+              'Failed to create welcome match with Doc Love'
+            );
+          }
+        } catch (error) {
+          request.log.error(
+            { userId: user.id, error },
+            'Unexpected error creating welcome match'
+          );
+        }
       }
 
       return reply.status(201).send({

@@ -20,6 +20,7 @@ declare module 'fastify' {
 
 type AuthRoutesOptions = FastifyPluginOptions & {
   authService?: AuthService;
+  systemUserService?: SystemUserService;
 };
 
 export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
@@ -36,14 +37,27 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
   }
 
   // Initialize SystemUserService for welcome matches with Doc Love
-  const docLoveHelper = new DocLoveHelper();
-  const likeRepository = new SupabaseLikeRepository();
-  const matchRepository = new SupabaseMatchRepository();
-  const systemUserService = new SystemUserService(
-    docLoveHelper,
-    likeRepository,
-    matchRepository
-  );
+  let systemUserService = options.systemUserService;
+
+  // Only initialize if we have Supabase credentials and are not in test environment
+  if (!systemUserService && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NODE_ENV !== 'test') {
+    try {
+      const docLoveHelper = new DocLoveHelper();
+      const likeRepository = new SupabaseLikeRepository();
+      const matchRepository = new SupabaseMatchRepository();
+      systemUserService = new SystemUserService(
+        docLoveHelper,
+        likeRepository,
+        matchRepository
+      );
+      fastify.log.info('SystemUserService initialized successfully');
+    } catch (error) {
+      fastify.log.warn(
+        { error },
+        'Failed to initialize SystemUserService, welcome matches will be disabled'
+      );
+    }
+  }
 
   const authController = new AuthController(authService, systemUserService);
 

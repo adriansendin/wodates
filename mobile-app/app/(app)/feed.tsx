@@ -89,6 +89,7 @@ export default function FeedScreen() {
   const [isPassing, setIsPassing] = useState(false);
   const [affinitySentences, setAffinitySentences] = useState<string[]>([]);
   const [isLoadingSentences, setIsLoadingSentences] = useState(false);
+  const [affinitySentencesError, setAffinitySentencesError] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [potentialMatch, setPotentialMatch] = useState<{
     userId: string;
@@ -96,6 +97,7 @@ export default function FeedScreen() {
     photoUrl?: string | null;
   } | null>(null);
   const [isConfirmingMatch, setIsConfirmingMatch] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Memoize API clients to prevent useEffect loops
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -105,6 +107,74 @@ export default function FeedScreen() {
   // Track current candidate ID to prevent stale updates
   const currentCandidateIdRef = useRef<string | null>(null);
   const hasLoadedMatchesCount = useRef(false);
+
+  // Function to load affinity sentences for current user
+  const loadAffinitySentencesForCurrentUser = useCallback(async () => {
+    const currentUser = users[currentIndex];
+
+    // Guard: only call if we have valid session AND a real candidate
+    if (!currentUser?.id || !tokens?.accessToken || !user?.id) {
+      setAffinitySentences([]);
+      setAffinitySentencesError(false);
+      currentCandidateIdRef.current = null;
+      return;
+    }
+
+    // Update ref to track current candidate
+    currentCandidateIdRef.current = currentUser.id;
+
+    // AbortController to cancel previous request if user changes quickly
+    const abortController = new AbortController();
+    const candidateId = currentUser.id; // Capture for stale check
+
+    const loadSentences = async () => {
+      setIsLoadingSentences(true);
+      setAffinitySentences([]); // Clear previous sentences
+      setAffinitySentencesError(false); // Reset error state
+
+      try {
+        const result = await feedApi.getAffinitySentences(
+          candidateId,
+          tokens.accessToken
+        );
+
+        // Check if request was aborted or candidate changed
+        if (abortController.signal.aborted || currentCandidateIdRef.current !== candidateId) {
+          return;
+        }
+
+        if (result.success) {
+          setAffinitySentences(result.data.sentences);
+          setAffinitySentencesError(false);
+        } else {
+          console.error('Backend returned error for affinity sentences:', result.error);
+          setAffinitySentences([]);
+          setAffinitySentencesError(true);
+        }
+      } catch (error) {
+        // Check if request was aborted or candidate changed
+        if (abortController.signal.aborted || currentCandidateIdRef.current !== candidateId) {
+          return;
+        }
+        if (error instanceof Error && !error.message.includes('429')) {
+          console.error('Failed to load affinity sentences:', error);
+        }
+        setAffinitySentences([]);
+        setAffinitySentencesError(true);
+      } finally {
+        if (!abortController.signal.aborted && currentCandidateIdRef.current === candidateId) {
+          setIsLoadingSentences(false);
+        }
+      }
+    };
+
+    loadSentences();
+
+    // Cleanup: abort request if user changes
+    return () => {
+      abortController.abort();
+    };
+  }, [users, currentIndex, tokens?.accessToken, user?.id, feedApi]);
 
   // Load matches to get activeChatsCount
   // Only load once when component mounts or when tokens change (not on every user.id change)
@@ -178,6 +248,10 @@ export default function FeedScreen() {
       showAlert('Error', 'Network error. Please try again.');
     } finally {
       setLoading(false);
+      // Mark initial load as complete when first load finishes (success or failure)
+      if (offset === 0) {
+        setIsInitialLoad(false);
+      }
     }
   }, [tokens?.accessToken, feedApi, addUsers, setUsers, setHasMore, setLoading, setError]);
 
@@ -192,9 +266,11 @@ export default function FeedScreen() {
 
   useEffect(() => {
     console.log('[FeedScreen] useEffect triggered - calling loadFeed');
-    loadFeed(0, false);
+    if (tokens?.accessToken && users.length === 0) {
+      loadFeed(0, false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tokens?.accessToken]);
 
   // Load more users when approaching the end
   useEffect(() => {
@@ -204,10 +280,11 @@ export default function FeedScreen() {
   // Load affinity sentences when current user changes
   useEffect(() => {
     const currentUser = users[currentIndex];
-    
+
     // Guard: only call if we have valid session AND a real candidate
     if (!currentUser?.id || !tokens?.accessToken || !user?.id) {
       setAffinitySentences([]);
+      setAffinitySentencesError(false);
       currentCandidateIdRef.current = null;
       return;
     }
@@ -217,66 +294,8 @@ export default function FeedScreen() {
       return;
     }
 
-    // Update ref to track current candidate
-    currentCandidateIdRef.current = currentUser.id;
-
-    // AbortController to cancel previous request if user changes quickly
-    const abortController = new AbortController();
-    const candidateId = currentUser.id; // Capture for stale check
-
-    const loadAffinitySentences = async () => {
-      setIsLoadingSentences(true);
-      setAffinitySentences([]); // Clear previous sentences
-
-      try {
-        const result = await feedApi.getAffinitySentences(
-          candidateId,
-          tokens.accessToken
-        );
-
-        // Check if request was aborted or candidate changed
-        if (abortController.signal.aborted || currentCandidateIdRef.current !== candidateId) {
-          return;
-        }
-
-        if (result.success) {
-          // Backend always returns sentences (even if fallback)
-          // No need for frontend fallback - backend handles all error cases
-          setAffinitySentences(result.data.sentences);
-        } else {
-          // If backend returns an error, log it but don't show fallback
-          // The backend should always return sentences (even fallback ones)
-          // If we get here, it's a real error (network, auth, etc.)
-          console.error('Backend returned error for affinity sentences:', result.error);
-          // Clear sentences on error (backend should handle fallback)
-          setAffinitySentences([]);
-        }
-      } catch (error) {
-        // Check if request was aborted or candidate changed
-        if (abortController.signal.aborted || currentCandidateIdRef.current !== candidateId) {
-          return;
-        }
-        // Log error for debugging
-        if (error instanceof Error && !error.message.includes('429')) {
-          console.error('Failed to load affinity sentences:', error);
-        }
-        // Clear sentences on error (backend should handle fallback)
-        // If network fails, backend can't return fallback, so we clear
-        setAffinitySentences([]);
-      } finally {
-        if (!abortController.signal.aborted && currentCandidateIdRef.current === candidateId) {
-          setIsLoadingSentences(false);
-        }
-      }
-    };
-
-    loadAffinitySentences();
-
-    // Cleanup: abort request if user changes
-    return () => {
-      abortController.abort();
-    };
-  }, [currentIndex, users, tokens?.accessToken, user?.id, feedApi]);
+    loadAffinitySentencesForCurrentUser();
+  }, [currentIndex, users, tokens?.accessToken, user?.id, loadAffinitySentencesForCurrentUser]);
 
   const handleLike = async () => {
     const currentUser = users[currentIndex];
@@ -504,7 +523,7 @@ export default function FeedScreen() {
 
   const currentUser = users[currentIndex];
 
-  if (isLoading && users.length === 0) {
+  if (isInitialLoad && (isLoading || users.length === 0)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#e91e63" />
@@ -589,6 +608,7 @@ export default function FeedScreen() {
           {isLoadingSentences ? (
             <View style={styles.affinityPlaceholder}>
               <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.affinityLoadingText}>Analizando afinidad...</Text>
             </View>
           ) : affinitySentences.length > 0 ? (
             affinitySentences.map((sentence, index) => (
@@ -596,6 +616,20 @@ export default function FeedScreen() {
                 {sentence}
               </Text>
             ))
+          ) : affinitySentencesError ? (
+            <View style={styles.affinityError}>
+              <Text style={styles.affinityErrorText}>
+                No se pudieron cargar las frases de afinidad
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  loadAffinitySentencesForCurrentUser();
+                }}
+                style={styles.retryButton}
+              >
+                <Text style={styles.retryButtonText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
           ) : null}
         </View>
       </View>
@@ -779,6 +813,13 @@ const styles = StyleSheet.create({
   },
   affinityPlaceholder: {
     paddingVertical: 4,
+    alignItems: 'center',
+  },
+  affinityLoadingText: {
+    fontSize: 12,
+    color: '#fff',
+    marginTop: 4,
+    opacity: 0.8,
   },
   affinitySentence: {
     fontSize: 13,
@@ -789,6 +830,33 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
     opacity: 0.85,
     marginBottom: 4,
+  },
+  affinityError: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  affinityErrorText: {
+    fontSize: 12,
+    color: '#fff',
+    textAlign: 'center',
+    opacity: 0.8,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  retryButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  retryButtonText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '500',
   },
   // Botones de acción
   actions: {

@@ -31,6 +31,7 @@ export async function createTestApp<
   await fastify.register(authRoutes, {
     prefix: '/api/v1/auth',
     authService,
+    systemUserService: undefined, // Disable for tests
   });
 
   await fastify.ready();
