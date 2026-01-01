@@ -1162,7 +1162,7 @@ export default function ChatScreen() {
               }}
             >
               <Ionicons name="ban" size={20} color="#e91e63" />
-              <Text style={styles.menuItemText}>Bloquear usuario</Text>
+              <Text style={styles.menuItemText}>Cerrar conversación</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -1177,9 +1177,10 @@ export default function ChatScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Bloquear usuario</Text>
+            <Text style={styles.modalTitle}>Cerrar conversación</Text>
             <Text style={styles.modalText}>
-              ¿Estás seguro de que quieres bloquear a {otherUserName}?
+              Al cerrar esta conversación, terminará de forma definitiva y no podréis volver a chatear en Wodates.{'\n'}
+              Después se activará Discover para que puedas conocer a más gente con mayor afinidad.{'\n'}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -1187,7 +1188,7 @@ export default function ChatScreen() {
                 onPress={() => setShowBlockModal(false)}
                 disabled={isBlocking}
               >
-                <Text style={styles.modalButtonTextCancel}>No</Text>
+                <Text style={styles.modalButtonTextCancel}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
@@ -1197,7 +1198,7 @@ export default function ChatScreen() {
                 {isBlocking ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.modalButtonTextConfirm}>Sí</Text>
+                  <Text style={styles.modalButtonTextConfirm}>Cerrar conversación</Text>
                 )}
               </TouchableOpacity>
             </View>
