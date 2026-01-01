@@ -15,6 +15,7 @@ import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { MatchApi } from '../../src/data/api/matchApi';
 import { getApiUrl } from '../../src/utils/apiConfig';
+import { MatchNotificationBanner } from '../../src/components/MatchNotificationBanner';
 
 const API_URL = getApiUrl();
 
@@ -38,6 +39,12 @@ export default function MatchesScreen() {
   const isInitialLoad = useRef(true);
   const isFetching = useRef(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [showMatchNotification, setShowMatchNotification] = useState(false);
+  const [newMatchNotification, setNewMatchNotification] = useState<{
+    matchId: string;
+    otherUserName: string;
+  } | null>(null);
+  const previousMatchesCount = useRef(0);
 
   const loadMatches = useCallback(async () => {
     const shouldShowLoader = isInitialLoad.current;
@@ -119,6 +126,34 @@ export default function MatchesScreen() {
       });
 
       console.log('[MatchesScreen] Setting matches:', normalizedMatches.length);
+      
+      // Check if there's a new match (for User B notification)
+      const currentMatchesCount = normalizedMatches.length;
+      if (
+        hasLoadedOnce &&
+        currentMatchesCount > previousMatchesCount.current &&
+        previousMatchesCount.current > 0
+      ) {
+        // Find the newest match (most recent createdAt)
+        const newestMatch = normalizedMatches.reduce((newest, current) => {
+          const newestDate = new Date(newest.createdAt).getTime();
+          const currentDate = new Date(current.createdAt).getTime();
+          return currentDate > newestDate ? current : newest;
+        });
+
+        // Only show notification if the match was created very recently (within last 30 seconds)
+        const matchAge = Date.now() - new Date(newestMatch.createdAt).getTime();
+        if (matchAge < 30000) {
+          // Match is less than 30 seconds old
+          setNewMatchNotification({
+            matchId: newestMatch.id,
+            otherUserName: newestMatch.otherUser?.name ?? 'Alguien',
+          });
+          setShowMatchNotification(true);
+        }
+      }
+      previousMatchesCount.current = currentMatchesCount;
+
       setMatches(normalizedMatches);
       setActiveChatsCount(result.data.activeChatsCount);
       setHasLoadedOnce(true);
@@ -143,11 +178,17 @@ export default function MatchesScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // Load immediately when screen comes into focus
       loadMatches();
+
+      // Use a longer polling interval as a backup to catch new matches
+      // Matches are typically created by user actions (likes), so we don't need
+      // aggressive polling. 2-3 minutes is sufficient to catch any missed updates.
+      const pollInterval = 120000; // 2 minutes - reasonable for both dev and prod
 
       const interval = setInterval(() => {
         loadMatches();
-      }, 5000);
+      }, pollInterval);
 
       return () => {
         clearInterval(interval);
@@ -218,8 +259,30 @@ export default function MatchesScreen() {
     );
   }
 
+  const handleNotificationPress = () => {
+    if (newMatchNotification) {
+      const match = matches.find((m) => m.id === newMatchNotification.matchId);
+      if (match) {
+        setShowMatchNotification(false);
+        setNewMatchNotification(null);
+        handleMatchPress(match);
+      }
+    }
+  };
+
+  const handleNotificationDismiss = () => {
+    setShowMatchNotification(false);
+    setNewMatchNotification(null);
+  };
+
   return (
     <View style={styles.container}>
+      <MatchNotificationBanner
+        visible={showMatchNotification}
+        otherUserName={newMatchNotification?.otherUserName ?? ''}
+        onPress={handleNotificationPress}
+        onDismiss={handleNotificationDismiss}
+      />
       {matches.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#e91e63" />

@@ -2,11 +2,26 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Text, View } from 'react-native';
+import { useAuthStore } from '../src/domain/stores/authStore';
+import { useEffect } from 'react';
+
+// Component to initialize auth state
+function AuthInitializer() {
+  const { restoreAuth } = useAuthStore();
+
+  useEffect(() => {
+    console.log('[AuthInitializer] Initializing auth state...');
+    restoreAuth();
+  }, [restoreAuth]);
+
+  return null; // This component doesn't render anything
+}
 
 export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      <AuthInitializer />
       <StatusBar style="auto" />
       <Stack
         screenOptions={({ route }) => ({

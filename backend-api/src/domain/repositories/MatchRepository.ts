@@ -10,6 +10,10 @@ export interface MatchRepository {
     userId1: string,
     userId2: string
   ): Promise<Result<boolean, DomainError>>;
+  getMatchBetween(
+    userId1: string,
+    userId2: string
+  ): Promise<Result<Match | null, DomainError>>;
   delete(matchId: string): Promise<Result<void, DomainError>>;
   updateActiveChatsCountForUsers(userIds: string[]): Promise<void>;
   getActiveChatsCount(userIds: string[]): Promise<Map<string, number>>;

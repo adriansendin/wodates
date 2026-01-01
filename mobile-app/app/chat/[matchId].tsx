@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+// Global counter to track component instances
+let globalComponentCounter = 0;
 import {
   View,
   Text,
@@ -38,6 +41,88 @@ const DisplayMessageSchema = MessageSchema.extend({
 import { getApiUrl } from '../../src/utils/apiConfig';
 
 const API_URL = getApiUrl();
+
+// Simple global flag to prevent any duplicate API calls during the entire chat session
+const activeChatSession = {
+  matchId: null as string | null,
+  isActive: false,
+  lastMessageLoad: 0,
+  markedAsRead: false,
+
+  startSession(matchId: string): boolean {
+    const now = Date.now();
+    console.log(`[ChatSession] startSession called at ${new Date(now).toISOString()}, requested: ${matchId}, current: ${this.matchId}, isActive: ${this.isActive}`);
+
+    if (this.isActive && this.matchId === matchId) {
+      console.log(`[ChatSession] Session already active for ${matchId} - BLOCKING`);
+      return false; // Already active for this matchId
+    }
+
+    if (this.isActive && this.matchId !== matchId) {
+      console.log(`[ChatSession] Switching from ${this.matchId} to ${matchId}`);
+      this.endSession();
+    }
+
+    this.matchId = matchId;
+    this.isActive = true;
+    this.lastMessageLoad = 0;
+    this.markedAsRead = false;
+    console.log(`[ChatSession] STARTED NEW SESSION for ${matchId} at ${new Date(now).toISOString()}`);
+    return true;
+  },
+
+  canLoadMessages(): boolean {
+    const now = Date.now();
+    console.log(`[ChatSession] canLoadMessages called at ${new Date(now).toISOString()}, isActive: ${this.isActive}, matchId: ${this.matchId}`);
+
+    if (!this.isActive) {
+      console.log(`[ChatSession] BLOCKED - session not active`);
+      return false;
+    }
+
+    const timeSinceLastLoad = now - this.lastMessageLoad;
+    if (timeSinceLastLoad < 2000) { // 2 seconds minimum between loads
+      console.log(`[ChatSession] BLOCKED - only ${timeSinceLastLoad}ms since last load (need 2000ms)`);
+      return false;
+    }
+
+    console.log(`[ChatSession] ALLOWED - time since last load: ${timeSinceLastLoad}ms`);
+    return true;
+  },
+
+  markMessageLoad(): void {
+    const now = Date.now();
+    this.lastMessageLoad = now;
+    console.log(`[ChatSession] Marked message load at ${new Date(now).toISOString()}`);
+  },
+
+  canMarkAsRead(): boolean {
+    if (!this.isActive || this.markedAsRead) {
+      console.log(`[ChatSession] Cannot mark as read: active=${this.isActive}, alreadyMarked=${this.markedAsRead}`);
+      return false;
+    }
+    return true;
+  },
+
+  markAsReadDone(): void {
+    this.markedAsRead = true;
+    console.log(`[ChatSession] Marked as read for ${this.matchId}`);
+  },
+
+  endSession(): void {
+    const now = Date.now();
+    if (this.matchId) {
+      console.log(`[ChatSession] ENDING SESSION for ${this.matchId} at ${new Date(now).toISOString()}`);
+    } else {
+      console.log(`[ChatSession] ENDING SESSION (no active matchId) at ${new Date(now).toISOString()}`);
+    }
+    this.matchId = null;
+    this.isActive = false;
+    this.lastMessageLoad = 0;
+    this.markedAsRead = false;
+    console.log(`[ChatSession] Session ended - state reset`);
+  }
+};
 
 // Función para formatear la fecha según las especificaciones
 const formatDateSeparator = (date: Date): string => {
@@ -83,6 +168,9 @@ const isSameDay = (date1: Date, date2: Date): boolean => {
 };
 
 export default function ChatScreen() {
+  const componentInstanceId = useRef(++globalComponentCounter);
+  const mountTime = useRef(Date.now());
+
   const params = useLocalSearchParams<{
     matchId?: string | string[];
     name?: string | string[];
@@ -95,6 +183,15 @@ export default function ChatScreen() {
     if (!params.matchId) return undefined;
     return Array.isArray(params.matchId) ? params.matchId[0] : params.matchId;
   }, [params.matchId]);
+
+  // Log component mount/unmount for debugging
+  useEffect(() => {
+    const componentId = `ChatScreen-${componentInstanceId.current}`;
+    console.log(`[${componentId}] MOUNTED at ${new Date().toISOString()}, matchId: ${matchId}, uptime: ${Date.now() - mountTime.current}ms`);
+    return () => {
+      console.log(`[${componentId}] UNMOUNTED at ${new Date().toISOString()}, matchId: ${matchId}, lifetime: ${Date.now() - mountTime.current}ms`);
+    };
+  }, [matchId]);
 
   const otherUserName = useMemo(() => {
     if (!params.name) return undefined;
@@ -158,6 +255,10 @@ export default function ChatScreen() {
   const lastMessageIdRef = useRef<string | null>(null);
   const isUserAtBottom = useRef(true);
   const contentSizeChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasMarkedAsReadRef = useRef(false);
+  const isLoadingMessagesRef = useRef(false);
+  const lastLoadTimeRef = useRef<number>(0);
+  const loadMessagesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const matchMessages = useMemo(
     () => (matchId ? messages[matchId] || [] : []),
@@ -170,6 +271,8 @@ export default function ChatScreen() {
     lastMessageIdRef.current = null;
     isUserAtBottom.current = true;
     oldestMessageCursorRef.current = null;
+    hasMarkedAsReadRef.current = false;
+    isLoadingMessagesRef.current = false;
     setHasMoreMessages(true);
     setIsLoadingOlder(false);
   }, [matchId]);
@@ -250,10 +353,49 @@ export default function ChatScreen() {
     };
   }, []);
 
+  // Store refs to avoid recreating the function
+  const chatApiRef = useRef(chatApi);
+  const matchApiRef = useRef(matchApi);
+  const tokensRef = useRef(tokens?.accessToken);
+  const matchIdRef = useRef(matchId);
+
+  // Update refs when values change
+  useEffect(() => {
+    chatApiRef.current = chatApi;
+    matchApiRef.current = matchApi;
+    tokensRef.current = tokens?.accessToken;
+    matchIdRef.current = matchId;
+  }, [chatApi, matchApi, tokens?.accessToken, matchId]);
+
   const loadMessages = useCallback(async () => {
-    if (!tokens?.accessToken || !matchId) {
+    const currentMatchId = matchIdRef.current;
+    const currentToken = tokensRef.current;
+    const componentId = `ChatScreen-${componentInstanceId.current}`;
+    const callTime = Date.now();
+
+    console.log(`[${componentId}] loadMessages CALLED at ${new Date(callTime).toISOString()}, matchId: ${currentMatchId}, timeSinceMount: ${callTime - mountTime.current}ms`);
+
+    if (!currentToken || !currentMatchId) {
+      console.log(`[${componentId}] loadMessages SKIPPED - missing token or matchId`);
       return;
     }
+
+    // Global protection: prevent multiple instances from loading the same matchId
+    if (!activeChatSession.canLoadMessages()) {
+      console.log(`[ChatScreen] loadMessages blocked by session protection`);
+      return;
+    }
+
+    // Prevent concurrent calls (local protection)
+    if (isLoadingMessagesRef.current) {
+      console.log('[ChatScreen] Already loading (local ref), skipping');
+      return;
+    }
+
+    // Mark as loading globally and locally
+    activeChatSession.markMessageLoad();
+    isLoadingMessagesRef.current = true;
+    console.log(`[ChatScreen] Starting to load messages for matchId: ${currentMatchId}`);
 
     if (isInitialLoad.current) {
       setLoading(true);
@@ -261,7 +403,7 @@ export default function ChatScreen() {
 
     try {
       clearError();
-      const result = await chatApi.getMessages(matchId, 25, undefined, tokens.accessToken);
+      const result = await chatApiRef.current.getMessages(currentMatchId, 25, undefined, currentToken);
       if (!result.success) {
         const messageText = result.error.message || 'Could not load messages.';
         
@@ -310,11 +452,13 @@ export default function ChatScreen() {
       // En carga inicial: reemplazar todos los mensajes
       // En polling: preservar mensajes anteriores cargados y solo añadir los nuevos al final
       if (isInitialLoad.current) {
-        setMessages(matchId, orderedMessages);
+        setMessages(currentMatchId, orderedMessages);
       } else {
         // Preservar todos los mensajes actuales (incluyendo los anteriores cargados)
         // y solo añadir mensajes nuevos que no existen
-        const currentMessages = matchId ? messages[matchId] || [] : [];
+        // Usar getState() para leer el estado actual sin depender de messages en las dependencias
+        const currentState = useChatStore.getState();
+        const currentMessages = currentMatchId ? currentState.messages[currentMatchId] || [] : [];
         const currentIds = new Set(currentMessages.map((msg) => msg.id));
         
         // Filtrar solo mensajes nuevos que no están en la lista actual
@@ -322,7 +466,7 @@ export default function ChatScreen() {
         
         if (newMessages.length > 0) {
           // Añadir solo los mensajes nuevos al final, preservando todos los anteriores
-          addMessages(matchId, newMessages);
+          addMessages(currentMatchId, newMessages);
         }
         // Si no hay mensajes nuevos, no hacer nada para preservar los mensajes anteriores cargados
       }
@@ -330,7 +474,7 @@ export default function ChatScreen() {
       if (orderedMessages.length > 0) {
         const latestMessage = orderedMessages[orderedMessages.length - 1];
         const oldestMessage = orderedMessages[0];
-        updateMatch(matchId, { lastMessage: latestMessage, unreadCount: 0 });
+        updateMatch(currentMatchId, { lastMessage: latestMessage, unreadCount: 0 });
         
         // Actualizar referencias
         lastMessageIdRef.current = latestMessage.id;
@@ -347,16 +491,18 @@ export default function ChatScreen() {
           }, 100);
         }
       } else {
-        updateMatch(matchId, { lastMessage: undefined, unreadCount: 0 });
+        updateMatch(currentMatchId, { lastMessage: undefined, unreadCount: 0 });
         if (isInitialLoad.current) {
           setHasMoreMessages(false);
         }
       }
 
-      // Mark messages as read when opening the chat (only on initial load)
-      if (isInitialLoad.current && tokens?.accessToken) {
+      // Mark messages as read when opening the chat (only once on initial load)
+      if (isInitialLoad.current && currentToken && activeChatSession.canMarkAsRead()) {
+        activeChatSession.markAsReadDone();
+        hasMarkedAsReadRef.current = true;
         // Await to ensure it completes before user can navigate away
-        matchApi.markAsRead(matchId, tokens.accessToken).catch((error) => {
+        matchApiRef.current.markAsRead(currentMatchId, currentToken).catch((error) => {
           console.error('[ChatScreen] Failed to mark messages as read:', error);
           // Log error but don't block UI
         });
@@ -368,13 +514,15 @@ export default function ChatScreen() {
         Alert.alert('Error', 'Network error. Please try again.');
       }
     } finally {
+      isLoadingMessagesRef.current = false;
+      // Mark load as complete (no specific endLoad needed with new system)
       if (isInitialLoad.current) {
         setLoading(false);
         // El scroll se maneja en el useEffect y onContentSizeChange
         // No hacer scroll aquí para evitar conflictos
       }
     }
-  }, [chatApi, clearError, matchId, matchApi, setError, setLoading, setMessages, addMessages, messages, tokens?.accessToken, updateMatch]);
+  }, []);
 
   const loadOlderMessages = useCallback(async () => {
     if (!tokens?.accessToken || !matchId || isLoadingOlder || !oldestMessageCursorRef.current || !hasMoreMessages) {
@@ -432,26 +580,92 @@ export default function ChatScreen() {
   }, [chatApi, clearError, matchId, prependMessages, setError, tokens?.accessToken, isLoadingOlder, hasMoreMessages]);
 
   useEffect(() => {
+    const componentId = `ChatScreen-${componentInstanceId.current}`;
+    const effectTime = Date.now();
+
     if (!matchId) {
+      console.log(`[${componentId}] useEffect SKIPPED at ${new Date(effectTime).toISOString()} - no matchId`);
       return;
     }
 
-    loadMessages();
-    // Aumentar intervalo a 15 segundos para evitar rate limiting
-    // (100 requests/min = ~1 request cada 0.6 segundos, pero con 15s tenemos margen)
-    const interval = setInterval(loadMessages, 15000);
+    console.log(`[${componentId}] useEffect TRIGGERED at ${new Date(effectTime).toISOString()}, matchId: ${matchId}, timeSinceMount: ${effectTime - mountTime.current}ms`);
+
+    // Start or switch chat session
+    const sessionStarted = activeChatSession.startSession(matchId);
+    if (!sessionStarted) {
+      console.log(`[${componentId}] Session already active for ${matchId}, skipping setup`);
+      return;
+    }
+
+    // Clear any pending timeout from local ref
+    if (loadMessagesTimeoutRef.current) {
+      clearTimeout(loadMessagesTimeoutRef.current);
+      loadMessagesTimeoutRef.current = null;
+    }
+
+    // Reset flags when matchId changes
+    hasMarkedAsReadRef.current = false;
+    isLoadingMessagesRef.current = false;
+    isInitialLoad.current = true;
+    lastLoadTimeRef.current = 0;
+
+    // Load messages with a delay to prevent rapid-fire calls on mount
+    // Use a longer delay to ensure only one instance loads
+    const timeoutId = setTimeout(() => {
+      const componentId = `ChatScreen-${componentInstanceId.current}`;
+      const timeoutFireTime = Date.now();
+      console.log(`[${componentId}] Initial load TIMEOUT FIRED at ${new Date(timeoutFireTime).toISOString()}, matchId: ${matchId}, timeSinceMount: ${timeoutFireTime - mountTime.current}ms`);
+      console.log(`[${componentId}] Session state - isActive: ${activeChatSession.isActive}, matchId: ${activeChatSession.matchId}`);
+      if (activeChatSession.canLoadMessages()) {
+        console.log(`[${componentId}] Calling loadMessages from timeout`);
+        loadMessages();
+      } else {
+        console.log(`[${componentId}] Initial load blocked by session for matchId: ${matchId}`);
+      }
+    }, 1000); // Increased delay to 1 second
+
+    loadMessagesTimeoutRef.current = timeoutId;
+
+    // Poll for new messages while chat is active
+    // 30 seconds is a reasonable balance between responsiveness and API load
+    // This works well for both development and production
+    const pollInterval = 30000; // 30 seconds
+
+    const interval = setInterval(() => {
+      const componentId = `ChatScreen-${componentInstanceId.current}`;
+      const intervalTime = Date.now();
+      // Only poll if not currently loading and not in initial load
+      if (!isLoadingMessagesRef.current && !isInitialLoad.current && activeChatSession.canLoadMessages()) {
+        console.log(`[${componentId}] Polling INTERVAL TRIGGERED at ${new Date(intervalTime).toISOString()}, matchId: ${matchId}, timeSinceMount: ${intervalTime - mountTime.current}ms`);
+        loadMessages();
+      } else {
+        console.log(`[${componentId}] Polling skipped - loading: ${isLoadingMessagesRef.current}, initialLoad: ${isInitialLoad.current}, canLoad: ${activeChatSession.canLoadMessages()}`);
+      }
+    }, pollInterval);
     
     // Mark as read when component unmounts (user leaves chat)
     return () => {
-      clearInterval(interval);
-      // Mark messages as read when leaving the chat
-      if (tokens?.accessToken && matchId) {
-        matchApi.markAsRead(matchId, tokens.accessToken).catch((error) => {
-          console.error('[ChatScreen] Failed to mark messages as read on unmount:', error);
+      const componentId = `ChatScreen-${componentInstanceId.current}`;
+      const cleanupTime = Date.now();
+      console.log(`[${componentId}] CLEANUP at ${new Date(cleanupTime).toISOString()}, matchId: ${matchId}, lifetime: ${cleanupTime - mountTime.current}ms`);
+      // Clear local refs
+      if (loadMessagesTimeoutRef.current) {
+        clearTimeout(loadMessagesTimeoutRef.current);
+        loadMessagesTimeoutRef.current = null;
+      }
+      // End chat session on unmount
+      activeChatSession.endSession();
+      // Mark messages as read when leaving the chat (only if not already marked)
+      const currentToken = tokensRef.current;
+      const currentMatchId = matchIdRef.current;
+      if (currentToken && currentMatchId && !hasMarkedAsReadRef.current && activeChatSession.canMarkAsRead()) {
+        activeChatSession.markAsReadDone();
+        matchApiRef.current.markAsRead(currentMatchId, currentToken).catch((error) => {
+          console.error(`[${componentId}] Failed to mark messages as read on unmount:`, error);
         });
       }
     };
-  }, [loadMessages, matchId, matchApi, tokens?.accessToken]);
+  }, [matchId]); // Re-run when matchId changes to setup polling for new chat
 
   // Check if this match still exists (detect if blocked)
   useEffect(() => {

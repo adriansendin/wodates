@@ -273,10 +273,8 @@ export default function ProfileScreen() {
     }
   }, [profileApi, tokens?.accessToken]);
 
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
-
+  // Only load profile when screen comes into focus, not on mount
+  // This avoids duplicate calls
   useFocusEffect(
     useCallback(() => {
       loadProfile();

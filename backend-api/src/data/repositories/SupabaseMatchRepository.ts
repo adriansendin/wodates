@@ -284,7 +284,7 @@ export class SupabaseMatchRepository implements MatchRepository {
     }
   }
 
-  private async getMatchBetween(
+  async getMatchBetween(
     userId1: string,
     userId2: string
   ): Promise<Result<Match | null, DomainError>> {

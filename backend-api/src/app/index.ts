@@ -25,6 +25,7 @@ import { SupabaseBlockedUserRepository } from '../data/repositories/SupabaseBloc
 import { SupabaseQuestionBankRepository } from '../data/repositories/SupabaseQuestionBankRepository';
 import { LikeUser } from '../domain/use-cases/feed/LikeUser';
 import { PassUser } from '../domain/use-cases/feed/PassUser';
+import { ConfirmMatch } from '../domain/use-cases/feed/ConfirmMatch';
 import { SendMessage } from '../domain/use-cases/chat/SendMessage';
 import { GetMessages } from '../domain/use-cases/chat/GetMessages';
 import { BlockUser } from '../domain/use-cases/chat/BlockUser';
@@ -169,6 +170,7 @@ async function buildApp() {
   // Initialize use cases
   const likeUser = new LikeUser(likeRepository, matchRepository);
   const passUser = new PassUser(passRepository);
+  const confirmMatch = new ConfirmMatch(likeRepository, matchRepository);
   const sendMessage = new SendMessage(
     messageRepository,
     matchRepository,
@@ -219,6 +221,7 @@ async function buildApp() {
   // Decorate fastify with use cases
   fastify.decorate('likeUser', likeUser);
   fastify.decorate('passUser', passUser);
+  fastify.decorate('confirmMatch', confirmMatch);
   fastify.decorate('sendMessage', sendMessage);
   fastify.decorate('getMessages', getMessages);
   fastify.decorate('blockUser', blockUser);

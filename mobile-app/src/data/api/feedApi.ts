@@ -20,6 +20,7 @@ export interface LikeResponse {
   action: string;
   result: unknown;
   isMatch: boolean;
+  isPotentialMatch?: boolean;
 }
 
 export interface PassResponse {

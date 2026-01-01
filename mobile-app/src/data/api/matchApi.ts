@@ -104,4 +104,38 @@ export class MatchApi {
       data: undefined,
     };
   }
+
+  async confirmMatch(
+    targetUserId: string,
+    token: string
+  ): Promise<Result<Match, DomainError>> {
+    const response = await this.apiClient.post<{ match: unknown }>(
+      '/matches/confirm',
+      { targetUserId },
+      token
+    );
+
+    if (!response.success) {
+      return response;
+    }
+
+    // Backend only returns a basic Match (id, userId1, userId2, createdAt)
+    // We'll construct the full MatchWithUser in the component
+    const parseResult = MatchSchema.safeParse(response.data.match);
+
+    if (!parseResult.success) {
+      const errorDetails = parseResult.error.errors
+        .map((err) => `${err.path.join('.')}: ${err.message}`)
+        .join('; ');
+      return {
+        success: false,
+        error: new ValidationError(`Invalid match payload: ${errorDetails}`),
+      };
+    }
+
+    return {
+      success: true,
+      data: parseResult.data,
+    };
+  }
 }

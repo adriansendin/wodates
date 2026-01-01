@@ -5,12 +5,16 @@ import { MatchOverviewService } from '../services/match-overview-service';
 declare module 'fastify' {
   interface FastifyInstance {
     matchOverviewService: MatchOverviewService;
+    confirmMatch: any;
     authMiddleware: any;
   }
 }
 
 export async function matchRoutes(fastify: FastifyInstance) {
-  const controller = new MatchesController(fastify.matchOverviewService);
+  const controller = new MatchesController(
+    fastify.matchOverviewService,
+    fastify.confirmMatch
+  );
 
   fastify.get(
     '/matches',
@@ -122,5 +126,43 @@ export async function matchRoutes(fastify: FastifyInstance) {
       preHandler: fastify.authMiddleware,
     },
     controller.markAsRead.bind(controller)
+  );
+
+  fastify.post(
+    '/matches/confirm',
+    {
+      schema: {
+        description: 'Confirm a potential match (create match from mutual likes)',
+        tags: ['matches'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['targetUserId'],
+          properties: {
+            targetUserId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              match: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  userId1: { type: 'string', format: 'uuid' },
+                  userId2: { type: 'string', format: 'uuid' },
+                  createdAt: { type: 'string', format: 'date-time' },
+                },
+                required: ['id', 'userId1', 'userId2', 'createdAt'],
+              },
+            },
+            required: ['match'],
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    controller.confirm.bind(controller)
   );
 }

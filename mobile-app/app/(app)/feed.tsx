@@ -19,6 +19,7 @@ import { MatchSchema } from '../../src/domain/entities/Match';
 import { showAlert } from '../../src/utils/showAlert';
 import { MatchApi } from '../../src/data/api/matchApi';
 import { getApiUrl } from '../../src/utils/apiConfig';
+import { MatchConfirmationModal } from '../../src/components/MatchConfirmationModal';
 
 const API_URL = getApiUrl();
 const FALLBACK_PHOTO = require('../../assets/placeholder.png');
@@ -64,6 +65,7 @@ const resolvePhotoUrl = (photoUrl?: string | null) => {
 };
 
 export default function FeedScreen() {
+  console.log('[FeedScreen] Component mounted');
   const router = useRouter();
   const {
     users,
@@ -71,6 +73,7 @@ export default function FeedScreen() {
     isLoading,
     setUsers,
     addUsers,
+    removeUser,
     nextUser,
     setLoading,
     setError,
@@ -78,6 +81,7 @@ export default function FeedScreen() {
     setHasMore,
   } = useFeedStore();
   const { tokens, user } = useAuthStore();
+  console.log('[FeedScreen] Auth state - user:', !!user, 'tokens:', !!tokens, 'accessToken:', !!tokens?.accessToken);
   const addMatch = useMatchesStore((state) => state.addMatch);
   const activeChatsCount = useMatchesStore((state) => state.activeChatsCount);
   const setActiveChatsCount = useMatchesStore((state) => state.setActiveChatsCount);
@@ -85,6 +89,13 @@ export default function FeedScreen() {
   const [isPassing, setIsPassing] = useState(false);
   const [affinitySentences, setAffinitySentences] = useState<string[]>([]);
   const [isLoadingSentences, setIsLoadingSentences] = useState(false);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [potentialMatch, setPotentialMatch] = useState<{
+    userId: string;
+    name: string;
+    photoUrl?: string | null;
+  } | null>(null);
+  const [isConfirmingMatch, setIsConfirmingMatch] = useState(false);
 
   // Memoize API clients to prevent useEffect loops
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -93,8 +104,10 @@ export default function FeedScreen() {
   
   // Track current candidate ID to prevent stale updates
   const currentCandidateIdRef = useRef<string | null>(null);
+  const hasLoadedMatchesCount = useRef(false);
 
   // Load matches to get activeChatsCount
+  // Only load once when component mounts or when tokens change (not on every user.id change)
   useEffect(() => {
     const loadMatchesForCount = async () => {
       // Guard: only call if we have valid session
@@ -102,10 +115,16 @@ export default function FeedScreen() {
         return;
       }
 
+      // Only load once per session to avoid unnecessary calls
+      if (hasLoadedMatchesCount.current) {
+        return;
+      }
+
       try {
         const result = await matchApi.getMatches(tokens.accessToken);
         if (result.success) {
           setActiveChatsCount(result.data.activeChatsCount);
+          hasLoadedMatchesCount.current = true;
         }
       } catch (error) {
         // Reduce log spam: only log if it's not a rate limit error
@@ -116,9 +135,63 @@ export default function FeedScreen() {
     };
 
     loadMatchesForCount();
-  }, [tokens?.accessToken, user?.id, matchApi, setActiveChatsCount]);
+    // Reset flag when tokens change (new session)
+    return () => {
+      if (!tokens?.accessToken) {
+        hasLoadedMatchesCount.current = false;
+      }
+    };
+  }, [tokens?.accessToken, matchApi, setActiveChatsCount]);
+
+  const loadFeed = useCallback(async (offset: number = 0, append: boolean = false) => {
+    console.log('[FeedScreen] loadFeed called with tokens:', !!tokens, 'accessToken:', !!tokens?.accessToken);
+    if (!tokens?.accessToken) {
+      console.log('[FeedScreen] No access token available, skipping loadFeed');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Load 50 users initially, then 20 more when loading more
+      const limit = offset === 0 ? 50 : 20;
+      const result = await feedApi.getFeed(limit, offset, tokens.accessToken);
+      if (result.success) {
+        if (append) {
+          // Filter out users that are already in the feed to avoid duplicates
+          const existingUserIds = new Set(users.map((u) => u.id));
+          const newUsers = result.data.users.filter((u) => !existingUserIds.has(u.id));
+          if (newUsers.length > 0) {
+            addUsers(newUsers);
+          }
+          // Update hasMore based on whether we got new users or not
+          setHasMore(result.data.pagination.hasMore && newUsers.length > 0);
+        } else {
+          setUsers(result.data.users);
+          setHasMore(result.data.pagination.hasMore);
+        }
+      } else {
+        setError(result.error.message);
+        showAlert('Error', result.error.message);
+      }
+    } catch (error) {
+      setError('Network error');
+      showAlert('Error', 'Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [tokens?.accessToken, feedApi, addUsers, setUsers, setHasMore, setLoading, setError]);
+
+  // Load more users when approaching the end
+  const loadMoreIfNeeded = useCallback(async () => {
+    // Load more when we're within 5 users of the end
+    const remainingUsers = users.length - currentIndex;
+    if (remainingUsers <= 5 && hasMore && !isLoading) {
+      await loadFeed(users.length, true);
+    }
+  }, [users.length, currentIndex, hasMore, isLoading, loadFeed]);
 
   useEffect(() => {
+    console.log('[FeedScreen] useEffect triggered - calling loadFeed');
     loadFeed(0, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -205,44 +278,6 @@ export default function FeedScreen() {
     };
   }, [currentIndex, users, tokens?.accessToken, user?.id, feedApi]);
 
-  const loadFeed = async (offset: number = 0, append: boolean = false) => {
-    if (!tokens?.accessToken) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Load 50 users initially, then 20 more when loading more
-      const limit = offset === 0 ? 50 : 20;
-      const result = await feedApi.getFeed(limit, offset, tokens.accessToken);
-      if (result.success) {
-        if (append) {
-          addUsers(result.data.users);
-        } else {
-          setUsers(result.data.users);
-        }
-        setHasMore(result.data.pagination.hasMore);
-      } else {
-        setError(result.error.message);
-        showAlert('Error', result.error.message);
-      }
-    } catch (error) {
-      setError('Network error');
-      showAlert('Error', 'Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load more users when approaching the end
-  const loadMoreIfNeeded = useCallback(async () => {
-    // Load more when we're within 5 users of the end
-    const remainingUsers = users.length - currentIndex;
-    if (remainingUsers <= 5 && hasMore && !isLoading) {
-      await loadFeed(users.length, true);
-    }
-  }, [users.length, currentIndex, hasMore, isLoading, tokens?.accessToken]);
-
   const handleLike = async () => {
     const currentUser = users[currentIndex];
     if (!currentUser) {
@@ -260,10 +295,25 @@ export default function FeedScreen() {
     try {
       const result = await feedApi.likeUser(currentUser.id, tokens.accessToken);
       if (!result.success) {
+        // Handle "User already liked" error silently - just skip to next user
+        // ConflictError has code 'CONFLICT' and statusCode 409
+        const isConflictError = 
+          (result.error.code === 'CONFLICT' || result.error.statusCode === 409) &&
+          result.error.message.toLowerCase().includes('already liked');
+        
+        if (isConflictError) {
+          console.log(`[FeedScreen] User ${currentUser.id} already liked, removing from feed and skipping`);
+          removeUser(currentUser.id);
+          nextUser();
+          loadMoreIfNeeded();
+          return;
+        }
+        // For other errors, show alert
         showAlert('Error', result.error.message);
         return;
       }
 
+      // Check if it's an already created match (legacy behavior, should not happen with new flow)
       if (result.data.isMatch) {
         const validation = MatchSchema.safeParse(result.data.result);
         if (validation.success) {
@@ -298,7 +348,22 @@ export default function FeedScreen() {
         } else {
           console.warn('Invalid match payload received', validation.error);
         }
+      } 
+      // Check if it's a potential match (mutual like but not confirmed)
+      else if (result.data.isPotentialMatch) {
+        // Show confirmation modal instead of creating match immediately
+        setPotentialMatch({
+          userId: currentUser.id,
+          name: currentUser.name,
+          photoUrl: currentUser.photoUrl ?? null,
+        });
+        setShowMatchModal(true);
+        // Don't call nextUser() yet - wait for user's decision
+        return;
       }
+      
+      // Like was successful - remove user from feed and move to next
+      removeUser(currentUser.id);
       nextUser();
       // Load more if needed after moving to next user
       loadMoreIfNeeded();
@@ -307,6 +372,87 @@ export default function FeedScreen() {
     } finally {
       setIsLiking(false);
     }
+  };
+
+  const handleConfirmMatch = async () => {
+    if (!potentialMatch || !tokens?.accessToken) {
+      return;
+    }
+
+    setIsConfirmingMatch(true);
+    try {
+      const result = await matchApi.confirmMatch(
+        potentialMatch.userId,
+        tokens.accessToken
+      );
+
+      if (!result.success) {
+        showAlert('Error', result.error.message);
+        setShowMatchModal(false);
+        setPotentialMatch(null);
+        nextUser();
+        loadMoreIfNeeded();
+        return;
+      }
+
+      // Add match to store
+      // Backend returns a basic Match, we need to construct MatchWithUser
+      const match = result.data;
+      addMatch({
+        ...match,
+        otherUser: {
+          id: potentialMatch.userId,
+          name: potentialMatch.name,
+          photoUrl: potentialMatch.photoUrl ?? undefined,
+        },
+        lastMessage: undefined, // New match, no messages yet
+        unreadCount: 0,
+      });
+
+      // Update active chats count (will block feed automatically)
+      const matchesResult = await matchApi.getMatches(tokens.accessToken);
+      if (matchesResult.success) {
+        setActiveChatsCount(matchesResult.data.activeChatsCount);
+      }
+
+      // Close modal and navigate to chat
+      setShowMatchModal(false);
+      setPotentialMatch(null);
+
+      // Navigate to matches tab first, then to the chat
+      router.push('/(app)/matches');
+      
+      // Small delay to ensure navigation completes
+      setTimeout(() => {
+        router.push({
+          pathname: '/chat/[matchId]',
+          params: {
+            matchId: match.id,
+            name: potentialMatch.name,
+            photoUrl: potentialMatch.photoUrl ?? '',
+            otherUserId: potentialMatch.userId,
+            isBot: 'false',
+          },
+        });
+      }, 100);
+    } catch (error) {
+      showAlert('Error', 'Network error. Please try again.');
+      setShowMatchModal(false);
+      setPotentialMatch(null);
+      nextUser();
+      loadMoreIfNeeded();
+    } finally {
+      setIsConfirmingMatch(false);
+    }
+  };
+
+  const handleCancelMatch = () => {
+    // User cancelled - just close modal and continue with feed
+    // Don't remove user from feed since they didn't confirm the match
+    setShowMatchModal(false);
+    setPotentialMatch(null);
+    nextUser();
+    loadMoreIfNeeded();
   };
 
   const handlePass = async () => {
@@ -326,10 +472,26 @@ export default function FeedScreen() {
     try {
       const result = await feedApi.passUser(currentUser.id, tokens.accessToken);
       if (!result.success) {
+        // Handle "User already passed" error silently - just skip to next user
+        // ConflictError has code 'CONFLICT' and statusCode 409
+        const isConflictError = 
+          (result.error.code === 'CONFLICT' || result.error.statusCode === 409) &&
+          result.error.message.toLowerCase().includes('already passed');
+        
+        if (isConflictError) {
+          console.log(`[FeedScreen] User ${currentUser.id} already passed, removing from feed and skipping`);
+          removeUser(currentUser.id);
+          nextUser();
+          loadMoreIfNeeded();
+          return;
+        }
+        // For other errors, show alert
         showAlert('Error', result.error.message);
         return;
       }
 
+      // Pass was successful - remove user from feed and move to next
+      removeUser(currentUser.id);
       nextUser();
       // Load more if needed after moving to next user
       loadMoreIfNeeded();
@@ -462,6 +624,16 @@ export default function FeedScreen() {
           <Ionicons name="heart" size={32} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      {/* Match Confirmation Modal */}
+      <MatchConfirmationModal
+        visible={showMatchModal}
+        otherUserName={potentialMatch?.name ?? ''}
+        otherUserPhotoUrl={potentialMatch?.photoUrl}
+        onConfirm={handleConfirmMatch}
+        onCancel={handleCancelMatch}
+        isConfirming={isConfirmingMatch}
+      />
     </View>
   );
 }

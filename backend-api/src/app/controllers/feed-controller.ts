@@ -79,10 +79,17 @@ export class FeedController {
       const result = await this.likeUserUseCase.execute(userId, targetUserId);
 
       if (result.success) {
+        const data = result.data;
+        // Check if it's a Match entity (already created match)
+        const isMatch = 'userId1' in data;
+        // Check if it's a potential match (like mutuo pero sin confirmar)
+        const isPotentialMatch = 'isPotentialMatch' in data && data.isPotentialMatch === true;
+        
         return reply.send({
           action: 'like',
-          result: result.data,
-          isMatch: 'userId1' in result.data, // Check if it's a Match entity
+          result: data,
+          isMatch,
+          isPotentialMatch,
         });
       } else {
         return this.handleError(reply, result.error);
