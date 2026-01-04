@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
-import { X, MessageCircle } from 'lucide-react-native';
+import { X, Check } from 'lucide-react-native';
 
 interface DiscoverActionButtonsProps {
   disabled: boolean;
@@ -38,7 +38,7 @@ const DiscoverActionButtons: React.FC<DiscoverActionButtonsProps> = ({
           accessibilityLabel="Quiero conocerle"
           accessibilityHint="Muestra interés en esta persona"
         >
-          <MessageCircle size={24} color="#10b981" />
+          <Check size={24} color="#10b981" />
         </TouchableOpacity>
       </View>
     </View>

@@ -19,7 +19,7 @@ import { showAlert } from '../../src/utils/showAlert';
 import { MatchApi } from '../../src/data/api/matchApi';
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { MatchConfirmationModal } from '../../src/components/MatchConfirmationModal';
-import { X, MessageCircle } from 'lucide-react-native';
+import { X, Check } from 'lucide-react-native';
 // import DiscoverActionButtons from '../../src/components/DiscoverActionButtons';
 
 // Componente temporal inline mientras se resuelve el problema del linter
@@ -95,7 +95,7 @@ const DiscoverActionButtons = ({ disabled, onReject, onAccept, resetKey }: {
           accessibilityHint="Muestra interés en esta persona"
           activeOpacity={0.8}
         >
-          <MessageCircle size={24} color={disabled ? 'rgba(16, 185, 129, 0.45)' : '#10b981'} />
+          <Check size={24} color={disabled ? 'rgba(16, 185, 129, 0.45)' : '#10b981'} />
         </TouchableOpacity>
       </View>
     </View>
