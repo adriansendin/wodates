@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useFeedStore } from '../../src/domain/stores/feedStore';
@@ -20,6 +19,88 @@ import { showAlert } from '../../src/utils/showAlert';
 import { MatchApi } from '../../src/data/api/matchApi';
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { MatchConfirmationModal } from '../../src/components/MatchConfirmationModal';
+import { X, MessageCircle } from 'lucide-react-native';
+// import DiscoverActionButtons from '../../src/components/DiscoverActionButtons';
+
+// Componente temporal inline mientras se resuelve el problema del linter
+const DiscoverActionButtons = ({ disabled, onReject, onAccept, resetKey }: {
+  disabled: boolean;
+  onReject: () => void;
+  onAccept: () => void;
+  resetKey?: string;
+}) => {
+  return (
+    <View style={{
+      position: 'absolute',
+      bottom: 40,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+    }}>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 40,
+      }}>
+        <TouchableOpacity
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: 30,
+            backgroundColor: '#ffffff',
+            borderWidth: 2,
+            borderColor: '#ef4444',
+            justifyContent: 'center',
+            alignItems: 'center',
+            opacity: disabled ? 0.45 : 1,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 4,
+          }}
+          onPress={onReject}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel="No es para mí"
+          accessibilityHint="Descarta este perfil sugerido"
+          activeOpacity={0.8}
+        >
+          <X size={24} color={disabled ? 'rgba(239, 68, 68, 0.45)' : '#ef4444'} />
+        </TouchableOpacity>
+
+        <View style={{ width: 16 }} />
+
+        <TouchableOpacity
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: 30,
+            backgroundColor: '#ffffff',
+            borderWidth: 2,
+            borderColor: '#10b981',
+            justifyContent: 'center',
+            alignItems: 'center',
+            opacity: disabled ? 0.45 : 1,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 4,
+          }}
+          onPress={onAccept}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel="Quiero conocerle"
+          accessibilityHint="Muestra interés en esta persona"
+          activeOpacity={0.8}
+        >
+          <MessageCircle size={24} color={disabled ? 'rgba(16, 185, 129, 0.45)' : '#10b981'} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
 
 const API_URL = getApiUrl();
 const FALLBACK_PHOTO = require('../../assets/placeholder.png');
@@ -98,6 +179,7 @@ export default function FeedScreen() {
   } | null>(null);
   const [isConfirmingMatch, setIsConfirmingMatch] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isDislikeInitiallyDisabled, setIsDislikeInitiallyDisabled] = useState(true);
 
   // Memoize API clients to prevent useEffect loops
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -301,6 +383,30 @@ export default function FeedScreen() {
 
     loadAffinitySentencesForCurrentUser();
   }, [currentIndex, users, tokens?.accessToken, user?.id, loadAffinitySentencesForCurrentUser]);
+
+  // Enable dislike button after 1.5 seconds when user changes
+  useEffect(() => {
+    const currentUser = users[currentIndex];
+
+    // Only enable timer if we have a valid user
+    if (!currentUser?.id) {
+      setIsDislikeInitiallyDisabled(true);
+      return;
+    }
+
+    // Start with button disabled
+    setIsDislikeInitiallyDisabled(true);
+
+    // Enable after 1.5 seconds
+    const timer = setTimeout(() => {
+      setIsDislikeInitiallyDisabled(false);
+    }, 1500);
+
+    // Cleanup timer if user changes before timer completes
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [currentIndex, users]);
 
   // Cleanup timeouts and abort controllers on unmount
   useEffect(() => {
@@ -698,29 +804,12 @@ export default function FeedScreen() {
       </View>
 
       {/* Botones de acción */}
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.passButton]}
-          onPress={handlePass}
-          disabled={isPassing}
-          accessibilityRole="button"
-          accessibilityLabel="Ignorar perfil"
-          accessibilityHint="Descarta este perfil sugerido"
-        >
-          <Ionicons name="close" size={32} color="#fff" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.likeButton]}
-          onPress={handleLike}
-          disabled={isLiking}
-          accessibilityRole="button"
-          accessibilityLabel="Dar like al perfil"
-          accessibilityHint="Indica que te interesa esta persona"
-        >
-          <Ionicons name="heart" size={32} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <DiscoverActionButtons
+        disabled={isDislikeInitiallyDisabled}
+        onReject={handlePass}
+        onAccept={handleLike}
+        resetKey={currentUser?.id}
+      />
 
       {/* Match Confirmation Modal */}
       <MatchConfirmationModal
@@ -920,39 +1009,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     fontWeight: '500',
-  },
-  // Botones de acción
-  actions: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    gap: 60,
-  },
-  
-  actionButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  
-  passButton: {
-    backgroundColor: '#ff4757',
-  },
-  
-  likeButton: {
-    backgroundColor: '#2ed573',
   },
   welcomeContainer: {
     paddingHorizontal: 20,

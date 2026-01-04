@@ -80,7 +80,7 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
                   disabled={isConfirming}
                 >
                   <Text style={styles.cancelButtonText}>
-                    Ahora no / Ha sido un error
+                    Ahora no, ha sido un error
                   </Text>
                 </TouchableOpacity>
 
