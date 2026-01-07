@@ -91,37 +91,49 @@ export class SendMessage {
         if (this.logger) {
           this.logger.info(
             { matchId, senderId, content },
-            '3. Conversación con Doc Love detectada - Iniciando generación de respuesta'
+            '3. Conversación con Doc Love detectada - Iniciando generación de respuesta (asíncrona)'
           );
         }
 
-        const docLoveReplyResult =
-          await this.docLoveChatService.generateAndSaveReply(
-            matchId,
-            senderId,
-            savedMessage
-          );
-
-        // Log error but don't fail the original message send
-        if (!docLoveReplyResult.success) {
-          if (this.logger) {
-            this.logger.error(
-              {
-                matchId,
-                senderId,
-                error: docLoveReplyResult.error,
-              },
-              'Failed to generate Doc Love reply'
-            );
-          }
-        } else {
-          if (this.logger) {
-            this.logger.info(
-              { matchId, senderId },
-              'Doc Love reply generated and saved successfully'
-            );
-          }
-        }
+        // Generate Doc Love reply asynchronously (fire-and-forget)
+        // This allows the user's message to be sent immediately without waiting
+        // for the AI response. The frontend will receive Doc Love's reply via polling.
+        this.docLoveChatService
+          .generateAndSaveReply(matchId, senderId, savedMessage)
+          .then((docLoveReplyResult) => {
+            if (!docLoveReplyResult.success) {
+              if (this.logger) {
+                this.logger.error(
+                  {
+                    matchId,
+                    senderId,
+                    error: docLoveReplyResult.error,
+                  },
+                  'Failed to generate Doc Love reply (async)'
+                );
+              }
+            } else {
+              if (this.logger) {
+                this.logger.info(
+                  { matchId, senderId, messageId: docLoveReplyResult.data.id },
+                  'Doc Love reply generated and saved successfully (async)'
+                );
+              }
+            }
+          })
+          .catch((error) => {
+            // Catch any unexpected errors to prevent unhandled promise rejection
+            if (this.logger) {
+              this.logger.error(
+                {
+                  matchId,
+                  senderId,
+                  error: error instanceof Error ? error.message : String(error),
+                },
+                'Unexpected error generating Doc Love reply (async)'
+              );
+            }
+          });
         // Note: We don't return the AI message here, as the frontend
         // will receive it via polling/subscription
       } else {
