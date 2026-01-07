@@ -149,15 +149,37 @@ export class SupabaseUserRepository implements UserRepository {
     city?: string | null;
     show_bio_in_feed?: boolean | null;
   } {
-    return {
-      birthDate: user.birthDate ?? null,
-      gender: user.gender ?? null,
-      looking_for: null, // Not in User entity, set to null instead of undefined
-      min_age: null, // Not in User entity, set to null instead of undefined
-      max_age: null, // Not in User entity, set to null instead of undefined
-      bio: user.bio ?? null,
-      city: user.location?.city ?? null,
-      show_bio_in_feed: null, // Not in User entity, set to null instead of undefined
-    };
+    // Only include fields that are actually present in the UpdateUser object
+    // This prevents setting fields to null when they're not being updated
+    const result: {
+      birthDate?: string | null;
+      gender?: 'male' | 'female' | 'non_binary' | null;
+      looking_for?: 'male' | 'female' | 'both' | null;
+      min_age?: number | null;
+      max_age?: number | null;
+      bio?: string | null;
+      city?: string | null;
+      show_bio_in_feed?: boolean | null;
+    } = {};
+
+    // Only add fields that are explicitly present in the UpdateUser object
+    if ('birthDate' in user) {
+      result.birthDate = user.birthDate ?? null;
+    }
+    if ('gender' in user) {
+      result.gender = user.gender ?? null;
+    }
+    if ('bio' in user) {
+      result.bio = user.bio ?? null;
+    }
+    if ('location' in user) {
+      result.city = user.location?.city ?? null;
+    }
+
+    // Note: looking_for, min_age, max_age, and show_bio_in_feed are not in the User entity
+    // so they cannot be updated through this method. They should be updated through
+    // updateProfile directly using UpdateUserProfileInput.
+
+    return result;
   }
 }

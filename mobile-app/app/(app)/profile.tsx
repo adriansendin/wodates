@@ -1170,55 +1170,6 @@ export default function ProfileScreen() {
             )}
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Biografia</Text>
-            <TextInput
-              style={[
-                styles.input,
-                styles.multiline,
-                styles.inputDisabled,
-                formErrors.bio ? styles.inputError : null,
-              ]}
-              placeholder="Tu perfil crecerá a medida que conectes con otras personas."
-              value={form.bio}
-              onChangeText={handleChange('bio')}
-              multiline
-              numberOfLines={4}
-              editable={false}
-              maxLength={300}
-            />
-          </View>
-
-          <View style={styles.field}>
-            <View style={styles.toggleContainer}>
-              <Text style={styles.toggleLabel}>
-                Mostrar mi descripción a otras personas
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.toggle,
-                  form.show_bio_in_feed
-                    ? styles.toggleActive
-                    : styles.toggleInactive,
-                ]}
-                onPress={handleShowInFeedToggle}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.toggleThumb,
-                    form.show_bio_in_feed
-                      ? styles.toggleThumbActive
-                      : styles.toggleThumbInactive,
-                  ]}
-                />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.toggleHelperText}>
-              Si lo desactivas, tu bio no será visible para otros usuarios.
-            </Text>
-          </View>
-
           {/* Plan familiar */}
           <Text style={styles.sectionTitle}>Plan familiar</Text>
 
@@ -1323,6 +1274,58 @@ export default function ProfileScreen() {
                 {getCaresAboutPartnerSmokingLabel(form.cares_about_partner_smoking)}
               </Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Biografía */}
+          <Text style={styles.sectionTitle}>Biografía</Text>
+
+          <View style={styles.field}>
+            <Text style={styles.helperText}>Generada por IA a partir de tus conversaciones. Puede contener imprecisiones</Text>
+            <TextInput
+              style={[
+                styles.input,
+                styles.multiline,
+                styles.inputDisabled,
+                formErrors.bio ? styles.inputError : null,
+              ]}
+              placeholder="Tu perfil crecerá a medida que conectes con otras personas."
+              value={form.bio}
+              onChangeText={handleChange('bio')}
+              multiline
+              numberOfLines={4}
+              editable={false}
+              maxLength={280}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <View style={styles.toggleContainer}>
+              <Text style={styles.toggleLabel}>
+                Mostrar mi descripción a otras personas
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.toggle,
+                  form.show_bio_in_feed
+                    ? styles.toggleActive
+                    : styles.toggleInactive,
+                ]}
+                onPress={handleShowInFeedToggle}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.toggleThumb,
+                    form.show_bio_in_feed
+                      ? styles.toggleThumbActive
+                      : styles.toggleThumbInactive,
+                  ]}
+                />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.toggleHelperText}>
+              Si lo desactivas, tu bio no será visible para otros usuarios y no podrás ver la bio de los demás.
+            </Text>
           </View>
 
           <Text style={styles.autoSaveMessage}>

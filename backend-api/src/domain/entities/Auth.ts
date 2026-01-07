@@ -12,10 +12,10 @@ export const RegisterSchema = z.object({
   password: z.string().min(6),
   name: z.string().min(1).max(100),
   birthDate: z.string().datetime(),
-  gender: z.enum(GENDER_VALUES).optional(),
-  location: z.string().optional(),
+  gender: z.enum(GENDER_VALUES), // REQUERIDO - no puede ser opcional
+  location: z.string().min(1), // REQUERIDO - no puede ser opcional ni vacío
   country: z.string().optional(),
-  lookingFor: z.enum(LOOKING_FOR_VALUES).optional(),
+  lookingFor: z.enum(LOOKING_FOR_VALUES), // REQUERIDO - no puede ser opcional
 });
 
 export const RefreshTokenSchema = z.object({

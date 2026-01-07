@@ -181,11 +181,13 @@ export class AuthController {
     });
   }
 
-  private buildResponseUser(user: { id: string; email: string; name: string }) {
+  private buildResponseUser(user: { id: string; email: string; name: string; gender?: string; birthDate?: string }) {
     return {
       id: user.id,
       email: user.email,
       name: user.name,
+      gender: user.gender,
+      birthDate: user.birthDate,
     };
   }
 }

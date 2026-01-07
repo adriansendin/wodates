@@ -4,6 +4,8 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
+  gender?: string;
+  birthDate?: string;
 };
 
 export interface AuthService {

@@ -107,23 +107,131 @@ export class SupabaseAuthService implements AuthService {
     registerRequest: RegisterRequest
   ): Promise<void> {
     try {
-      // Create profile in public.users without name and email (those are in auth.users)
-      const { error } = await this.adminClient.from('users').insert({
-        id: userId,
-        // email and name are no longer stored in public.users
-        birthDate: registerRequest.birthDate,
-        gender: registerRequest.gender || null,
-        city: registerRequest.location || null,
-        country: registerRequest.country || 'Spain', // Default to Spain
-        looking_for: registerRequest.lookingFor || null,
+      // VALIDACIÓN ESTRICTA: Verificar que gender y lookingFor sean valores válidos (REQUERIDOS)
+      // Validar que gender sea un string válido y no esté vacío
+      if (!registerRequest.gender || typeof registerRequest.gender !== 'string' || registerRequest.gender.trim() === '') {
+        console.error('[SupabaseAuthService] Invalid gender:', registerRequest.gender);
+        throw new InternalError('Gender is required and must be a valid non-empty string');
+      }
+
+      // Validar que lookingFor sea un string válido y no esté vacío
+      if (!registerRequest.lookingFor || typeof registerRequest.lookingFor !== 'string' || registerRequest.lookingFor.trim() === '') {
+        console.error('[SupabaseAuthService] Invalid lookingFor:', registerRequest.lookingFor);
+        throw new InternalError('LookingFor is required and must be a valid non-empty string');
+      }
+
+      // Validar que location sea un string válido y no esté vacío
+      if (!registerRequest.location || typeof registerRequest.location !== 'string' || registerRequest.location.trim() === '') {
+        console.error('[SupabaseAuthService] Invalid location:', registerRequest.location);
+        throw new InternalError('Location is required and must be a valid non-empty string');
+      }
+
+      // Validar formato de birthDate
+      if (!registerRequest.birthDate || typeof registerRequest.birthDate !== 'string') {
+        throw new InternalError('birthDate is required and must be a valid ISO datetime string');
+      }
+      
+      // Validar que birthDate sea una fecha válida
+      const birthDateObj = new Date(registerRequest.birthDate);
+      if (isNaN(birthDateObj.getTime())) {
+        throw new InternalError('birthDate must be a valid ISO datetime string');
+      }
+
+      // Preparar valores validados (asegurar que son strings válidos)
+      const validatedGender = registerRequest.gender.trim();
+      const validatedLookingFor = registerRequest.lookingFor.trim();
+      const validatedCity = registerRequest.location.trim();
+      const validatedBirthDate = registerRequest.birthDate;
+
+      // Log para debugging
+      console.log('[SupabaseAuthService] Creating user profile with validated data:', {
+        userId,
+        birthDate: validatedBirthDate,
+        gender: validatedGender,
+        city: validatedCity,
+        looking_for: validatedLookingFor,
       });
+
+      // Create profile in public.users without name and email (those are in auth.users)
+      // Explicitly set show_bio_in_feed to true (boolean, not null)
+      // gender, looking_for, city y birthDate son REQUERIDOS - usar valores validados
+      const { data, error } = await this.adminClient
+        .from('users')
+        .insert({
+          id: userId,
+          // email and name are no longer stored in public.users
+          birthDate: validatedBirthDate, // REQUERIDO - ya validado arriba (ISO datetime string)
+          gender: validatedGender, // REQUERIDO - ya validado arriba (string no vacío)
+          city: validatedCity, // REQUERIDO - ya validado arriba (string no vacío)
+          country: registerRequest.country || 'Spain', // Default to Spain
+          looking_for: validatedLookingFor, // REQUERIDO - ya validado arriba (string no vacío)
+          show_bio_in_feed: true, // New users should show bio in feed by default
+        })
+        .select('id, birthDate, gender, city, looking_for, show_bio_in_feed')
+        .single();
 
       if (error) {
         console.error(
           '[SupabaseAuthService] Failed to create user profile',
-          error
+          {
+            error: error.message,
+            details: error.details,
+            hint: error.hint,
+            userId,
+            attemptedData: {
+              birthDate: validatedBirthDate,
+              gender: validatedGender,
+              city: validatedCity,
+              looking_for: validatedLookingFor,
+            }
+          }
         );
         throw new InternalError('Failed to create user profile', error);
+      }
+
+      // Verificar que los datos se guardaron correctamente
+      if (data) {
+        console.log('[SupabaseAuthService] User profile created successfully:', {
+          userId,
+          savedData: {
+            birthDate: data.birthDate,
+            gender: data.gender,
+            city: data.city,
+            looking_for: data.looking_for,
+          }
+        });
+
+        // Verificar que los campos requeridos no sean NULL
+        if (!data.birthDate || !data.gender || !data.city || !data.looking_for) {
+          console.error('[SupabaseAuthService] WARNING: Some required fields are NULL after insert:', {
+            userId,
+            birthDate: data.birthDate,
+            gender: data.gender,
+            city: data.city,
+            looking_for: data.looking_for,
+          });
+        }
+      }
+
+      // Verify that show_bio_in_feed was set correctly (should be true, not null)
+      if (data && data.show_bio_in_feed !== true) {
+        console.warn(
+          `[SupabaseAuthService] show_bio_in_feed was not set correctly for user ${userId}. Expected true, got: ${data.show_bio_in_feed}. Attempting to fix...`
+        );
+        // Attempt to fix by updating the field explicitly
+        const { error: updateError } = await this.adminClient
+          .from('users')
+          .update({ show_bio_in_feed: true })
+          .eq('id', userId);
+
+        if (updateError) {
+          console.error(
+            `[SupabaseAuthService] Failed to fix show_bio_in_feed for user ${userId}`,
+            updateError
+          );
+          // Don't throw here, as the user was created successfully
+          // The migration script will fix this later
+        }
       }
     } catch (error) {
       if (error instanceof DomainError) {
@@ -209,10 +317,22 @@ export class SupabaseAuthService implements AuthService {
         ? metadata.display_name
         : undefined;
 
+    // Extract gender and birthDate from user_metadata (they are stored there during registration)
+    const gender =
+      metadata && typeof metadata.gender === 'string'
+        ? metadata.gender
+        : undefined;
+    const birthDate =
+      metadata && typeof metadata.birthDate === 'string'
+        ? metadata.birthDate
+        : undefined;
+
     return {
       id: user.id,
       email: user.email ?? '',
       name: displayName ?? user.email ?? 'User',
+      gender,
+      birthDate,
     };
   }
 

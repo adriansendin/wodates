@@ -151,8 +151,21 @@ export class ApiClient {
     token?: string
   ): Promise<Result<T, DomainError>> {
     try {
+      const headers: Record<string, string | undefined> = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
+
+      // Set Content-Type to application/json to ensure proper JSON serialization
+      headers['Content-Type'] = 'application/json';
+
+      console.log(`[ApiClient] PUT ${this.client.defaults.baseURL}${url}`, {
+        hasData: !!data,
+        dataKeys: data && typeof data === 'object' ? Object.keys(data) : [],
+        dataStringified: data ? JSON.stringify(data) : undefined,
+      });
+
       const response: AxiosResponse<T> = await this.client.put(url, data, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers,
       });
       return success(response.data);
     } catch (error) {

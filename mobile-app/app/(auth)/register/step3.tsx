@@ -13,12 +13,18 @@ export default function Step3Screen() {
   const router = useRouter();
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
-  const [selectedCity, setSelectedCity] = useState(data.location || 'Barcelona');
+  // Inicializar con valor por defecto si no hay uno guardado, pero validar antes de avanzar
+  const [selectedCity, setSelectedCity] = useState<string>(data.location || 'Barcelona');
 
   const handleNext = () => {
+    // Validar que se haya seleccionado una ciudad
+    if (!selectedCity || selectedCity.trim() === '') {
+      return;
+    }
+    
     // Save selected city and set country to Spain automatically
     updateData({ 
-      location: selectedCity,
+      location: selectedCity.trim(),
       country: 'Spain' // This will be used in the backend
     });
     nextStep();
@@ -65,8 +71,19 @@ export default function Step3Screen() {
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity testID="continuar-step3-button" style={styles.button} onPress={handleNext}>
-              <Text style={styles.buttonText}>Continuar</Text>
+            <TouchableOpacity 
+              testID="continuar-step3-button" 
+              style={[
+                styles.button,
+                (!selectedCity || selectedCity.trim() === '') && styles.buttonDisabled
+              ]} 
+              onPress={handleNext}
+              disabled={!selectedCity || selectedCity.trim() === ''}
+            >
+              <Text style={[
+                styles.buttonText,
+                (!selectedCity || selectedCity.trim() === '') && styles.buttonTextDisabled
+              ]}>Continuar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -146,10 +163,16 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
   },
+  buttonDisabled: {
+    backgroundColor: '#BDC3C7',
+  },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  buttonTextDisabled: {
+    color: '#FFFFFF',
   },
   backButton: {
     padding: 12,

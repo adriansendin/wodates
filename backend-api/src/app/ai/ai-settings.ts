@@ -204,6 +204,31 @@ Nunca, bajo ninguna circunstancia, hablas de ti como si fueras una persona o tuv
     `,
 
     /**
+     * Instructions for generating user bio from structured profile summary
+     * Used by backend to generate short bios for display in Discover feed
+     */
+    bioGeneration: `ROL:
+Eres Doc Love. Escribes una micro-bio para una tarjeta móvil (Discover). Tono adulto, natural y amable. No suenes a informe.
+
+ENTRADA:
+Un perfil estructurado en 11 líneas (p.ej. “Identidad básica: …”, “Gustos y preferencias: …”).
+
+TAREA:
+Genera UNA bio en prosa (un solo párrafo), basada SOLO en datos explícitos del perfil.
+
+REGLAS:
+- Tercera persona singular (nunca “yo/me/mi”).
+- Máx. 250 caracteres (incluidos espacios).
+- Sin listas, saltos de línea, emojis, comillas ni títulos.
+- Elige 2–3 señales más diferenciales para compatibilidad (planes concretos, estilo de vida, preferencias relacionales explícitas). Ignora “sin datos”.
+- No inventes ni infieras. Sin causalidad/psicologizar.
+- Si hay límites/rechazos, exprésalos como preferencia positiva clara (sin ultimátums).
+
+SALIDA:
+Devuelve SOLO la bio.
+`,
+
+    /**
      * Instructions for generating user personality summaries
      * Used by ai-service to create/update user AI profiles
      *

@@ -22,14 +22,24 @@ export default function Step4Screen() {
   const router = useRouter();
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
-  const [gender, setGender] = useState<GenderOption | ''>(data.gender || 'male');
+  // No usar valor por defecto para gender - debe ser seleccionado explícitamente
+  const [gender, setGender] = useState<GenderOption | ''>(data.gender || '');
   const [lookingFor, setLookingFor] = useState<LookingForOption | ''>(data.lookingFor || '');
 
   const handleNext = () => {
-    if (!lookingFor) {
+    // Validación estricta: ambos campos deben ser valores válidos (no cadenas vacías, no undefined)
+    if (!gender || gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption)) {
       return;
     }
-    updateData({ gender, lookingFor });
+    if (!lookingFor || lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) {
+      return;
+    }
+    
+    // Solo guardar valores válidos (asegurar que son del tipo correcto)
+    updateData({ 
+      gender: gender as GenderOption, 
+      lookingFor: lookingFor as LookingForOption 
+    });
     nextStep();
     router.push('/(auth)/register/step2');
   };
@@ -118,14 +128,19 @@ export default function Step4Screen() {
               testID="continuar-step4-button" 
               style={[
                 styles.button,
-                !lookingFor && styles.buttonDisabled
+                (!gender || gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
+                 !lookingFor || lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) && styles.buttonDisabled
               ]} 
               onPress={handleNext}
-              disabled={!lookingFor}
+              disabled={
+                !gender || gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
+                !lookingFor || lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)
+              }
             >
               <Text style={[
                 styles.buttonText,
-                !lookingFor && styles.buttonTextDisabled
+                (!gender || gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
+                 !lookingFor || lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) && styles.buttonTextDisabled
               ]}>Continuar</Text>
             </TouchableOpacity>
 

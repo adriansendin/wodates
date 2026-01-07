@@ -23,6 +23,7 @@ type FeedUserRow = {
   gender: string | null;
   looking_for: LookingForValue | null;
   bio: string | null;
+  show_bio_in_feed: boolean | null;
 };
 
 type CurrentUserRow = {
@@ -44,6 +45,7 @@ export type FeedCandidate = {
   age: number | null;
   gender: Gender | null;
   photoUrl: string | null;
+  show_bio_in_feed: boolean | null;
 };
 
 export class SupabaseFeedService {
@@ -70,7 +72,7 @@ export class SupabaseFeedService {
 
       let query = this.client
         .from('users')
-        .select('id, birthDate, gender, looking_for, bio, city') // Added 'looking_for' and 'city' for filtering
+        .select('id, birthDate, gender, looking_for, bio, city, show_bio_in_feed') // Added 'show_bio_in_feed' to control bio visibility
         .neq('id', userId)
         .lt('active_chats_count', 1) // Exclude users with any active chats (must be 0)
         .or('is_bot.is.null,is_bot.eq.false') // Exclude bots (system users)
@@ -119,11 +121,17 @@ export class SupabaseFeedService {
         }
 
         // Check if candidate is looking for current user's gender
-        if (
-          !currentUserGender ||
-          !this.includesGender(candidateLookingFor, currentUserGender)
-        ) {
-          return false;
+        // If current user has no gender, allow if candidate is looking for "both" or has no preference
+        if (currentUserGender) {
+          // Current user has gender - check if candidate is looking for it
+          if (!this.includesGender(candidateLookingFor, currentUserGender)) {
+            return false;
+          }
+        } else {
+          // Current user has no gender - only allow if candidate is looking for "both" or has no preference
+          if (candidateLookingFor && candidateLookingFor !== 'both') {
+            return false;
+          }
         }
 
         return true;
@@ -350,7 +358,8 @@ export class SupabaseFeedService {
   private async mapRowToCandidate(row: FeedUserRow): Promise<FeedCandidate> {
     const gender = this.normalizeGender(row.gender);
     const birthDate = this.normalizeDate(row.birthDate);
-    const bio = this.truncateBio(row.bio);
+    // Always include bio - filtering is done on frontend based on show_bio_in_feed flags
+    const bio = row.bio ? this.truncateBio(row.bio) : null;
     const age = birthDate ? this.calculateAge(birthDate) : null;
     const photoUrl = await this.getMainPhotoUrl(row.id);
 
@@ -362,6 +371,7 @@ export class SupabaseFeedService {
       age,
       gender,
       photoUrl,
+      show_bio_in_feed: row.show_bio_in_feed,
     };
   }
 

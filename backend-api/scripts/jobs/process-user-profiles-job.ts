@@ -80,6 +80,7 @@ import { GetAllUserChats } from '../../src/domain/use-cases/chat/GetAllUserChats
 import { GetUnprocessedMessages } from '../../src/domain/use-cases/chat/GetUnprocessedMessages';
 import { GenerateUserProfileFromChats } from '../../src/domain/use-cases/chat/GenerateUserProfileFromChats';
 import { UserAIProfileEmbeddingService } from '../../src/app/ai/profile/UserAIProfileEmbeddingService';
+import { UserBioGenerationService } from '../../src/app/ai/profile/UserBioGenerationService';
 import { ExternalChatFilesService } from '../../src/app/services/external-chat-files-service';
 import { AiServiceProfileClient } from '../../src/app/ai/clients/AiServiceProfileClient';
 import { AiServiceEmbeddingClient } from '../../src/app/ai/clients/AiServiceEmbeddingClient';
@@ -1051,6 +1052,13 @@ async function main() {
       logger
     );
 
+    // Initialize bio generation service (uses ai-service via AiServiceChatClient)
+    const bioGenerationService = new UserBioGenerationService(
+      userAIProfileRepository,
+      userRepository,
+      logger
+    );
+
     // ============================================================================
     // PROCESO 1: PROCESS_1_CHATS_FROM_WODATES
     // ============================================================================
@@ -1108,6 +1116,31 @@ async function main() {
         writeToLog(`[${userNumber}/${userIds.length}] Processing user: ${userId}`, 'INFO');
 
       try {
+        // CRITICAL: Check if user has active chats with real users (not Doc Love)
+        // Only process if active_chats_count = 0 (user is not talking to anyone real)
+        const { data: userData, error: userError } = await client
+          .from('users')
+          .select('active_chats_count')
+          .eq('id', userId)
+          .single<{ active_chats_count: number | null }>();
+
+        if (userError) {
+          writeToLog(`Failed to check active_chats_count for user ${userId}: ${userError.message}`, 'WARN');
+          // Continue processing - better to process than skip on error
+        } else if (userData) {
+          const activeChatsCount = userData.active_chats_count ?? 0;
+          if (activeChatsCount >= 1) {
+            writeToLog(`User ${userId}: Has ${activeChatsCount} active chat(s) with real users, skipping processing (user is currently talking to someone)`, 'INFO');
+            skippedCount++;
+            results.push({ 
+              userId, 
+              status: 'skipped',
+              message: `User has ${activeChatsCount} active chat(s)`
+            });
+            continue;
+          }
+        }
+
         // Get profile before processing to compare summary changes
         const profileBeforeResult = await userAIProfileRepository.findByUserId(userId);
         const summaryBefore = profileBeforeResult.success && profileBeforeResult.data 
@@ -1167,6 +1200,29 @@ async function main() {
         } catch (embeddingError) {
           // Log error but don't fail the whole process - summary is already saved
           writeToLog(`Failed to generate embedding for user ${userId}: ${embeddingError instanceof Error ? embeddingError.message : String(embeddingError)}`, 'WARN');
+        }
+
+        // Generate bio from summary after embedding generation
+        // Bio generation is independent of summary changes - always generate if summary exists
+        try {
+          const profileAfterResult = await userAIProfileRepository.findByUserId(userId);
+          const summaryAfter = profileAfterResult.success && profileAfterResult.data 
+            ? profileAfterResult.data.summary 
+            : null;
+          
+          const hasConsolidatedSummary = summaryAfter !== null && summaryAfter.trim().length > 0;
+          
+          if (!hasConsolidatedSummary) {
+            writeToLog(`User ${userId}: No consolidated summary available, skipping bio generation`, 'INFO');
+          } else {
+            // Always generate bio if summary exists (independent of whether it changed)
+            writeToLog(`User ${userId}: Generating bio from summary (independent of summary changes)...`, 'INFO');
+            await bioGenerationService.generateBioFromSummary(userId);
+            writeToLog(`Bio generated successfully for user ${userId}`, 'INFO');
+          }
+        } catch (bioError) {
+          // Log error but don't fail the whole process - summary and embedding are already saved
+          writeToLog(`Failed to generate bio for user ${userId}: ${bioError instanceof Error ? bioError.message : String(bioError)}`, 'WARN');
         }
         
         processedCount++;

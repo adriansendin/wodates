@@ -12,9 +12,10 @@ export const RegisterSchema = z.object({
   password: z.string().min(6),
   name: z.string().min(1).max(100), // Se almacena como display_name en auth.users.raw_user_meta_data
   birthDate: z.string().datetime(),
-  gender: GenderSchema.optional(),
-  location: z.string().optional(),
-  lookingFor: LookingForSchema.optional(),
+  gender: GenderSchema, // REQUERIDO - debe coincidir con el backend
+  location: z.string().min(1), // REQUERIDO - debe coincidir con el backend
+  country: z.string().optional(),
+  lookingFor: LookingForSchema, // REQUERIDO - debe coincidir con el backend
 });
 
 export const AuthTokensSchema = z.object({

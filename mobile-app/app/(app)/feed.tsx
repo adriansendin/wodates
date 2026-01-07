@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useFeedStore } from '../../src/domain/stores/feedStore';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { FeedApi } from '../../src/data/api/feedApi';
@@ -17,9 +17,12 @@ import { useMatchesStore } from '../../src/domain/stores/matchesStore';
 import { MatchSchema } from '../../src/domain/entities/Match';
 import { showAlert } from '../../src/utils/showAlert';
 import { MatchApi } from '../../src/data/api/matchApi';
+import { ProfileApi } from '../../src/data/api/profileApi';
+import { UserProfile } from '../../src/domain/entities/UserProfile';
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { MatchConfirmationModal } from '../../src/components/MatchConfirmationModal';
-import { X, Check } from 'lucide-react-native';
+import { BioPopupModal } from '../../src/components/BioPopupModal';
+import { X, Check, Info } from 'lucide-react-native';
 // import DiscoverActionButtons from '../../src/components/DiscoverActionButtons';
 
 // Componente temporal inline mientras se resuelve el problema del linter
@@ -180,11 +183,14 @@ export default function FeedScreen() {
   const [isConfirmingMatch, setIsConfirmingMatch] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isDislikeInitiallyDisabled, setIsDislikeInitiallyDisabled] = useState(true);
+  const [showBioPopup, setShowBioPopup] = useState(false);
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
 
   // Memoize API clients to prevent useEffect loops
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const feedApi = useMemo(() => new FeedApi(apiClient), [apiClient]);
   const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
+  const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
 
   // Track current candidate ID to prevent stale updates
   const currentCandidateIdRef = useRef<string | null>(null);
@@ -262,6 +268,39 @@ export default function FeedScreen() {
       abortController.abort();
     };
   }, [users, currentIndex, tokens?.accessToken, user?.id, feedApi]);
+
+  // Load current user profile to check show_bio_in_feed setting
+  // Reload when screen comes into focus to get latest show_bio_in_feed value
+  const loadCurrentUserProfile = useCallback(async () => {
+    if (!tokens?.accessToken) {
+      setCurrentUserProfile(null);
+      return;
+    }
+
+    try {
+      const result = await profileApi.getProfile(tokens.accessToken);
+      if (result.success) {
+        setCurrentUserProfile(result.data);
+      }
+    } catch (error) {
+      // Reduce log spam: only log if it's not a rate limit error
+      if (error instanceof Error && !error.message.includes('429')) {
+        console.error('Failed to load current user profile', error);
+      }
+    }
+  }, [tokens?.accessToken, profileApi]);
+
+  // Load profile on mount and when screen comes into focus
+  useEffect(() => {
+    loadCurrentUserProfile();
+  }, [loadCurrentUserProfile]);
+
+  // Reload profile when screen comes into focus to get latest show_bio_in_feed value
+  useFocusEffect(
+    useCallback(() => {
+      loadCurrentUserProfile();
+    }, [loadCurrentUserProfile])
+  );
 
   // Load matches to get activeChatsCount
   // Only load once when component mounts or when tokens change (not on every user.id change)
@@ -803,6 +842,29 @@ export default function FeedScreen() {
         </View>
       </View>
 
+      {/* Info icon for bio - only show if:
+          1. Candidate has bio
+          2. Candidate has show_bio_in_feed === true (not false, not null)
+          3. Current user (viewer) has show_bio_in_feed === true (not false, not null)
+          Both users must have show_bio_in_feed === true to show the icon */}
+      {currentUser?.bio && 
+       typeof (currentUser as any).show_bio_in_feed === 'boolean' &&
+       (currentUser as any).show_bio_in_feed === true &&
+       typeof currentUserProfile?.show_bio_in_feed === 'boolean' &&
+       currentUserProfile?.show_bio_in_feed === true && (
+        <TouchableOpacity
+          style={styles.infoIconContainer}
+          onPress={() => setShowBioPopup(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Ver bio"
+          accessibilityHint="Muestra la bio del usuario"
+        >
+          <View style={styles.infoIconCircle}>
+            <Info size={20} color="#fff" />
+          </View>
+        </TouchableOpacity>
+      )}
+
       {/* Botones de acción */}
       <DiscoverActionButtons
         disabled={isDislikeInitiallyDisabled}
@@ -819,6 +881,13 @@ export default function FeedScreen() {
         onConfirm={handleConfirmMatch}
         onCancel={handleCancelMatch}
         isConfirming={isConfirmingMatch}
+      />
+
+      {/* Bio Popup Modal */}
+      <BioPopupModal
+        visible={showBioPopup}
+        bio={currentUser?.bio}
+        onClose={() => setShowBioPopup(false)}
       />
     </View>
   );
@@ -1009,6 +1078,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     fontWeight: '500',
+  },
+  infoIconContainer: {
+    position: 'absolute',
+    bottom: 110,
+    right: 20,
+    zIndex: 10,
+  },
+  infoIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   welcomeContainer: {
     paddingHorizontal: 20,

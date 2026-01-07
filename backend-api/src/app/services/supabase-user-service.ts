@@ -130,6 +130,12 @@ export class SupabaseUserService {
     input: UpdateUserProfileInput
   ): Promise<UserProfile> {
     try {
+      console.log('[SupabaseUserService] ===== UPDATE PROFILE =====');
+      console.log('[SupabaseUserService] User ID:', userId);
+      console.log('[SupabaseUserService] Input received:', input);
+      console.log('[SupabaseUserService] Input keys:', Object.keys(input));
+      console.log('[SupabaseUserService] Input values:', JSON.stringify(input));
+
       const profile = await this.ensureProfileRow(userId);
 
       const updatePayload: Record<string, unknown> = {};
@@ -144,16 +150,50 @@ export class SupabaseUserService {
         updatePayload.looking_for = input.looking_for ?? null;
       }
       if ('min_age' in input) {
-        updatePayload.min_age = input.min_age ?? null;
+        console.log('[SupabaseUserService] Processing min_age:', input.min_age);
+        // Validar que min_age sea un número válido antes de guardar
+        if (input.min_age !== null && input.min_age !== undefined) {
+          if (typeof input.min_age !== 'number' || isNaN(input.min_age) || input.min_age < 18 || input.min_age > 100) {
+            throw new InternalError('min_age must be a valid number between 18 and 100');
+          }
+          updatePayload.min_age = input.min_age;
+          console.log('[SupabaseUserService] min_age validated and added to updatePayload:', updatePayload.min_age);
+        } else {
+          updatePayload.min_age = null;
+          console.log('[SupabaseUserService] min_age is null/undefined, setting to null in updatePayload');
+        }
+      } else {
+        console.log('[SupabaseUserService] min_age NOT in input');
       }
       if ('max_age' in input) {
-        updatePayload.max_age = input.max_age ?? null;
+        console.log('[SupabaseUserService] Processing max_age:', input.max_age);
+        // Validar que max_age sea un número válido antes de guardar
+        if (input.max_age !== null && input.max_age !== undefined) {
+          if (typeof input.max_age !== 'number' || isNaN(input.max_age) || input.max_age < 18 || input.max_age > 100) {
+            throw new InternalError('max_age must be a valid number between 18 and 100');
+          }
+          updatePayload.max_age = input.max_age;
+          console.log('[SupabaseUserService] max_age validated and added to updatePayload:', updatePayload.max_age);
+        } else {
+          updatePayload.max_age = null;
+          console.log('[SupabaseUserService] max_age is null/undefined, setting to null in updatePayload');
+        }
+      } else {
+        console.log('[SupabaseUserService] max_age NOT in input');
       }
       if ('bio' in input) {
         updatePayload.bio = input.bio ?? null;
       }
       if ('city' in input) {
-        updatePayload.city = input.city ?? null;
+        // Validar que city sea un string válido antes de guardar
+        if (input.city !== null && input.city !== undefined) {
+          if (typeof input.city !== 'string' || input.city.trim() === '') {
+            throw new InternalError('city must be a non-empty string');
+          }
+          updatePayload.city = input.city.trim();
+        } else {
+          updatePayload.city = null;
+        }
       }
       if ('show_bio_in_feed' in input) {
         updatePayload.show_bio_in_feed = input.show_bio_in_feed ?? null;
@@ -161,25 +201,50 @@ export class SupabaseUserService {
       // Family plan
       if ('has_children' in input) {
         updatePayload.has_children = input.has_children ?? null;
+        console.log('[SupabaseUserService] Processing has_children:', input.has_children, '->', updatePayload.has_children);
+      } else {
+        console.log('[SupabaseUserService] has_children NOT in input');
       }
       if ('wants_children' in input) {
         updatePayload.wants_children = input.wants_children ?? null;
+        console.log('[SupabaseUserService] Processing wants_children:', input.wants_children, '->', updatePayload.wants_children);
+      } else {
+        console.log('[SupabaseUserService] wants_children NOT in input');
       }
       if ('cares_about_partner_children' in input) {
         updatePayload.cares_about_partner_children = input.cares_about_partner_children ?? null;
+        console.log('[SupabaseUserService] Processing cares_about_partner_children:', input.cares_about_partner_children, '->', updatePayload.cares_about_partner_children);
+      } else {
+        console.log('[SupabaseUserService] cares_about_partner_children NOT in input');
       }
       // Habits
       if ('smoking' in input) {
         updatePayload.smoking = input.smoking ?? null;
+        console.log('[SupabaseUserService] Processing smoking:', input.smoking, '->', updatePayload.smoking);
+      } else {
+        console.log('[SupabaseUserService] smoking NOT in input');
       }
       if ('cares_about_partner_smoking' in input) {
         updatePayload.cares_about_partner_smoking = input.cares_about_partner_smoking ?? null;
+        console.log('[SupabaseUserService] Processing cares_about_partner_smoking:', input.cares_about_partner_smoking, '->', updatePayload.cares_about_partner_smoking);
+      } else {
+        console.log('[SupabaseUserService] cares_about_partner_smoking NOT in input');
       }
+
+      console.log('[SupabaseUserService] Final updatePayload:', updatePayload);
+      console.log('[SupabaseUserService] updatePayload keys:', Object.keys(updatePayload));
+      console.log('[SupabaseUserService] updatePayload JSON:', JSON.stringify(updatePayload));
+
       if (Object.keys(updatePayload).length === 0) {
+        console.log('[SupabaseUserService] WARNING: updatePayload is empty, no fields to update');
         // Get auth user data even if no profile updates
         const authUser = await this.getAuthUser(userId);
         return this.mapRow(profile, authUser);
       }
+
+      console.log('[SupabaseUserService] Executing UPDATE query on users table');
+      console.log('[SupabaseUserService] UPDATE SET:', updatePayload);
+      console.log('[SupabaseUserService] WHERE id =', userId);
 
       const { data, error } = await this.client
         .from('users')
@@ -189,6 +254,26 @@ export class SupabaseUserService {
           'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking'
         )
         .single();
+
+      if (error) {
+        console.error('[SupabaseUserService] UPDATE query failed:', {
+          error: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+      } else {
+        console.log('[SupabaseUserService] UPDATE query successful');
+        console.log('[SupabaseUserService] Updated data returned:', {
+          min_age: data?.min_age,
+          max_age: data?.max_age,
+          has_children: data?.has_children,
+          wants_children: data?.wants_children,
+          cares_about_partner_children: data?.cares_about_partner_children,
+          smoking: data?.smoking,
+          cares_about_partner_smoking: data?.cares_about_partner_smoking,
+        });
+      }
 
       if (error) {
         console.error('[SupabaseUserService] updateProfile failed', {
@@ -243,21 +328,57 @@ export class SupabaseUserService {
   private async ensureProfileRow(userId: string): Promise<UserProfileRow> {
     const existingProfile = await this.findProfileRow(userId);
     if (existingProfile) {
+      // Fix show_bio_in_feed if it's null (should be true by default)
+      if (existingProfile.show_bio_in_feed === null) {
+        console.warn(
+          `[SupabaseUserService] Found user ${userId} with show_bio_in_feed = null. Fixing to true...`
+        );
+        const { error: updateError } = await this.client
+          .from('users')
+          .update({ show_bio_in_feed: true })
+          .eq('id', userId);
+
+        if (updateError) {
+          console.error(
+            `[SupabaseUserService] Failed to fix show_bio_in_feed for user ${userId}`,
+            updateError
+          );
+          // Continue anyway, return the profile as-is
+        } else {
+          // Update the local object to reflect the fix
+          existingProfile.show_bio_in_feed = true;
+        }
+      }
       return existingProfile;
     }
 
     const defaults = await this.resolveAuthUserDefaults(userId);
 
+    // Use insert instead of upsert to avoid overwriting existing fields
+    // If the profile already exists, we would have returned it above
+    // This insert should only happen if the profile truly doesn't exist
     const { data, error } = await this.client
       .from('users')
-      .upsert(defaults, { onConflict: 'id' })
+      .insert(defaults)
       .select(
         'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking'
       )
       .single();
 
     if (error) {
-      console.error('[SupabaseUserService] ensureProfileRow upsert failed', {
+      // If the error is a duplicate key error (user already exists), try to fetch it again
+      // This can happen in race conditions where the profile was created between findProfileRow and insert
+      if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('already exists')) {
+        console.warn(
+          `[SupabaseUserService] Profile for user ${userId} was created between findProfileRow and insert. Fetching existing profile...`
+        );
+        const existingProfile = await this.findProfileRow(userId);
+        if (existingProfile) {
+          return existingProfile;
+        }
+      }
+      
+      console.error('[SupabaseUserService] ensureProfileRow insert failed', {
         userId,
         defaults,
         error,
@@ -270,6 +391,27 @@ export class SupabaseUserService {
 
     if (!data) {
       throw new InternalError('Supabase did not return a profile row');
+    }
+
+    // Verify that show_bio_in_feed was set correctly
+    if (data.show_bio_in_feed === null) {
+      console.warn(
+        `[SupabaseUserService] show_bio_in_feed was null after insert for user ${userId}. Fixing...`
+      );
+      const { error: updateError } = await this.client
+        .from('users')
+        .update({ show_bio_in_feed: true })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error(
+          `[SupabaseUserService] Failed to fix show_bio_in_feed after insert for user ${userId}`,
+          updateError
+        );
+      } else {
+        // Update the local object to reflect the fix
+        (data as UserProfileRow).show_bio_in_feed = true;
+      }
     }
 
     return data as UserProfileRow;
@@ -319,17 +461,29 @@ export class SupabaseUserService {
     let birthDate: string | null = null;
     if (metadata && typeof metadata.birthDate === 'string') {
       const trimmed = metadata.birthDate.trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      // Accept both ISO datetime format (from registration) and date-only format
+      if (trimmed.length > 0) {
         birthDate = trimmed;
       }
     }
 
     const gender = this.normalizeGender(metadata?.gender);
 
+    // Get looking_for from metadata (stored during registration as lookingFor)
+    let lookingFor: string | null = null;
+    if (metadata && typeof metadata.lookingFor === 'string') {
+      const trimmed = metadata.lookingFor.trim();
+      if (trimmed.length > 0) {
+        lookingFor = trimmed;
+      }
+    }
+
     const city =
       metadata && typeof metadata.city === 'string'
         ? metadata.city.trim() || null
-        : null;
+        : metadata && typeof metadata.location === 'string'
+          ? metadata.location.trim() || null
+          : null;
 
     const bio =
       metadata && typeof metadata.bio === 'string'
@@ -341,9 +495,9 @@ export class SupabaseUserService {
       // name and email are no longer stored in public.users
       birthDate,
       gender,
-      looking_for: null,
-      min_age: null,
-      max_age: null,
+      looking_for: lookingFor, // Get from metadata instead of always null
+      min_age: null, // These are set during profile update, not registration
+      max_age: null, // These are set during profile update, not registration
       bio,
       city,
       show_bio_in_feed: true, // Default to true as per database schema

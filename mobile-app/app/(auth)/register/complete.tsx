@@ -10,6 +10,7 @@ import { AuthTokens } from '../../../src/domain/entities/Auth';
 import { User, Gender } from '../../../src/domain/entities/User';
 import { FeedbackBanner } from '../../../src/components/FeedbackBanner';
 import { getApiUrl } from '../../../src/utils/apiConfig';
+import { GENDER_OPTIONS, GenderOption } from '../../../src/domain/entities/Gender';
 
 const API_URL = getApiUrl();
 
@@ -20,7 +21,12 @@ const normalizeUser = (rawUser: Record<string, unknown>): User => {
     throw new Error('User payload is missing required fields.');
   }
 
-  const gender = (rawUser.gender ?? 'male') as Gender;
+  // NO usar valor por defecto - si el backend devuelve null/undefined, lanzar error
+  const rawGender = rawUser.gender;
+  if (!rawGender || typeof rawGender !== 'string' || !GENDER_OPTIONS.includes(rawGender as GenderOption)) {
+    throw new Error('User payload is missing valid gender field.');
+  }
+  const gender = rawGender as Gender;
 
   return {
     id: rawUser.id,
@@ -52,16 +58,79 @@ export default function CompleteScreen() {
     setFeedback(null);
 
     try {
-      // Preparar los datos para el registro
+      // VALIDACIÓN ESTRICTA: Verificar que TODOS los campos requeridos estén presentes
+      if (!data.name || data.name.trim() === '') {
+        setFeedback({ type: 'error', message: 'El nombre es requerido' });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.email || data.email.trim() === '') {
+        setFeedback({ type: 'error', message: 'El email es requerido' });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.password || data.password.length < 6) {
+        setFeedback({ type: 'error', message: 'La contraseña debe tener al menos 6 caracteres' });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.birthDate || !(data.birthDate instanceof Date) || isNaN(data.birthDate.getTime())) {
+        setFeedback({ type: 'error', message: 'La fecha de nacimiento es requerida y debe ser válida' });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validar que min_age y max_age sean números válidos
+      if (typeof data.minAge !== 'number' || isNaN(data.minAge) || data.minAge < 18 || data.minAge > 100) {
+        setFeedback({ type: 'error', message: 'El rango de edad mínimo debe ser válido (18-100 años)' });
+        setIsLoading(false);
+        return;
+      }
+
+      if (typeof data.maxAge !== 'number' || isNaN(data.maxAge) || data.maxAge < 18 || data.maxAge > 100) {
+        setFeedback({ type: 'error', message: 'El rango de edad máximo debe ser válido (18-100 años)' });
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.minAge > data.maxAge) {
+        setFeedback({ type: 'error', message: 'La edad mínima no puede ser mayor que la edad máxima' });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.location || data.location.trim() === '') {
+        setFeedback({ type: 'error', message: 'La ubicación es requerida' });
+        setIsLoading(false);
+        return;
+      }
+
+      // VALIDACIÓN CRÍTICA: gender y lookingFor son REQUERIDOS y deben ser valores válidos
+      if (!data.gender || data.gender === '' || !GENDER_OPTIONS.includes(data.gender as GenderOption)) {
+        setFeedback({ type: 'error', message: 'Debes seleccionar tu género' });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.lookingFor || data.lookingFor === '') {
+        setFeedback({ type: 'error', message: 'Debes seleccionar a quién buscas' });
+        setIsLoading(false);
+        return;
+      }
+
+      // Preparar los datos para el registro - TODOS los campos son requeridos
       const registerData = {
-        email: data.email,
+        email: data.email.trim(),
         password: data.password,
-        name: data.name,
-        birthDate: data.birthDate?.toISOString() || new Date().toISOString(),
-        gender: data.gender || undefined,
-        location: data.location || undefined,
-        country: data.country || 'Spain', // Default to Spain
-        lookingFor: data.lookingFor || undefined,
+        name: data.name.trim(),
+        birthDate: data.birthDate.toISOString(),
+        gender: data.gender as Gender, // REQUERIDO - ya validado arriba
+        location: data.location.trim(), // REQUERIDO - ya validado arriba
+        country: data.country || 'Spain',
+        lookingFor: data.lookingFor, // REQUERIDO - ya validado arriba
       };
 
       console.log('[Register] Sending registration data:', registerData);
@@ -95,23 +164,57 @@ export default function CompleteScreen() {
       }
 
       // Actualizar perfil con rango de edad, plan familiar y hábitos
+      // IMPORTANTE: Incluir TODOS los campos, incluso si son null, para asegurar que se actualicen en la BD
+      
+      // min_age y max_age - usar valores del store o valores por defecto (18 y 99)
+      const minAge = typeof data.minAge === 'number' && !isNaN(data.minAge) ? data.minAge : 18;
+      const maxAge = typeof data.maxAge === 'number' && !isNaN(data.maxAge) ? data.maxAge : 99;
+
+      // Construir profileUpdates con TODOS los campos (incluso si son null)
       const profileUpdates: Record<string, any> = {
-        min_age: data.minAge,
-        max_age: data.maxAge,
-        has_children: data.hasChildren,
-        wants_children: data.wantsChildren,
-        cares_about_partner_children: data.caresAboutPartnerChildren,
-        smoking: data.smoking,
-        cares_about_partner_smoking: data.caresAboutPartnerSmoking,
+        min_age: minAge,
+        max_age: maxAge,
+        // Campos opcionales - incluir TODOS incluso si son null (deben guardarse en BD)
+        has_children: data.hasChildren ?? null,
+        wants_children: data.wantsChildren ?? null,
+        cares_about_partner_children: data.caresAboutPartnerChildren ?? null,
+        smoking: data.smoking ?? null,
+        cares_about_partner_smoking: data.caresAboutPartnerSmoking ?? null,
       };
 
-      console.log('[Register] Updating profile with age range, family plan, habits and avatar...');
+      console.log('[Register] ===== PROFILE UPDATE DEBUG =====');
+      console.log('[Register] Data from registration store:', {
+        minAge: data.minAge,
+        maxAge: data.maxAge,
+        hasChildren: data.hasChildren,
+        wantsChildren: data.wantsChildren,
+        caresAboutPartnerChildren: data.caresAboutPartnerChildren,
+        smoking: data.smoking,
+        caresAboutPartnerSmoking: data.caresAboutPartnerSmoking,
+      });
+      console.log('[Register] Profile updates object to send:', profileUpdates);
+      console.log('[Register] Profile updates JSON stringified:', JSON.stringify(profileUpdates));
+      console.log('[Register] =================================');
+
+      // Validar que min_age y max_age sean números válidos
+      if (typeof profileUpdates.min_age !== 'number' || typeof profileUpdates.max_age !== 'number') {
+        console.error('[Register] ERROR: min_age or max_age are not numbers!', profileUpdates);
+        setFeedback({ type: 'error', message: 'Error: Los rangos de edad no son válidos' });
+        setIsLoading(false);
+        return;
+      }
+
       const updateResult = await profileApi.updateProfile(profileUpdates, token);
 
       if (!updateResult.success) {
-        console.warn('[Register] Failed to update profile:', updateResult.error);
-        // No mostramos error al usuario, se puede actualizar después
+        console.error('[Register] Failed to update profile:', updateResult.error);
+        console.error('[Register] Profile updates that failed:', profileUpdates);
+        setFeedback({ type: 'error', message: 'Error al guardar las preferencias. Por favor, actualiza tu perfil después.' });
+        setIsLoading(false);
+        return;
       }
+
+      console.log('[Register] Profile updated successfully:', updateResult.data);
 
       // Limpiar el store de registro
       resetRegistration();
