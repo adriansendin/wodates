@@ -1454,6 +1454,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
     minHeight: 60,
+    overflow: 'visible',
   },
   attachButton: {
     marginRight: 8,
@@ -1465,6 +1466,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
     position: 'relative',
+    overflow: 'visible',
   },
   textInput: {
     flex: 1,
@@ -1494,7 +1496,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
-    zIndex: 1,
+    zIndex: 10,
+    elevation: 5, // For Android
+    shadowColor: '#000', // For iOS and web
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    pointerEvents: 'none', // Allow touches to pass through to input
   },
   counterText: {
     fontSize: 12,
