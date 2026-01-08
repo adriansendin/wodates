@@ -41,6 +41,48 @@ export async function userPhotosRoutes(fastify: FastifyInstance) {
     controller.listUserPhotos.bind(controller)
   );
 
+  fastify.get(
+    '/users/:userId/photos',
+    {
+      schema: {
+        description: 'Get public photos for a user',
+        tags: ['user-photos'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            userId: { type: 'string', format: 'uuid' },
+          },
+          required: ['userId'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              photos: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    user_id: { type: 'string', format: 'uuid' },
+                    storage_path: { type: 'string' },
+                    public_url: { type: 'string', format: 'uri' },
+                    is_main: { type: 'boolean' },
+                    position: { type: 'number' },
+                    created_at: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    controller.getUserPublicPhotos.bind(controller)
+  );
+
   fastify.post(
     '/users/me/photos',
     {

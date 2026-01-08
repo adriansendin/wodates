@@ -30,6 +30,38 @@ export class UserPhotosController {
     }
   }
 
+  async getUserPublicPhotos(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      // Require authentication but allow viewing any user's photos
+      const authUser = request.user;
+      if (!authUser) {
+        throw new UnauthorizedError('Missing authenticated user');
+      }
+
+      const { userId } = request.params as { userId: string };
+
+      if (!userId) {
+        return reply.status(400).send({
+          error: 'MISSING_USER_ID',
+          message: 'User ID is required.',
+        });
+      }
+
+      const result = await this.photoService.getUserPublicPhotos(userId);
+
+      if (!result.success) {
+        return reply.status(result.error.statusCode).send({
+          error: result.error.code,
+          message: result.error.message,
+        });
+      }
+
+      return reply.send({ photos: result.data });
+    } catch (error) {
+      return this.handleError(reply, error);
+    }
+  }
+
   async addUserPhoto(request: FastifyRequest, reply: FastifyReply) {
     try {
       const authUser = request.user;

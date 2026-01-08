@@ -1,7 +1,7 @@
 /**
  * Script para actualizar la contraseña de un usuario específico
  * 
- * Este script actualiza la contraseña del usuario testio1@example.com a 123456
+ * Este script actualiza la contraseña del usuario testia1@example.com a 123456
  * 
  * Uso:
  *   npx tsx scripts/working/update-user-password.ts
@@ -28,7 +28,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-const TARGET_EMAIL = 'testio1@example.com';
+const TARGET_EMAIL = 'testia1@example.com';
 const NEW_PASSWORD = '123456';
 
 async function updateUserPassword() {

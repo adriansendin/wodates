@@ -22,6 +22,23 @@ export class UserPhotoApi {
       });
   }
 
+  async getUserPublicPhotos(
+    userId: string,
+    token: string
+  ): Promise<Result<UserPhoto[], DomainError>> {
+    return this.apiClient
+      .get<{ photos: UserPhoto[] }>(`/users/${userId}/photos`, token)
+      .then((result) => {
+        if (result.success) {
+          return { success: true, data: result.data.photos } as Result<
+            UserPhoto[],
+            DomainError
+          >;
+        }
+        return result;
+      });
+  }
+
   async addUserPhoto(
     formData: FormData,
     token: string

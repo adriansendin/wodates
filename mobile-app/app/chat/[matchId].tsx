@@ -805,14 +805,20 @@ export default function ChatScreen() {
   }, [blockApi, matchId, otherUserId, router, tokens?.accessToken]);
 
   const handleAvatarPress = useCallback(() => {
+    // Get match to access otherUser bio
+    const currentMatch = matchId ? matches.find(m => m.id === matchId) : null;
+    const otherUserBio = currentMatch?.otherUser?.bio;
+
     router.push({
       pathname: '/chat/avatar-view',
       params: {
         photoUrl: photoUrl ?? '',
         name: otherUserName ?? 'User',
+        otherUserId: otherUserId ?? '',
+        otherUserBio: otherUserBio ?? '',
       },
     });
-  }, [photoUrl, otherUserName, router]);
+  }, [photoUrl, otherUserName, otherUserId, matchId, matches, router]);
 
   const handleAttachZip = useCallback(async () => {
     console.log('[ChatScreen] handleAttachZip called', { userId: user?.id, isUploadingZip, isBlocked });

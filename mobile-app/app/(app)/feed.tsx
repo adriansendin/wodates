@@ -22,6 +22,8 @@ import { UserProfile } from '../../src/domain/entities/UserProfile';
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { MatchConfirmationModal } from '../../src/components/MatchConfirmationModal';
 import { BioPopupModal } from '../../src/components/BioPopupModal';
+import { PhotoCarousel, Photo } from '../../src/components/PhotoCarousel';
+import { UserPhotoApi } from '../../src/data/api/userPhotoApi';
 import { X, Check, Info } from 'lucide-react-native';
 // import DiscoverActionButtons from '../../src/components/DiscoverActionButtons';
 
@@ -185,12 +187,15 @@ export default function FeedScreen() {
   const [isDislikeInitiallyDisabled, setIsDislikeInitiallyDisabled] = useState(true);
   const [showBioPopup, setShowBioPopup] = useState(false);
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
+  const [currentUserPhotos, setCurrentUserPhotos] = useState<Photo[]>([]);
+  const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
 
   // Memoize API clients to prevent useEffect loops
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const feedApi = useMemo(() => new FeedApi(apiClient), [apiClient]);
   const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
+  const userPhotoApi = useMemo(() => new UserPhotoApi(apiClient), [apiClient]);
 
   // Track current candidate ID to prevent stale updates
   const currentCandidateIdRef = useRef<string | null>(null);
@@ -402,6 +407,65 @@ export default function FeedScreen() {
   useEffect(() => {
     loadMoreIfNeeded();
   }, [loadMoreIfNeeded]);
+
+  // Load photos for current user
+  const loadCurrentUserPhotos = useCallback(async () => {
+    const currentUser = users[currentIndex];
+
+    if (!currentUser?.id || !tokens?.accessToken) {
+      setCurrentUserPhotos([]);
+      return;
+    }
+
+    // Guard: prevent duplicate calls for the same candidate
+    if (currentCandidateIdRef.current === currentUser.id && currentUserPhotos.length > 0) {
+      return;
+    }
+
+    setIsLoadingPhotos(true);
+    try {
+      const result = await userPhotoApi.getUserPublicPhotos(
+        currentUser.id,
+        tokens.accessToken
+      );
+
+      if (result.success) {
+        setCurrentUserPhotos(result.data);
+      } else {
+        // Fallback to single photo from feed
+        if (currentUser.photoUrl) {
+          setCurrentUserPhotos([{
+            id: 'fallback',
+            public_url: currentUser.photoUrl,
+            is_main: true,
+            position: 0,
+          }]);
+        } else {
+          setCurrentUserPhotos([]);
+        }
+      }
+    } catch (error) {
+      console.error('[FeedScreen] Failed to load user photos:', error);
+      // Fallback to single photo from feed
+      if (currentUser.photoUrl) {
+        setCurrentUserPhotos([{
+          id: 'fallback',
+          public_url: currentUser.photoUrl,
+          is_main: true,
+          position: 0,
+        }]);
+      } else {
+        setCurrentUserPhotos([]);
+      }
+    } finally {
+      setIsLoadingPhotos(false);
+    }
+  }, [users, currentIndex, tokens?.accessToken, userPhotoApi]);
+
+  // Load photos when current user changes
+  useEffect(() => {
+    loadCurrentUserPhotos();
+  }, [loadCurrentUserPhotos]);
 
   // Load affinity sentences when current user changes
   useEffect(() => {
@@ -787,10 +851,20 @@ export default function FeedScreen() {
   const age = resolveAge(currentUser);
   const photoSource = resolvePhotoUrl(currentUser.photoUrl);
 
+  // Prepare photos for carousel - use loaded photos or fallback to single photo
+  const photosForCarousel = currentUserPhotos.length > 0 
+    ? currentUserPhotos 
+    : currentUser.photoUrl 
+      ? [{ id: 'fallback', public_url: currentUser.photoUrl, is_main: true, position: 0 }]
+      : [];
+
   return (
     <View style={styles.container}>
-      {/* Imagen a pantalla completa */}
-      <Image source={photoSource} style={styles.fullScreenImage} resizeMode="cover" />
+      {/* Photo carousel */}
+      <PhotoCarousel
+        photos={photosForCarousel}
+        fallbackPhoto={photoSource}
+      />
       
       {/* Gradiente inferior para mejor legibilidad */}
       <LinearGradient

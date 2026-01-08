@@ -49,6 +49,15 @@ export class UserPhotoService {
     return this.repository.listUserPhotos(userId);
   }
 
+  /**
+   * Get public photos for any user (used for viewing other users' photos in feed/discover)
+   */
+  async getUserPublicPhotos(
+    userId: string
+  ): Promise<Result<UserPhoto[], DomainError>> {
+    return this.repository.listUserPhotos(userId);
+  }
+
   async addUserPhoto(
     userId: string,
     buffer: Buffer,
