@@ -60,7 +60,7 @@ export default function Step4Screen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ProgressBar totalSteps={7} currentStep={2} />
+        <ProgressBar totalSteps={5} currentStep={2} />
 
         <View style={styles.content}>
           {/* Sección de Género */}

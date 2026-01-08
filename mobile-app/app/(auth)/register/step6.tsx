@@ -38,7 +38,7 @@ export default function Step6Screen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ProgressBar totalSteps={7} currentStep={5} />
+        <ProgressBar totalSteps={5} currentStep={4} />
 
         <View style={styles.content}>
           <Text style={styles.introText}>

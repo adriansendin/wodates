@@ -58,19 +58,11 @@ const completeRegistrationSteps = () => {
   cy.location('pathname', { timeout: 10000 }).should('include', 'step1');
   cy.contains('Comencemos creando tu cuenta').should('be.visible');
 
-  // Step 4: Basic credentials
+  // Step 4: Basic credentials (final step - registration happens here)
   cy.get('input[placeholder="Tu nombre"]').type(registerResponse.user.name);
   cy.get('input[placeholder="tu@email.com"]').clear().type(registerResponse.user.email);
   cy.get('input[placeholder="Confirma tu email"]').clear().type(registerResponse.user.email);
   cy.get('input[type="password"]').type('Password1!');
-  cy.contains('Continuar').click({ force: true });
-  cy.location('pathname').should('include', 'step7');
-  cy.contains('Añade tu foto de perfil').should('be.visible');
-
-  // Step 5: Avatar (skip upload for web flow)
-  cy.contains('Continuar').click({ force: true });
-  cy.location('pathname').should('include', '/register/complete');
-  cy.contains('Perfil básico completado').should('be.visible');
 };
 
 describe('Registration', () => {
@@ -99,7 +91,8 @@ describe('Registration', () => {
 
     completeRegistrationSteps();
 
-    cy.get('[data-testid="complete-registration-button"]').click({ force: true });
+    // Click "Finalizar registro" button to complete registration
+    cy.contains('Finalizar registro').click({ force: true });
 
     cy.wait('@register');
     cy.wait('@updateProfile');
@@ -118,10 +111,11 @@ describe('Registration', () => {
 
     completeRegistrationSteps();
 
-    cy.get('[data-testid="complete-registration-button"]').click({ force: true });
+    // Click "Finalizar registro" button to attempt registration
+    cy.contains('Finalizar registro').click({ force: true });
     cy.wait('@register');
 
     cy.contains(errorMessage).should('be.visible');
-    cy.location('pathname').should('include', '/register/complete');
+    cy.location('pathname').should('include', '/register/step1');
   });
 });

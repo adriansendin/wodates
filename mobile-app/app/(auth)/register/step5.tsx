@@ -40,7 +40,7 @@ export default function Step5Screen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ProgressBar totalSteps={7} currentStep={4} />
+        <ProgressBar totalSteps={5} currentStep={3} />
 
         <View style={styles.content}>
           {/* Sección: Sobre ti */}

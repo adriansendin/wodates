@@ -69,7 +69,7 @@ export default function Step2Screen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <ProgressBar totalSteps={7} currentStep={3} />
+        <ProgressBar totalSteps={5} currentStep={2} />
 
         <View style={styles.content}>
           {/* Sección de Fecha de Nacimiento */}

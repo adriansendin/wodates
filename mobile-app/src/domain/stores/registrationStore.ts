@@ -69,7 +69,7 @@ export const useRegistrationStore = create<
 
   nextStep: () =>
     set((state) => ({
-      currentStep: Math.min(state.currentStep + 1, 7),
+      currentStep: Math.min(state.currentStep + 1, 5),
     })),
 
   previousStep: () =>
