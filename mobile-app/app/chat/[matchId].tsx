@@ -243,6 +243,7 @@ export default function ChatScreen() {
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string>('');
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [pastedTextToSplit, setPastedTextToSplit] = useState<string | null>(null);
   const oldestMessageCursorRef = useRef<string | null>(null);
   const flatListRef = useRef<FlatList<Message>>(null);
 
@@ -695,29 +696,61 @@ export default function ChatScreen() {
     }
   }, [isBlocked, router]);
 
-  const handleSendMessage = useCallback(async () => {
-    const messageContent = message.trim();
+  // Constants for message limits
+  const MESSAGE_MAX_LENGTH = 500;
+  const SHOW_COUNTER_THRESHOLD = Math.floor(MESSAGE_MAX_LENGTH * 0.7); // 70% = 350
+  const WARNING_THRESHOLD = Math.floor(MESSAGE_MAX_LENGTH * 0.9); // 90% = 450
+
+  // Calculate remaining characters
+  const remainingChars = MESSAGE_MAX_LENGTH - message.length;
+  const shouldShowCounter = message.length >= SHOW_COUNTER_THRESHOLD;
+  const isWarning = message.length >= WARNING_THRESHOLD;
+  const isAtLimit = message.length >= MESSAGE_MAX_LENGTH;
+
+  // Handle text input change with paste detection
+  const handleTextChange = useCallback((text: string) => {
+    // If text exceeds limit, truncate it
+    if (text.length > MESSAGE_MAX_LENGTH) {
+      const truncated = text.substring(0, MESSAGE_MAX_LENGTH);
+      setMessage(truncated);
+      // Store the excess text for potential split
+      const excess = text.substring(MESSAGE_MAX_LENGTH);
+      if (excess.trim().length > 0) {
+        setPastedTextToSplit(excess);
+      } else {
+        setPastedTextToSplit(null);
+      }
+    } else {
+      setMessage(text);
+      // Clear pasted text if user modifies the text (typing or deleting)
+      // Only clear if the current text is different from what would be the first part
+      if (pastedTextToSplit) {
+        // If user has modified the text significantly, clear the split option
+        setPastedTextToSplit(null);
+      }
+    }
+  }, [MESSAGE_MAX_LENGTH, pastedTextToSplit]);
+
+  // Internal send message function
+  const handleSendMessageInternal = useCallback(async (messageContent: string) => {
     if (!messageContent || !tokens?.accessToken || !matchId || isSending || isBlocked) {
       return;
     }
 
-    // Store the message content to clear it later
-    const messageToSend = messageContent;
-    
     // Clear the input immediately when user clicks send (optimistic update)
-    // This provides immediate feedback and ensures the text is cleared
     console.log('[ChatScreen] Clearing message input immediately');
     setMessage('');
+    setPastedTextToSplit(null);
     
     setSending(true);
     clearError();
 
     try {
-      console.log('[ChatScreen] Sending message:', { matchId, isBot, messageLength: messageToSend.length });
+      console.log('[ChatScreen] Sending message:', { matchId, isBot, messageLength: messageContent.length });
       
       const result = await chatApi.sendMessage(
         matchId,
-        { content: messageToSend },
+        { content: messageContent },
         tokens.accessToken,
       );
 
@@ -728,7 +761,7 @@ export default function ChatScreen() {
         setError(messageText);
         Alert.alert('Error', messageText);
         // Restore message on error so user can retry
-        setMessage(messageToSend);
+        setMessage(messageContent);
         return;
       }
 
@@ -767,12 +800,33 @@ export default function ChatScreen() {
     isBot,
     isSending,
     matchId,
-    message,
     setError,
     setSending,
     tokens?.accessToken,
     updateMatch,
   ]);
+
+  // Handle split message action
+  const handleSplitMessage = useCallback(() => {
+    if (!pastedTextToSplit) return;
+    
+    // Send first part (current message)
+    const firstPart = message.trim();
+    if (firstPart && tokens?.accessToken && matchId && !isSending && !isBlocked) {
+      // Send first part
+      handleSendMessageInternal(firstPart);
+      
+      // Set second part in input
+      setMessage(pastedTextToSplit.substring(0, MESSAGE_MAX_LENGTH));
+      setPastedTextToSplit(null);
+    }
+  }, [pastedTextToSplit, message, tokens?.accessToken, matchId, isSending, isBlocked, MESSAGE_MAX_LENGTH, handleSendMessageInternal]);
+
+  // Public send message function
+  const handleSendMessage = useCallback(async () => {
+    const messageContent = message.trim();
+    await handleSendMessageInternal(messageContent);
+  }, [message, handleSendMessageInternal]);
 
   const handleBlockUser = useCallback(async () => {
     if (!matchId || !otherUserId || !tokens?.accessToken) {
@@ -1101,41 +1155,85 @@ export default function ChatScreen() {
                 )}
               </TouchableOpacity>
             )}
-            <TextInput
-              style={[styles.textInput, isBlocked && styles.textInputDisabled]}
-              value={message}
-              onChangeText={setMessage}
-              placeholder={isBlocked ? 'Chat no disponible' : 'Type a message...'}
-              multiline
-              maxLength={1000}
-              editable={!isBlocked}
-              onSubmitEditing={() => {
-                // Only send if message is not empty and not sending
-                if (message.trim() && !isSending && !isBlocked) {
-                  handleSendMessage();
-                }
-              }}
-              blurOnSubmit={false}
-              returnKeyType="send"
-              onKeyPress={(e) => {
-                // Handle Enter key press to send message
-                // Note: shiftKey is not available in React Native's TextInputKeyPressEventData
-                if (e.nativeEvent.key === 'Enter') {
+            <View style={styles.textInputWrapper}>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  isBlocked && styles.textInputDisabled,
+                  isAtLimit && styles.textInputAtLimit,
+                  shouldShowCounter && styles.textInputWithCounter
+                ]}
+                value={message}
+                onChangeText={handleTextChange}
+                placeholder={isBlocked ? 'Chat no disponible' : 'Type a message...'}
+                multiline
+                maxLength={MESSAGE_MAX_LENGTH}
+                editable={!isBlocked}
+                onSubmitEditing={() => {
+                  // Only send if message is not empty and not sending
                   if (message.trim() && !isSending && !isBlocked) {
-                    e.preventDefault?.();
                     handleSendMessage();
                   }
-                }
-              }}
-              onFocus={() => {
-                // Scroll to bottom when input is focused (solo si ya se hizo scroll inicial)
-                if (hasScrolledToBottom.current) {
-                  setTimeout(() => {
-                    flatListRef.current?.scrollToEnd({ animated: true });
-                  }, 300);
-                }
-              }}
-            />
+                }}
+                blurOnSubmit={false}
+                returnKeyType="send"
+                onKeyPress={(e) => {
+                  // Handle Enter key press to send message
+                  // Note: shiftKey is not available in React Native's TextInputKeyPressEventData
+                  if (e.nativeEvent.key === 'Enter') {
+                    if (message.trim() && !isSending && !isBlocked) {
+                      e.preventDefault?.();
+                      handleSendMessage();
+                    }
+                  }
+                }}
+                onFocus={() => {
+                  // Scroll to bottom when input is focused (solo si ya se hizo scroll inicial)
+                  if (hasScrolledToBottom.current) {
+                    setTimeout(() => {
+                      flatListRef.current?.scrollToEnd({ animated: true });
+                    }, 300);
+                  }
+                }}
+              />
+              {shouldShowCounter && (
+                <View style={styles.counterContainer}>
+                  <Text style={[
+                    styles.counterText,
+                    isWarning && styles.counterTextWarning,
+                    isAtLimit && styles.counterTextAtLimit
+                  ]}>
+                    {remainingChars}
+                  </Text>
+                </View>
+              )}
+              {pastedTextToSplit && (
+                <View style={styles.splitMessageContainer}>
+                  <Text style={styles.splitMessageText}>
+                    Text was too long and was truncated.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.splitButton}
+                    onPress={handleSplitMessage}
+                  >
+                    <Text style={styles.splitButtonText}>Split into 2 messages</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {!pastedTextToSplit && (isWarning || isAtLimit) && (
+                <View style={styles.helpTextContainer}>
+                  {isAtLimit ? (
+                    <Text style={styles.helpText}>
+                      Send or split into 2 messages.
+                    </Text>
+                  ) : (
+                    <Text style={styles.helpText}>
+                      Tip: split into 2 messages.
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
             <TouchableOpacity
               style={[styles.sendButton, (!message.trim() || isSending || isBlocked) && styles.sendButtonDisabled]}
               onPress={handleSendMessage}
@@ -1363,6 +1461,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  textInputWrapper: {
+    flex: 1,
+    marginRight: 12,
+    position: 'relative',
+  },
   textInput: {
     flex: 1,
     borderWidth: 1,
@@ -1370,13 +1473,74 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    marginRight: 12,
     maxHeight: 100,
     fontSize: 16,
+  },
+  textInputWithCounter: {
+    paddingRight: 50, // Make room for counter when visible
   },
   textInputDisabled: {
     backgroundColor: '#f0f0f0',
     color: '#999',
+  },
+  textInputAtLimit: {
+    borderColor: '#ff9800',
+  },
+  counterContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    zIndex: 1,
+  },
+  counterText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  counterTextWarning: {
+    color: '#ff9800',
+  },
+  counterTextAtLimit: {
+    color: '#f44336',
+  },
+  helpTextContainer: {
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  helpText: {
+    fontSize: 11,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  splitMessageContainer: {
+    marginTop: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    backgroundColor: '#fff3cd',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ffc107',
+  },
+  splitMessageText: {
+    fontSize: 12,
+    color: '#856404',
+    marginBottom: 4,
+  },
+  splitButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#ffc107',
+    borderRadius: 6,
+  },
+  splitButtonText: {
+    fontSize: 11,
+    color: '#856404',
+    fontWeight: '600',
   },
   sendButton: {
     backgroundColor: '#e91e63',

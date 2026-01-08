@@ -32,7 +32,7 @@ export const MessageSchema = z.object({
   id: z.string().uuid(),
   matchId: z.string().uuid(),
   senderId: z.string().uuid(),
-  content: z.string().min(1).max(1000),
+  content: z.string().min(1).max(500),
   createdAt: DateTimeSchema,
   profileProcessedAt: DateTimeSchema.nullable().optional(),
 });

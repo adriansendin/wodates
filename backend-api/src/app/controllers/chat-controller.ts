@@ -6,7 +6,7 @@ import { DomainError } from '../../domain/errors/DomainError';
 import { z } from 'zod';
 
 const SendMessageSchema = z.object({
-  content: z.string().min(1).max(1000),
+  content: z.string().min(1).max(500),
 });
 
 const GetMessagesQuerySchema = z.object({
