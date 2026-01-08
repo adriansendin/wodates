@@ -6,6 +6,7 @@ import {
   Dimensions,
   ActivityIndicator,
   FlatList,
+  Platform,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -30,6 +31,19 @@ export function PhotoCarousel({
 }: PhotoCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+  const containerRef = useRef<View>(null);
+  
+  // Mouse drag state for web
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const currentXRef = useRef(0);
+  const scrollOffsetRef = useRef(0);
+  const currentIndexRef = useRef(currentIndex);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
 
   // Sort photos: main first, then by position
   const sortedPhotos = React.useMemo(() => {
@@ -62,6 +76,112 @@ export function PhotoCarousel({
       onPhotoChange(currentIndex);
     }
   }, [currentIndex, onPhotoChange]);
+
+  // Mouse drag handlers for web using native DOM events
+  useEffect(() => {
+    if (Platform.OS !== 'web' || sortedPhotos.length <= 1) {
+      return;
+    }
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only handle left mouse button
+      if (e.button !== 0) return;
+      
+      isDraggingRef.current = true;
+      startXRef.current = e.clientX;
+      currentXRef.current = e.clientX;
+      scrollOffsetRef.current = currentIndexRef.current * SCREEN_WIDTH;
+      
+      // Prevent default to avoid text selection
+      e.preventDefault();
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      
+      const deltaX = startXRef.current - e.clientX;
+      const newOffset = scrollOffsetRef.current + deltaX;
+      const clampedOffset = Math.max(0, Math.min(newOffset, (sortedPhotos.length - 1) * SCREEN_WIDTH));
+      
+      // Scroll to the calculated position using scrollToOffset
+      if (flatListRef.current) {
+        flatListRef.current.scrollToOffset({ offset: clampedOffset, animated: false });
+      }
+      
+      currentXRef.current = e.clientX;
+      e.preventDefault();
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      
+      const deltaX = startXRef.current - currentXRef.current;
+      const threshold = SCREEN_WIDTH * 0.15; // 15% of screen width
+      const currentIdx = currentIndexRef.current;
+      
+      let targetIndex = currentIdx;
+      
+      // Determine target index based on drag distance
+      if (Math.abs(deltaX) > threshold) {
+        if (deltaX > 0 && currentIdx < sortedPhotos.length - 1) {
+          // Dragged left - go to next photo
+          targetIndex = currentIdx + 1;
+        } else if (deltaX < 0 && currentIdx > 0) {
+          // Dragged right - go to previous photo
+          targetIndex = currentIdx - 1;
+        }
+      }
+      
+      // Snap to target photo
+      if (flatListRef.current) {
+        flatListRef.current.scrollToIndex({ index: targetIndex, animated: true });
+      }
+      
+      isDraggingRef.current = false;
+      e.preventDefault();
+    };
+
+    // Add event listeners to window for mouse move and up (to work even if mouse leaves container)
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    
+    // Use a timeout to ensure DOM is ready
+    const timeoutId = setTimeout(() => {
+      // Get the container DOM node - try multiple methods
+      // @ts-ignore - React Native Web exposes _nativeNode
+      let containerNode = containerRef.current?._nativeNode;
+      
+      // Fallback: try to find by traversing the ref
+      if (!containerNode && containerRef.current) {
+        // @ts-ignore
+        containerNode = containerRef.current;
+      }
+      
+      if (containerNode && typeof containerNode.addEventListener === 'function') {
+        containerNode.addEventListener('mousedown', handleMouseDown);
+        
+        // Style for better UX
+        if (containerNode instanceof HTMLElement) {
+          containerNode.style.cursor = 'grab';
+          containerNode.style.userSelect = 'none';
+          containerNode.style.webkitUserSelect = 'none';
+        }
+      }
+    }, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      
+      // Try to remove mousedown listener
+      // @ts-ignore
+      const containerNode = containerRef.current?._nativeNode || containerRef.current;
+      if (containerNode && typeof containerNode.removeEventListener === 'function') {
+        containerNode.removeEventListener('mousedown', handleMouseDown);
+      }
+    };
+  }, [currentIndex, sortedPhotos.length]);
 
   const handleScroll = (event: any) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
@@ -101,7 +221,10 @@ export function PhotoCarousel({
   }
 
   return (
-    <View style={styles.container}>
+    <View 
+      ref={containerRef} 
+      style={styles.container}
+    >
       {/* Photo indicators */}
       {sortedPhotos.length > 1 && (
         <View style={styles.indicatorsContainer}>
@@ -141,6 +264,7 @@ export function PhotoCarousel({
         contentContainerStyle={styles.flatListContent}
         removeClippedSubviews={false}
         windowSize={3}
+        scrollEnabled={true}
       />
     </View>
   );
