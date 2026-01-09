@@ -2,6 +2,7 @@ import { Result, success, failure } from '../../domain/Result';
 import { DomainError, InternalError } from '../../domain/errors/DomainError';
 import { MatchRepository } from '../../domain/repositories/MatchRepository';
 import { LikeRepository } from '../../domain/repositories/LikeRepository';
+import { MessageRepository } from '../../domain/repositories/MessageRepository';
 import { DocLoveHelper } from './doc-love-helper';
 import { Match } from '../../domain/entities/Match';
 
@@ -14,7 +15,8 @@ export class SystemUserService {
   constructor(
     private docLoveHelper: DocLoveHelper,
     private likeRepository: LikeRepository,
-    private matchRepository: MatchRepository
+    private matchRepository: MatchRepository,
+    private messageRepository?: MessageRepository
   ) {}
 
   /**
@@ -125,6 +127,23 @@ export class SystemUserService {
 
       if (!matchResult.success) {
         return failure(matchResult.error);
+      }
+
+      // Send welcome message from Doc Love (static message, not AI-generated)
+      if (this.messageRepository) {
+        const welcomeMessageResult = await this.messageRepository.create({
+          matchId: matchResult.data.id,
+          senderId: docLoveId,
+          content: "Welcome to Wodates, I'm Doc Love.",
+        });
+
+        // Log error but don't fail the match creation if message fails
+        if (!welcomeMessageResult.success) {
+          console.error(
+            '[SystemUserService] Failed to send welcome message:',
+            welcomeMessageResult.error
+          );
+        }
       }
 
       return success(matchResult.data);

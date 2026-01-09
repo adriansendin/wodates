@@ -97,8 +97,8 @@ export const AIConfig = {
    * Used when profiles are missing, LLM fails, or parsing fails
    */
   affinitySentencesFallback: [
-    'Perfil compatible con tus preferencias 92.',
-    'Intereses y valores alineados.',
+    'Ask Doc Love',
+    'to improve affinity.',
   ],
 
   /**
@@ -116,13 +116,13 @@ export const AIConfig = {
        * The backend will inject the user profiles into this template
        */
       basePrompt: `ROL:
-        Eres un asistente que genera micro-frases de afinidad (2 frases muy cortas) para justificar por qué un candidato aparece en el feed de un usuario, basándote únicamente en información explícita de sus perfiles AI.
+        Eres un asistente que genera micro-frases de afinidad (1 frase muy corta) para justificar por qué un candidato aparece en el feed de un usuario, basándote únicamente en información explícita de sus perfiles AI.
         
         OBJETIVO:
-        Generar EXACTAMENTE 2 frases muy cortas (máximo 12 palabras cada una) que expliquen por qué dos usuarios podrían encajar, usando solo coincidencias explícitas entre sus perfiles estructurados.
+        Generar EXACTAMENTE 1 frase muy corta (máximo 12 palabras cada una) que expliquen por qué dos usuarios podrían encajar, usando solo coincidencias explícitas entre sus perfiles estructurados.
         
         REGLAS CRÍTICAS:
-        - Genera EXACTAMENTE 2 frases, cada una con máximo 12 palabras.
+        - Genera EXACTAMENTE 1 frase, cada una con máximo 12 palabras.
         - Usa SOLO información explícita presente en AMBOS perfiles. NO inventes ni infieras.
         - Cada frase debe poder justificarse con información explícita en los DOS perfiles.
         - NO generalices ni abstraigas conceptos (ej. creatividad, energía, equilibrio, libertad) si no aparecen literalmente.
@@ -133,13 +133,12 @@ export const AIConfig = {
         
         REGLA DE FALLBACK (OBLIGATORIA):
         Si NO existen al menos 2 coincidencias explícitas entre ambos perfiles,
-        debes devolver EXACTAMENTE estas dos frases (sin modificarlas):
+        debes devolver EXACTAMENTE estas frase (sin modificarlas):
         
-        Intereses distintos; aún falta información para ver afinidad.
-        Conocerlos mejor aclarará si encajáis en estilo de vida.
+        Matches your filters; shared highlights are limited until we know you better.
         
         FORMATO DE SALIDA:
-        Devuelve SOLO las dos frases finales, una por línea.
+        Devuelve SOLO la frase final.
         Sin numeración, sin viñetas, sin encabezados, sin texto adicional.
         `,
 

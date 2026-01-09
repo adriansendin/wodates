@@ -1,25 +1,25 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
-
-// Simplified auth store for MVP
-const useAuthStore = () => {
-  // Mock implementation for MVP
-  return {
-    user: null // No user logged in initially
-  };
-};
+import { useAuthStore } from '../src/domain/stores/authStore';
+import { usePreviewStore } from '../src/domain/stores/previewStore';
 
 export default function Home() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { enterPreview } = usePreviewStore();
 
   useEffect(() => {
     if (user) {
       router.replace('/(app)/matches');
     }
   }, [user, router]);
+
+  const handleEnterPreview = () => {
+    enterPreview();
+    router.push('/(preview)/feed');
+  };
 
   return (
     <>
@@ -47,17 +47,19 @@ export default function Home() {
 
         {/* Botones principales */}
         <View style={styles.buttonsContainer}>
-          <Link href="/(auth)/register" asChild>
-            <TouchableOpacity style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>Crear una cuenta</Text>
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => router.push('/(auth)/login')}
+          >
+            <Text style={styles.secondaryButtonText}>Sign in</Text>
+          </TouchableOpacity>
 
-          <Link href="/(auth)/login" asChild>
-            <TouchableOpacity style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Iniciar sesión</Text>
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleEnterPreview}
+          >
+            <Text style={styles.primaryButtonText}>Enter preview</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </>

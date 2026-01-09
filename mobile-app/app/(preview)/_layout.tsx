@@ -1,21 +1,8 @@
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../../src/domain/stores/authStore';
-import { usePreviewStore } from '../../src/domain/stores/previewStore';
 import { View, Text } from 'react-native';
 
-export default function AppTabsLayout() {
-  const { user } = useAuthStore();
-  const { isPreviewMode } = usePreviewStore();
-
-  if (isPreviewMode) {
-    return <Redirect href="/(preview)/feed" />;
-  }
-
-  if (!user) {
-    return <Redirect href="/" />;
-  }
-
+export default function PreviewTabsLayout() {
   return (
     <Tabs
       screenOptions={({ route }) => ({
@@ -38,13 +25,19 @@ export default function AppTabsLayout() {
             </Text>
           </View>
         ),
-        headerRight: undefined,
+        headerRight: () => (
+          <View style={{ marginRight: 16, backgroundColor: '#FFE5B4', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#8B4513' }}>
+              PREVIEW MODE
+            </Text>
+          </View>
+        ),
         headerBackVisible: false,
         tabBarIcon: ({ focused, color, size }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
             feed: focused ? 'heart' : 'heart-outline',
             matches: focused ? 'people' : 'people-outline',
-            profile: focused ? 'person' : 'person-outline',
+            profile: focused ? 'lock-closed' : 'lock-closed',
           };
 
           return <Ionicons name={icons[route.name] ?? 'ellipse'} size={size} color={color} />;
@@ -66,7 +59,7 @@ export default function AppTabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Perfil',
+          title: 'Profile',
         }}
       />
     </Tabs>

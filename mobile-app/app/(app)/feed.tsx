@@ -808,18 +808,18 @@ export default function FeedScreen() {
         <View style={styles.emptyIconContainer}>
           <Text style={styles.emptyIcon}>💬</Text>
         </View>
-        <Text style={styles.emptyTitle}>Modo exclusivo activado</Text>
+        <Text style={styles.emptyTitle}>Exclusive mode is on</Text>
         <Text style={styles.emptySubtext}>
-          Ahora estás conociendo a una persona.
+        You’re getting to know one person.
         </Text>
         <Text style={styles.emptySubtext}>
-          Para activar Discover tendrás que cerrar esa conversación.
+        To unlock Discover, you’ll need to close this chat.
         </Text>
         <TouchableOpacity 
           style={styles.discoverButton}
           onPress={() => router.push('/(app)/matches')}
         >
-          <Text style={styles.discoverButtonText}>Abrir chat</Text>
+          <Text style={styles.discoverButtonText}>Go to chats</Text>
         </TouchableOpacity>
       </View>
     );
@@ -890,14 +890,17 @@ export default function FeedScreen() {
           {isLoadingSentences ? (
             <View style={styles.affinityPlaceholder}>
               <ActivityIndicator size="small" color="#fff" />
-              <Text style={styles.affinityLoadingText}>Analizando afinidad...</Text>
+              <Text style={styles.affinityLoadingText}>Finding shared highlights...</Text>
             </View>
           ) : affinitySentences.length > 0 ? (
-            affinitySentences.map((sentence, index) => (
-              <Text key={index} style={styles.affinitySentence}>
-                {sentence}
-              </Text>
-            ))
+            <>
+              <Text style={styles.affinityLabel}>Doc Love</Text>
+              {affinitySentences.map((sentence, index) => (
+                <Text key={index} style={styles.affinitySentence}>
+                  {sentence}
+                </Text>
+              ))}
+            </>
           ) : affinitySentencesError ? (
             <View style={styles.affinityError}>
               <Text style={styles.affinityErrorText}>
@@ -1105,6 +1108,16 @@ const styles = StyleSheet.create({
   },
   affinityContainer: {
     marginTop: 8,
+  },
+  affinityLabel: {
+    fontSize: 12,
+    color: '#fff',
+    opacity: 0.8,
+    marginBottom: 6,
+    fontWeight: '500',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   affinityPlaceholder: {
     paddingVertical: 4,

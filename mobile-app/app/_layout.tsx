@@ -34,7 +34,7 @@ export default function RootLayout() {
             color: '#000000',
           },
           headerTitle: '',
-          headerShown: !route.name?.includes('chat') && !route.name?.includes('(auth)') && !route.name?.includes('(app)'),
+          headerShown: !route.name?.includes('chat') && !route.name?.includes('(auth)') && !route.name?.includes('(app)') && !route.name?.includes('(preview)'),
           headerLeft: () => (
             <View style={{ marginLeft: 16 }}>
               <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#e91e63' }}>

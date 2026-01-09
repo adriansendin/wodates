@@ -435,7 +435,7 @@ export default function Step1Screen() {
               {(isCheckingEmail || isLoading) ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.buttonText}>Finalizar registro</Text>
+                <Text style={styles.buttonText}>Enter Wodates</Text>
               )}
             </TouchableOpacity>
 

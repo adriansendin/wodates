@@ -11,6 +11,7 @@ import { SystemUserService } from '../services/system-user-service';
 import { DocLoveHelper } from '../services/doc-love-helper';
 import { SupabaseLikeRepository } from '../../data/repositories/SupabaseLikeRepository';
 import { SupabaseMatchRepository } from '../../data/repositories/SupabaseMatchRepository';
+import { SupabaseMessageRepository } from '../../data/repositories/SupabaseMessageRepository';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -45,10 +46,12 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
       const docLoveHelper = new DocLoveHelper();
       const likeRepository = new SupabaseLikeRepository();
       const matchRepository = new SupabaseMatchRepository();
+      const messageRepository = new SupabaseMessageRepository();
       systemUserService = new SystemUserService(
         docLoveHelper,
         likeRepository,
-        matchRepository
+        matchRepository,
+        messageRepository
       );
       fastify.log.info('SystemUserService initialized successfully');
     } catch (error) {
