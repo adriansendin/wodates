@@ -24,6 +24,7 @@ import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepos
 import { SupabaseMessageRepository } from '../data/repositories/SupabaseMessageRepository';
 import { SupabaseBlockedUserRepository } from '../data/repositories/SupabaseBlockedUserRepository';
 import { SupabaseQuestionBankRepository } from '../data/repositories/SupabaseQuestionBankRepository';
+import { SupabaseUserAskedQuestionRepository } from '../data/repositories/SupabaseUserAskedQuestionRepository';
 import { LikeUser } from '../domain/use-cases/feed/LikeUser';
 import { PassUser } from '../domain/use-cases/feed/PassUser';
 import { ConfirmMatch } from '../domain/use-cases/feed/ConfirmMatch';
@@ -123,6 +124,7 @@ async function buildApp() {
   const messageRepository = new SupabaseMessageRepository();
   const blockedUserRepository = new SupabaseBlockedUserRepository();
   const questionBankRepository = new SupabaseQuestionBankRepository();
+  const userAskedQuestionRepository = new SupabaseUserAskedQuestionRepository();
 
   // Initialize AI services (for Doc Love chatbot)
   let docLoveChatService: DocLoveChatService | undefined;

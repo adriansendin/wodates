@@ -4,9 +4,9 @@ import { Link } from 'expo-router';
 export default function NotFound() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>404 - Pagina no encontrada</Text>
+      <Text style={styles.title}>404 — Not found</Text>
       <Link href="/" style={styles.link}>
-        Volver al inicio
+        Return to Home
       </Link>
     </View>
   );
