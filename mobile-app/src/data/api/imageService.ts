@@ -486,7 +486,7 @@ export async function pickImageFromGallery(): Promise<
     if (!hasPermission) {
       return failure(
         new PermissionDeniedError(
-          'Se necesitan permisos para acceder a la galería de fotos.'
+          'Photo library permission is required.'
         )
       );
     }
@@ -511,7 +511,7 @@ export async function pickImageFromGallery(): Promise<
     console.error('[ImageService] Error picking image from gallery:', error);
     return failure(
       new ImagePickerError(
-        'Error al seleccionar la imagen. Inténtalo de nuevo.',
+        "Couldn't select the image. Please try again.",
         error
       )
     );
@@ -564,7 +564,7 @@ export async function takePictureWithCamera(): Promise<
           );
           return failure(
             new CameraError(
-              'Error al tomar la foto. Inténtalo de nuevo.',
+              "Couldn't take the photo. Please try again.",
               fallbackError instanceof Error
                 ? fallbackError
                 : new Error(String(fallbackError))
@@ -579,7 +579,7 @@ export async function takePictureWithCamera(): Promise<
     if (!hasPermission) {
       return failure(
         new PermissionDeniedError(
-          'Se necesitan permisos para acceder a la cámara.'
+          'Camera permission is required.'
         )
       );
     }
@@ -601,7 +601,7 @@ export async function takePictureWithCamera(): Promise<
   } catch (error) {
     console.error('[ImageService] Error taking picture with camera:', error);
     return failure(
-      new CameraError('Error al tomar la foto. Inténtalo de nuevo.', error)
+      new CameraError("Couldn't take the photo. Please try again.", error)
     );
   }
 }
@@ -683,13 +683,13 @@ export async function uploadAvatarToBackend(
     // Handle axios error format
     if (axios.isAxiosError(error) && error.response) {
       const message =
-        error.response.data?.message || 'Error al subir la imagen.';
+        error.response.data?.message || 'An error occurred while uploading the image.';
       return failure(new UploadError(message, error));
     }
 
     return failure(
       new UploadError(
-        'Error inesperado al subir la imagen. Inténtalo de nuevo.',
+        'Unexpected error while uploading the image. Please try again.',
         error instanceof Error ? error : new Error(String(error))
       )
     );
@@ -788,7 +788,7 @@ export async function uploadVerificationSelfie(
 
         // Validate file size before upload to prevent 413 errors
         if (file.size > MAX_IMAGE_SIZE_BYTES) {
-          const errorMessage = `La imagen es demasiado grande (${fileSizeKB}KB). El tamaño máximo permitido es ${MAX_IMAGE_SIZE_KB}KB. Por favor, selecciona una imagen más pequeña o comprímela.`;
+          const errorMessage = `The image is too large (${fileSizeKB} KB). The maximum allowed size is ${MAX_IMAGE_SIZE_KB} KB. Please choose a smaller image or compress it.`;
           console.error('[ImageService] ❌ File too large:', {
             fileSizeKB: fileSizeKB,
             maxSizeKB: MAX_IMAGE_SIZE_KB,
@@ -916,7 +916,7 @@ export async function uploadVerificationSelfie(
         // Handle specific error codes with user-friendly messages
         if (error.response.status === 413) {
           const message =
-            'La imagen es demasiado grande. Por favor, selecciona una imagen más pequeña. El tamaño máximo permitido es 500KB.';
+            'The image is too large. Please choose a smaller image. The maximum allowed size is 500 KB.';
           console.error(
             '[ImageService] ❌ 413 Payload Too Large - Image exceeds server limit'
           );
@@ -943,7 +943,7 @@ export async function uploadVerificationSelfie(
     const errorMessage =
       error instanceof Error
         ? error.message
-        : 'Error inesperado al subir la selfie de verificación.';
+        : 'Unexpected error while uploading the verification selfie.';
     console.error('[ImageService] Non-axios error:', errorMessage);
 
     return failure(

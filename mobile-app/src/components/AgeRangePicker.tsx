@@ -94,7 +94,7 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
         <View style={styles.rangeDisplay}>
           <Text
             style={styles.rangeText}
-          >{`Rango: ${localMinAge} - ${localMaxAge} años`}</Text>
+          >{`Range: ${localMinAge}–${localMaxAge}`}</Text>
         </View>
       </View>
     );
@@ -119,7 +119,7 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
 
       <View style={styles.rangeDisplay}>
         <Text style={styles.rangeText}>
-          {`Rango: ${localMinAge} - ${localMaxAge} años`}
+          {`Range: ${localMinAge}–${localMaxAge}`}
         </Text>
       </View>
     </View>

@@ -36,4 +36,11 @@ export class AuthApi {
   ): Promise<Result<{ exists: boolean; email: string }, DomainError>> {
     return this.apiClient.post('/auth/check-email', { email });
   }
+
+  async joinWaitlist(
+    city: string,
+    email: string
+  ): Promise<Result<{ ok: boolean; alreadyExisted: boolean; id: string; createdAt: string }, DomainError>> {
+    return this.apiClient.post('/waitlist/signup', { city, email });
+  }
 }

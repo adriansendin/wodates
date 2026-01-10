@@ -7,15 +7,15 @@ import { GENDER_OPTIONS, GenderOption } from '../../../src/domain/entities/Gende
 import { LOOKING_FOR_OPTIONS, LookingForOption } from '../../../src/domain/entities/LookingFor';
 
 const GENDER_LABELS: Record<GenderOption, string> = {
-  male: 'Hombre',
-  female: 'Mujer',
-  non_binary: 'No binario',
+  male: 'Man',
+  female: 'Woman',
+  non_binary: 'Non-binary',
 };
 
 const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
-  both: 'Ambos',
-  male: 'Hombres',
-  female: 'Mujeres',
+  both: 'Everyone',
+  male: 'Men',
+  female: 'Women',
 };
 
 export default function Step4Screen() {
@@ -65,7 +65,7 @@ export default function Step4Screen() {
         <View style={styles.content}>
           {/* Sección de Género */}
           <View style={styles.section}>
-            <Text style={styles.title}>¿Cuál es tu género?</Text>
+            <Text style={styles.title}>What is your gender?</Text>
 
             <View style={styles.optionsContainer}>
               {GENDER_OPTIONS.map((option) => (
@@ -93,7 +93,7 @@ export default function Step4Screen() {
 
           {/* Sección de A quién buscas */}
           <View style={styles.section}>
-            <Text style={styles.title}>¿A quién buscas?</Text>
+            <Text style={styles.title}>Who are you looking for?</Text>
 
             <View style={styles.optionsContainer}>
               {LOOKING_FOR_OPTIONS.map((option) => (
@@ -120,7 +120,7 @@ export default function Step4Screen() {
           </View>
 
           <Text style={styles.infoText}>
-            Podrás cambiar estas preferencias más adelante.
+            You can change these preferences later.
           </Text>
 
           <View style={styles.buttonContainer}>
@@ -141,11 +141,11 @@ export default function Step4Screen() {
                 styles.buttonText,
                 (!gender || gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
                  !lookingFor || lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) && styles.buttonTextDisabled
-              ]}>Continuar</Text>
+              ]}>Continue</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Volver</Text>
+              <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
         </View>

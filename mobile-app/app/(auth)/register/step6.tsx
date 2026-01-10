@@ -42,15 +42,14 @@ export default function Step6Screen() {
 
         <View style={styles.content}>
           <Text style={styles.introText}>
-            Algunas costumbres son importantes en una relación.
+            Some habits matter in a relationship.
           </Text>
 
-          {/* Sección: Sobre ti */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sobre ti</Text>
+            <Text style={styles.sectionTitle}>About you</Text>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>¿Fumas?</Text>
+              <Text style={styles.questionText}>Do you smoke?</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -83,7 +82,7 @@ export default function Step6Screen() {
                     styles.optionText,
                     smoking === 'occasionally' && styles.optionTextSelected,
                   ]}>
-                    Solo ocasionalmente
+                    Occasionally
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -100,19 +99,18 @@ export default function Step6Screen() {
                     styles.optionText,
                     smoking === 'regularly' && styles.optionTextSelected,
                   ]}>
-                    Fumo habitualmente
+                    Yes, regularly
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
 
-          {/* Sección: Sobre la persona que buscas */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sobre la persona que buscas</Text>
+            <Text style={styles.sectionTitle}>About the person you're looking for</Text>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>¿Te importa si la otra persona fuma?</Text>
+              <Text style={styles.questionText}>Does it matter to you if the other person smokes?</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -128,7 +126,7 @@ export default function Step6Screen() {
                     styles.optionText,
                     caresAboutPartnerSmoking === 'yes' && styles.optionTextSelected,
                   ]}>
-                    Sí, no quiero que fume
+                    Yes, I prefer they don't smoke
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -145,7 +143,7 @@ export default function Step6Screen() {
                     styles.optionText,
                     caresAboutPartnerSmoking === 'no' && styles.optionTextSelected,
                   ]}>
-                    Me da igual
+                    It doesn't matter to me
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -153,7 +151,7 @@ export default function Step6Screen() {
           </View>
 
           <Text style={styles.infoText}>
-            Podrás cambiar estas preferencias más adelante.
+            You can change these preferences later.
           </Text>
 
           <View style={styles.buttonContainer}>
@@ -171,11 +169,11 @@ export default function Step6Screen() {
               <Text style={[
                 styles.buttonText,
                 (smoking === null || caresAboutPartnerSmoking === null) && styles.buttonTextDisabled
-              ]}>Continuar</Text>
+              ]}>Continue</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Volver</Text>
+              <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
         </View>

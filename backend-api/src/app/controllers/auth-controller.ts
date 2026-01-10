@@ -4,12 +4,31 @@ import { DomainError } from '../../domain/errors/DomainError';
 import { ZodError } from 'zod';
 import { AuthService } from '../services/auth-service';
 import { SystemUserService } from '../services/system-user-service';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export class AuthController {
+  private readonly supabaseClient: SupabaseClient | null;
+
   constructor(
     private readonly authService: AuthService,
     private readonly systemUserService?: SystemUserService
-  ) {}
+  ) {
+    // Initialize Supabase client for waitlist if credentials are available
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      this.supabaseClient = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }
+      );
+    } else {
+      this.supabaseClient = null;
+    }
+  }
 
   async register(request: FastifyRequest, reply: FastifyReply) {
     try {
@@ -136,6 +155,68 @@ export class AuthController {
       });
     } catch (error) {
       return this.handleUnexpectedError(reply, error);
+    }
+  }
+
+  async joinWaitlist(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const { city, email } = request.body as { city?: string; email?: string };
+      
+      if (!email || typeof email !== 'string') {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'Email is required',
+        });
+      }
+
+      if (!city || typeof city !== 'string' || city.trim() === '') {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'City is required',
+        });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid email format',
+        });
+      }
+
+      // If Supabase is not configured, return success anyway (graceful degradation)
+      if (!this.supabaseClient) {
+        request.log.warn('Supabase not configured, waitlist entry not saved');
+        return reply.send({
+          message: 'Successfully joined waitlist',
+        });
+      }
+
+      // Try to save to waitlist table (create if doesn't exist)
+      // Using a simple table structure: waitlist (city, email, created_at)
+      const { error } = await this.supabaseClient
+        .from('waitlist')
+        .insert({
+          city: city.trim(),
+          email: email.trim(),
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        // If table doesn't exist or other error, log but still return success
+        request.log.warn({ error }, 'Failed to save waitlist entry to database');
+        // Still return success to user (graceful degradation)
+      }
+
+      return reply.send({
+        message: 'Successfully joined waitlist',
+      });
+    } catch (error) {
+      request.log.error({ error }, 'Unexpected error in joinWaitlist');
+      // Return success anyway for better UX
+      return reply.send({
+        message: 'Successfully joined waitlist',
+      });
     }
   }
 

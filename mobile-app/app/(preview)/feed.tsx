@@ -434,7 +434,7 @@ export default function PreviewFeedScreen() {
           Doc Love · Affinity (Preview)
           </Text>
           <Text style={styles.affinityMicrocopy}>
-            Your matchmaker — learns from conversations.
+           Based on your conversations.
           </Text>
           <Text style={styles.affinitySentence}>
             {PREVIEW_AFFINITY_SENTENCE}
@@ -450,8 +450,8 @@ export default function PreviewFeedScreen() {
           style={styles.infoIconContainer}
           onPress={() => setShowBioPopup(true)}
           accessibilityRole="button"
-          accessibilityLabel="Ver bio"
-          accessibilityHint="Muestra la bio del usuario"
+          accessibilityLabel="View bio"
+          accessibilityHint="Shows the user's bio"
         >
           <View style={styles.infoIconCircle}>
             <Info size={20} color="#fff" />

@@ -1,10 +1,10 @@
 export function renderAdminVerificationPage(): string {
   return `<!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Panel Admin - Verificación</title>
+  <title>Admin panel – Verification</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -131,14 +131,14 @@ export function renderAdminVerificationPage(): string {
 <body>
   <main class="card">
     <div class="header">
-      <h1>Verificación manual</h1>
-      <div class="status" id="status-text">Cargando siguiente solicitud...</div>
+      <h1>Manual verification</h1>
+      <div class="status" id="status-text">Loading next request...</div>
     </div>
 
     <div class="photo-wrapper">
-      <img id="verification-photo" alt="Foto de verificación" />
+      <img id="verification-photo" alt="Verification photo" />
       <div class="empty-state" id="empty-state" style="display:none;">
-        No hay fotos pendientes de verificar.
+        There are no photos pending verification.
       </div>
     </div>
 
@@ -146,8 +146,8 @@ export function renderAdminVerificationPage(): string {
     <div class="error" id="error" style="display:none;"></div>
 
     <div class="actions" id="actions" style="display:none;">
-      <button class="btn-reject" id="reject-btn">❌ Rechazar</button>
-      <button class="btn-approve" id="approve-btn">✔️ Aprobar</button>
+      <button class="btn-reject" id="reject-btn">❌ Reject</button>
+      <button class="btn-approve" id="approve-btn">✔️ Approve</button>
     </div>
   </main>
 
@@ -170,7 +170,7 @@ export function renderAdminVerificationPage(): string {
       };
 
       const showError = (message) => {
-        errorBox.textContent = message || 'Ha ocurrido un error.';
+        errorBox.textContent = message || 'An error occurred.';
         errorBox.style.display = 'block';
       };
 
@@ -183,9 +183,9 @@ export function renderAdminVerificationPage(): string {
         meta.innerHTML = '';
         if (!data) return;
         const pills = [
-          ['Usuario', data.user_id],
-          ['Solicitud', data.id],
-          ['Creada', new Date(data.created_at).toLocaleString()],
+          ['User', data.user_id],
+          ['Request', data.id],
+          ['Created', new Date(data.created_at).toLocaleString()],
         ];
 
         pills.forEach(([label, value]) => {
@@ -199,7 +199,7 @@ export function renderAdminVerificationPage(): string {
       async function loadNext() {
         setBusy(true);
         clearError();
-        statusText.textContent = 'Cargando siguiente solicitud...';
+        statusText.textContent = 'Loading next request...';
         photo.style.display = 'none';
         emptyState.style.display = 'none';
         actions.style.display = 'none';
@@ -211,13 +211,13 @@ export function renderAdminVerificationPage(): string {
           });
           if (!response.ok) {
             const text = await response.text();
-            throw new Error(text || 'No se pudo cargar la siguiente solicitud');
+            throw new Error(text || "Couldn't load the next request");
           }
 
           const payload = await response.json();
 
           if (payload.done) {
-            statusText.textContent = 'Sin pendientes';
+            statusText.textContent = 'No pending requests';
             meta.innerHTML = '';
             emptyState.style.display = 'block';
             return;
@@ -227,12 +227,12 @@ export function renderAdminVerificationPage(): string {
           photo.src = payload.signed_url;
           photo.style.display = 'block';
           actions.style.display = 'flex';
-          statusText.textContent = 'Solicitud pendiente';
+          statusText.textContent = 'Pending request';
           renderMeta(payload);
         } catch (error) {
           console.error(error);
           showError(error.message);
-          statusText.textContent = 'Error al cargar';
+          statusText.textContent = 'Error loading';
         } finally {
           setBusy(false);
         }
@@ -242,7 +242,7 @@ export function renderAdminVerificationPage(): string {
         if (!currentRequestId) return;
         setBusy(true);
         clearError();
-        statusText.textContent = action === 'approve' ? 'Aprobando...' : 'Rechazando...';
+        statusText.textContent = action === 'approve' ? 'Approving...' : 'Rejecting...';
 
         try {
           const response = await fetch(
@@ -255,14 +255,14 @@ export function renderAdminVerificationPage(): string {
 
           if (!response.ok) {
             const text = await response.text();
-            throw new Error(text || 'No se pudo actualizar la solicitud');
+            throw new Error(text || "Couldn't update the request");
           }
 
           await loadNext();
         } catch (error) {
           console.error(error);
           showError(error.message);
-          statusText.textContent = 'Error al actualizar';
+          statusText.textContent = 'Error updating';
         } finally {
           setBusy(false);
         }

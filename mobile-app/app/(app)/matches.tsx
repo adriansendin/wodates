@@ -147,7 +147,7 @@ export default function MatchesScreen() {
           // Match is less than 30 seconds old
           setNewMatchNotification({
             matchId: newestMatch.id,
-            otherUserName: newestMatch.otherUser?.name ?? 'Alguien',
+            otherUserName: newestMatch.otherUser?.name ?? 'Someone',
           });
           setShowMatchNotification(true);
         }

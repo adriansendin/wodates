@@ -17,6 +17,7 @@ import { storageRoutes } from './routes/storage-routes';
 import { userVerificationRoutes } from './routes/user-verification-routes';
 import { adminVerificationRoutes } from './routes/admin-verification-routes';
 import { questionBankRoutes } from './routes/question-bank-routes';
+import { waitlistRoutes } from './routes/waitlist-routes';
 import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
 import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
 import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepository';
@@ -242,6 +243,7 @@ async function buildApp() {
     (fastify) => questionBankRoutes(fastify, questionBankRepository),
     { prefix: '/api/v1' }
   );
+  await fastify.register(waitlistRoutes, { prefix: '/api/v1/waitlist' });
 
   // Health check
   fastify.get('/health', async () => {

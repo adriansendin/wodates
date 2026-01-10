@@ -128,7 +128,7 @@ export default function PhotosScreen() {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancelar', 'Tomar foto', 'Elegir de galería'],
+          options: ['Cancel', 'Take photo', 'Choose from gallery'],
           cancelButtonIndex: 0,
         },
         async (buttonIndex) => {
@@ -137,10 +137,10 @@ export default function PhotosScreen() {
         }
       );
     } else {
-      Alert.alert('Añadir foto', '¿De dónde quieres obtener tu foto?', [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Tomar foto', onPress: takePhoto },
-        { text: 'Elegir de galería', onPress: pickFromGallery },
+      Alert.alert('Add photo', 'Where would you like to get your photo from?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Take photo', onPress: takePhoto },
+        { text: 'Choose from gallery', onPress: pickFromGallery },
       ]);
     }
   };
@@ -149,9 +149,9 @@ export default function PhotosScreen() {
     console.log('[PhotosScreen] Setting photo as main:', photoId);
     const result = await setMainPhoto(photoId);
     if (result.success) {
-      Alert.alert('Éxito', 'La foto se ha establecido como principal');
+      Alert.alert('Success', 'The photo has been set as your main photo');
     } else {
-      Alert.alert('Error', result.error.message || 'No se pudo establecer la foto como principal');
+      Alert.alert('Error', result.error.message || "Couldn't set the photo as your main photo");
     }
   };
 
@@ -229,9 +229,9 @@ export default function PhotosScreen() {
             <View style={styles.overlayContent}>
               <ActivityIndicator size="large" color="#e91e63" />
               <Text style={styles.overlayText}>
-                {isUploading && 'Subiendo foto...'}
-                {isDeleting && 'Eliminando foto...'}
-                {isSettingMain && 'Actualizando foto principal...'}
+                {isUploading && 'Uploading photo...'}
+                {isDeleting && 'Deleting photo...'}
+                {isSettingMain && 'Updating main photo...'}
               </Text>
             </View>
           </View>

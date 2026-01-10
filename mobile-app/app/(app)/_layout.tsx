@@ -66,7 +66,7 @@ export default function AppTabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Perfil',
+          title: 'Profile',
         }}
       />
     </Tabs>

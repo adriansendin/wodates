@@ -63,7 +63,7 @@ export function AvatarPicker({
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancelar', 'Tomar foto', 'Elegir de galería'],
+          options: ['Cancel', 'Take photo', 'Choose from gallery'],
           cancelButtonIndex: 0,
         },
         async (idx) => {
@@ -74,10 +74,10 @@ export function AvatarPicker({
       return;
     }
 
-    Alert.alert('Seleccionar foto', '¿De dónde quieres obtener tu foto?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Tomar foto', onPress: takePhoto },
-      { text: 'Elegir de galería', onPress: pickFromGallery },
+    Alert.alert('Select photo', 'Where would you like to get your photo from?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Take photo', onPress: takePhoto },
+      { text: 'Choose from gallery', onPress: pickFromGallery },
     ]);
   };
 
@@ -112,7 +112,7 @@ export function AvatarPicker({
             },
           ]}
           disabled={disabled || busy}
-          accessibilityLabel="Cambiar foto de perfil"
+          accessibilityLabel="Change profile photo"
         >
           {busy ? (
             <ActivityIndicator color="#F45C5C" />
@@ -125,8 +125,8 @@ export function AvatarPicker({
         <Text style={styles.helperText}>
           {helperText ??
             (uri
-              ? 'Toca el botón para cambiar la foto'
-              : 'Añade tu foto de perfil')}
+              ? 'Tap the button to change the photo'
+              : 'Add your profile photo')}
         </Text>
       ) : null}
     </View>

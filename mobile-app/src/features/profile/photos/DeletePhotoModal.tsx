@@ -31,10 +31,9 @@ export function DeletePhotoModal({
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.content}>
-          <Text style={styles.title}>¿Eliminar foto?</Text>
+          <Text style={styles.title}>Delete photo?</Text>
           <Text style={styles.message}>
-            Esta foto se eliminará permanentemente. Esta acción no se puede
-            deshacer.
+            This photo will be deleted.
           </Text>
           <View style={styles.buttons}>
             <TouchableOpacity
@@ -42,7 +41,7 @@ export function DeletePhotoModal({
               onPress={onClose}
               disabled={isDeleting}
             >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -56,7 +55,7 @@ export function DeletePhotoModal({
               {isDeleting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.confirmButtonText}>Eliminar</Text>
+                <Text style={styles.confirmButtonText}>Delete</Text>
               )}
             </TouchableOpacity>
           </View>

@@ -22,8 +22,8 @@ const DiscoverActionButtons: React.FC<DiscoverActionButtonsProps> = ({
           onPress={onReject}
           disabled={disabled}
           accessibilityRole="button"
-          accessibilityLabel="No es para mí"
-          accessibilityHint="Descarta este perfil sugerido"
+          accessibilityLabel="Not for me"
+          accessibilityHint="Dismiss this suggested profile"
         >
           <X size={24} color="#ef4444" />
         </TouchableOpacity>
@@ -35,8 +35,8 @@ const DiscoverActionButtons: React.FC<DiscoverActionButtonsProps> = ({
           onPress={onAccept}
           disabled={disabled}
           accessibilityRole="button"
-          accessibilityLabel="Quiero conocerle"
-          accessibilityHint="Muestra interés en esta persona"
+          accessibilityLabel="I want to meet them"
+          accessibilityHint="Show interest in this person"
         >
           <Check size={24} color="#10b981" />
         </TouchableOpacity>

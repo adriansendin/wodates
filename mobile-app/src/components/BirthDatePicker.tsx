@@ -16,18 +16,18 @@ interface BirthDatePickerProps {
 }
 
 const MONTHS = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 const MIN_AGE = 18;
@@ -94,15 +94,15 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
     const age = calculateAge(date);
 
     if (age < MIN_AGE) {
-      return `Debes tener al menos ${MIN_AGE} años para registrarte`;
+      return `You must be at least ${MIN_AGE} years old to sign up`;
     }
-
+  
     if (age > MAX_AGE) {
-      return `La edad máxima permitida es ${MAX_AGE} años`;
+      return `The maximum allowed age is ${MAX_AGE} years`;
     }
-
+  
     if (date > new Date()) {
-      return 'No puedes seleccionar una fecha futura';
+      return 'You can’t select a future date';
     }
 
     return null;
@@ -112,8 +112,8 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
    * Formatea la fecha para mostrar al usuario
    */
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
+    return date.toLocaleDateString('en-US', {
+      day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
@@ -172,16 +172,16 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
       <TouchableOpacity
         style={[styles.triggerButton, !isValidAge && styles.triggerButtonError]}
         onPress={handleOpen}
-        accessibilityLabel="Seleccionar fecha de nacimiento"
-        accessibilityHint="Toca para abrir el selector de fecha"
+        accessibilityLabel="Select birth date"
+        accessibilityHint="Tap to open date picker"
       >
         <Text style={styles.triggerText}>{formatDate(value)}</Text>
-        <Text style={styles.triggerHint}>Toca para cambiar</Text>
+        <Text style={styles.triggerHint}>Tap to change</Text>
       </TouchableOpacity>
 
       <View style={styles.ageContainer}>
         <Text style={[styles.ageText, !isValidAge && styles.ageTextError]}>
-          {age} años
+          {age} years old
         </Text>
       </View>
 
@@ -193,7 +193,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>¿Cuándo naciste?</Text>
+            <Text style={styles.modalTitle}>When were you born?</Text>
 
             {error && (
               <View style={styles.errorContainer}>
@@ -204,7 +204,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
             <View style={styles.pickerContainer}>
               {/* Selector de Día */}
               <View style={styles.pickerColumn}>
-                <Text style={styles.pickerLabel}>Día</Text>
+                <Text style={styles.pickerLabel}>Day</Text>
                 <ScrollView
                   style={styles.pickerScroll}
                   showsVerticalScrollIndicator={Platform.OS === 'web'}
@@ -233,7 +233,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
 
               {/* Selector de Mes */}
               <View style={styles.pickerColumn}>
-                <Text style={styles.pickerLabel}>Mes</Text>
+                <Text style={styles.pickerLabel}>Month</Text>
                 <ScrollView
                   style={styles.pickerScroll}
                   showsVerticalScrollIndicator={Platform.OS === 'web'}
@@ -263,7 +263,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
 
               {/* Selector de Año */}
               <View style={styles.pickerColumn}>
-                <Text style={styles.pickerLabel}>Año</Text>
+                <Text style={styles.pickerLabel}>Year</Text>
                 <ScrollView
                   style={styles.pickerScroll}
                   showsVerticalScrollIndicator={Platform.OS === 'web'}
@@ -296,14 +296,14 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
                 style={styles.cancelButton}
                 onPress={handleCancel}
               >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.confirmButton}
                 onPress={handleConfirm}
               >
-                <Text style={styles.confirmButtonText}>Confirmar</Text>
+                <Text style={styles.confirmButtonText}>Confirm</Text>
               </TouchableOpacity>
             </View>
           </View>

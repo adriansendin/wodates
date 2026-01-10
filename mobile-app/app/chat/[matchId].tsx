@@ -139,17 +139,18 @@ const formatDateSeparator = (date: Date): string => {
   yesterdayDate.setHours(0, 0, 0, 0);
   
   if (messageDate.getTime() === todayDate.getTime()) {
-    return 'Hoy';
+    return 'Today';
   }
   
   if (messageDate.getTime() === yesterdayDate.getTime()) {
-    return 'Ayer';
-  }
+    return 'Yesterday';
+  }  
   
   // Para fechas anteriores: "Mie, 20 Ago"
-  const dayNames = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
-  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
-                     'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
   
   const dayName = dayNames[date.getDay()];
   const day = date.getDate();
@@ -683,8 +684,8 @@ export default function ChatScreen() {
   useEffect(() => {
     if (isBlocked) {
       Alert.alert(
-        'Chat no disponible',
-        'Este chat ya no está disponible.',
+        'Chat unavailable',
+        'This chat is no longer available.',
         [
           {
             text: 'OK',
@@ -926,7 +927,7 @@ export default function ChatScreen() {
       setShowUploadSuccessModal(true);
     } catch (error) {
       console.error('[ChatScreen] Error uploading ZIP:', error);
-      const errorMessage = error instanceof Error ? error.message : 'No se pudo subir. Inténtalo de nuevo.';
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed. Please try again.';
       setIsUploadingZip(false);
       setUploadErrorMessage(errorMessage);
       setShowUploadErrorModal(true);
@@ -1116,7 +1117,7 @@ export default function ChatScreen() {
                         <ActivityIndicator size="small" color="#e91e63" />
                       ) : (
                         <Text style={styles.loadOlderButtonText}>
-                          Cargar mensajes anteriores
+                          Load earlier messages
                         </Text>
                       )}
                     </TouchableOpacity>
@@ -1165,7 +1166,7 @@ export default function ChatScreen() {
                 ]}
                 value={message}
                 onChangeText={handleTextChange}
-                placeholder={isBlocked ? 'Chat no disponible' : 'Type a message...'}
+                placeholder={isBlocked ? 'Chat unavailable' : 'Type a message...'}
                 multiline
                 maxLength={MESSAGE_MAX_LENGTH}
                 editable={!isBlocked}
@@ -1266,7 +1267,7 @@ export default function ChatScreen() {
               }}
             >
               <Ionicons name="ban" size={20} color="#e91e63" />
-              <Text style={styles.menuItemText}>Cerrar conversación</Text>
+              <Text style={styles.menuItemText}>End conversation</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -1281,10 +1282,10 @@ export default function ChatScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Cerrar conversación</Text>
+            <Text style={styles.modalTitle}>End conversation</Text>
             <Text style={styles.modalText}>
-              Al cerrar esta conversación, terminará de forma definitiva y no podréis volver a chatear en Wodates.{'\n'}
-              Después se activará Discover para que puedas conocer a más gente con mayor afinidad.{'\n'}
+              Ending this conversation is permanent. You won't be able to chat with this person again on Wodates.{'\n'}
+              Discover will then be reactivated to help you meet other people with higher affinity.{'\n'}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -1292,7 +1293,7 @@ export default function ChatScreen() {
                 onPress={() => setShowBlockModal(false)}
                 disabled={isBlocking}
               >
-                <Text style={styles.modalButtonTextCancel}>Cancelar</Text>
+                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
@@ -1302,7 +1303,7 @@ export default function ChatScreen() {
                 {isBlocking ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.modalButtonTextConfirm}>Cerrar conversación</Text>
+                  <Text style={styles.modalButtonTextConfirm}>End conversation</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1320,15 +1321,15 @@ export default function ChatScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Ionicons name="checkmark-circle" size={64} color="#4caf50" style={styles.successIcon} />
-            <Text style={styles.modalTitle}>¡Archivo subido!</Text>
+            <Text style={styles.modalTitle}>File uploaded!</Text>
             <Text style={styles.modalText}>
-              Tu archivo se ha subido correctamente.
+              Your file was uploaded successfully.
             </Text>
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonConfirm]}
               onPress={() => setShowUploadSuccessModal(false)}
             >
-              <Text style={styles.modalButtonTextConfirm}>Aceptar</Text>
+              <Text style={styles.modalButtonTextConfirm}>OK</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1344,13 +1345,13 @@ export default function ChatScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Ionicons name="close-circle" size={64} color="#f44336" style={styles.successIcon} />
-            <Text style={styles.modalTitle}>Error al subir archivo</Text>
+            <Text style={styles.modalTitle}>Upload error</Text>
             <View style={styles.modalTextContainer}>
               {uploadErrorMessage ? (
-                uploadErrorMessage.includes('Máximo permitido') ? (
+                uploadErrorMessage.includes('Maximum allowed') ? (
                   <>
-                    <Text style={styles.modalText}>Máximo permitido: 500 KB.</Text>
-                    <Text style={styles.modalText}>No subas contenido multimedia</Text>
+                    <Text style={styles.modalText}>Maximum size allowed: 500 KB.</Text>
+                    <Text style={styles.modalText}>Do not upload multimedia content.</Text>
                   </>
                 ) : (
                   <Text style={styles.modalText}>
@@ -1359,7 +1360,7 @@ export default function ChatScreen() {
                 )
               ) : (
                 <Text style={styles.modalText}>
-                  No se pudo subir el archivo. Inténtalo de nuevo.
+                  Couldn't upload the file. Please try again.
                 </Text>
               )}
             </View>
@@ -1367,7 +1368,7 @@ export default function ChatScreen() {
               style={[styles.modalButton, styles.modalButtonConfirm]}
               onPress={() => setShowUploadErrorModal(false)}
             >
-              <Text style={styles.modalButtonTextConfirm}>Aceptar</Text>
+              <Text style={styles.modalButtonTextConfirm}>OK</Text>
             </TouchableOpacity>
           </View>
         </View>

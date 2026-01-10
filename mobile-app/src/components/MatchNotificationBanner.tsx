@@ -59,10 +59,10 @@ export const MatchNotificationBanner: React.FC<
           <View style={styles.content}>
             <Text style={styles.emoji}>💕</Text>
             <View style={styles.textContainer}>
-              <Text style={styles.title}>¡Conexión confirmada!</Text>
+              <Text style={styles.title}>Match confirmed</Text>
               <Text style={styles.message}>
-                Tienes un nuevo chat exclusivo con {otherUserName}. Tu feed se
-                ha pausado para que os conozcáis.
+                You have a new exclusive chat with {otherUserName}. Discover has
+                been paused so you can get to know each other.
               </Text>
             </View>
             <TouchableOpacity

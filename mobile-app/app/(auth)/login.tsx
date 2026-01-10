@@ -59,9 +59,9 @@ export default function LoginScreen() {
       console.log('[Login] API response', result);
 
       if (!result.success) {
-        const message = result.error.message ?? 'No se pudo iniciar sesion. Revisa tus credenciales.';
+        const message = result.error.message ?? "Couldn't sign in. Please check your credentials.";
         setError(message);
-        Alert.alert('Error de inicio de sesion', message);
+        Alert.alert('Login error', message);
         return;
       }
 
@@ -77,7 +77,7 @@ export default function LoginScreen() {
       router.replace('/(app)/matches');
     } catch (err) {
       console.error('Login error', err);
-      const message = 'Error de red. Intentalo de nuevo.';
+      const message = 'Network error. Please try again.';
       setError(message);
       Alert.alert('Error', message);
     } finally {
@@ -112,8 +112,8 @@ export default function LoginScreen() {
 
             {/* Tagline */}
             <View style={styles.sloganBlock}>
-            <Text style={styles.tagline}>Relaciones serias</Text>
-            <Text style={styles.tagline}>Menos swipe. Más conexión.</Text>
+            <Text style={styles.tagline}>Serious relationships</Text>
+            <Text style={styles.tagline}>Less swiping. More connection.</Text>
             </View>
 
 
@@ -143,7 +143,7 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 disabled={isLoading}
               >
-                <Text style={styles.primaryButtonText}>{isLoading ? 'Entrando...' : 'Iniciar sesión'}</Text>
+                <Text style={styles.primaryButtonText}>{isLoading ? 'Signing in...' : 'Sign in'}</Text>
               </TouchableOpacity>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}

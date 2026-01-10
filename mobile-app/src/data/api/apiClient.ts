@@ -209,7 +209,13 @@ export class ApiClient {
       }
 
       if (status === 400) {
-        return new ValidationError(message ?? 'Invalid request');
+        const details =
+          typeof error.response?.data === 'object' &&
+          error.response?.data !== null &&
+          'details' in error.response.data
+            ? error.response.data.details
+            : undefined;
+        return new ValidationError(message ?? 'Invalid request', details);
       }
       if (status === 401) {
         return new UnauthorizedError(message ?? 'Unauthorized');

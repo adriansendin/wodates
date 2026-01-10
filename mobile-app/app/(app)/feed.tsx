@@ -67,8 +67,8 @@ const DiscoverActionButtons = ({ disabled, onReject, onAccept, resetKey }: {
           onPress={onReject}
           disabled={disabled}
           accessibilityRole="button"
-          accessibilityLabel="No es para mí"
-          accessibilityHint="Descarta este perfil sugerido"
+          accessibilityLabel="Not for me"
+          accessibilityHint="Dismiss this suggested profile"
           activeOpacity={0.8}
         >
           <X size={24} color={disabled ? 'rgba(239, 68, 68, 0.45)' : '#ef4444'} />
@@ -96,8 +96,8 @@ const DiscoverActionButtons = ({ disabled, onReject, onAccept, resetKey }: {
           onPress={onAccept}
           disabled={disabled}
           accessibilityRole="button"
-          accessibilityLabel="Quiero conocerle"
-          accessibilityHint="Muestra interés en esta persona"
+          accessibilityLabel="I want to meet them"
+          accessibilityHint="Show interest in this person"
           activeOpacity={0.8}
         >
           <Check size={24} color={disabled ? 'rgba(16, 185, 129, 0.45)' : '#10b981'} />
@@ -836,7 +836,7 @@ export default function FeedScreen() {
         <Text style={styles.emptyText}>
           {hasMore 
             ? 'Loading more users...' 
-            : 'Wodates prioriza calidad sobre cantidad. Mejora tu afinidad hablando con Doc Love'}
+            : 'Wodates prioritizes quality over quantity. Improve your affinity by talking with Doc Love.'}
         </Text>
         {!hasMore && (
           <TouchableOpacity style={styles.refreshButton} onPress={() => loadFeed(0, false)}>
@@ -904,7 +904,7 @@ export default function FeedScreen() {
           ) : affinitySentencesError ? (
             <View style={styles.affinityError}>
               <Text style={styles.affinityErrorText}>
-                No se pudieron cargar las frases de afinidad
+              Unable to load affinity insights
               </Text>
               <TouchableOpacity
                 onPress={() => {
@@ -912,7 +912,7 @@ export default function FeedScreen() {
                 }}
                 style={styles.retryButton}
               >
-                <Text style={styles.retryButtonText}>Reintentar</Text>
+                <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -933,8 +933,8 @@ export default function FeedScreen() {
           style={styles.infoIconContainer}
           onPress={() => setShowBioPopup(true)}
           accessibilityRole="button"
-          accessibilityLabel="Ver bio"
-          accessibilityHint="Muestra la bio del usuario"
+          accessibilityLabel="View bio"
+          accessibilityHint="View the user's bio"
         >
           <View style={styles.infoIconCircle}>
             <Info size={20} color="#fff" />

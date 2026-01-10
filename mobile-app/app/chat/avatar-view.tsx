@@ -177,8 +177,8 @@ export default function AvatarViewScreen() {
             style={styles.infoIconContainer}
             onPress={() => setShowBioPopup(true)}
             accessibilityRole="button"
-            accessibilityLabel="Ver bio"
-            accessibilityHint="Muestra la bio del usuario"
+            accessibilityLabel="View bio"
+            accessibilityHint="Shows the user's bio"
           >
             <View style={styles.infoIconCircle}>
               <Info size={20} color="#fff" />

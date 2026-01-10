@@ -74,9 +74,9 @@ type Feedback = {
 };
 
 const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
-  male: 'Hombres',
-  female: 'Mujeres',
-  both: 'Ambos',
+  male: 'Men',
+  female: 'Women',
+  both: 'Both',
 };
 
 const LOOKING_FOR_CHOICES: Array<{
@@ -88,12 +88,12 @@ const LOOKING_FOR_CHOICES: Array<{
 }));
 
 const getLookingForLabel = (value: LookingForFormValue) =>
-  value ? LOOKING_FOR_LABELS[value] : 'Seleccionar';
+  value ? LOOKING_FOR_LABELS[value] : 'Select';
 
 const GENDER_LABELS: Record<GenderOption, string> = {
-  male: 'Hombre',
-  female: 'Mujer',
-  non_binary: 'No binario',
+  male: 'Male',
+  female: 'Female',
+  non_binary: 'Non-binary',
 };
 
 const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> =
@@ -103,52 +103,52 @@ const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> =
   }));
 
 const getGenderLabel = (value: GenderFormValue) =>
-  value ? GENDER_LABELS[value] : 'Seleccionar';
+  value ? GENDER_LABELS[value] : 'Select';
 
 const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
-  pending: 'Verificar perfil',
-  verifying: 'Verificación en curso',
-  verified: 'Perfil verificado',
-  rejected: 'Reintentar verificación',
+  pending: 'Verify profile',
+  verifying: 'Verification in progress',
+  verified: 'Verified profile',
+  rejected: 'Retry verification',
 };
 
 // Family plan labels
 const WANTS_CHILDREN_LABELS: Record<'yes' | 'no' | 'not_sure', string> = {
-  yes: 'Sí',
+  yes: 'Yes',
   no: 'No',
-  not_sure: 'No lo tengo claro',
+  not_sure: 'Not sure',
 };
 
 const CARES_ABOUT_PARTNER_CHILDREN_LABELS: Record<'yes' | 'no', string> = {
-  yes: 'Sí, no quiero que tenga hijos',
-  no: 'Me da igual',
+  yes: 'Yes, I don\'t want them to have children',
+  no: 'I don\'t care',
 };
 
 
 // Habits labels
 const SMOKING_LABELS: Record<'no' | 'occasionally' | 'regularly', string> = {
   no: 'No',
-  occasionally: 'Solo ocasionalmente',
-  regularly: 'Fumo habitualmente',
+  occasionally: 'Occasionally',
+  regularly: 'Regularly',
 };
 
 const CARES_ABOUT_PARTNER_SMOKING_LABELS: Record<'yes' | 'no', string> = {
-  yes: 'Sí, no quiero que fume',
-  no: 'Me da igual',
+  yes: 'Yes, I don\'t want them to smoke',
+  no: 'I don\'t care',
 };
 
 const getWantsChildrenLabel = (value: 'yes' | 'no' | 'not_sure' | null) =>
-  value ? WANTS_CHILDREN_LABELS[value] : 'Seleccionar';
+  value ? WANTS_CHILDREN_LABELS[value] : 'Select';
 
 const getCaresAboutPartnerChildrenLabel = (value: 'yes' | 'no' | null) =>
-  value ? CARES_ABOUT_PARTNER_CHILDREN_LABELS[value] : 'Seleccionar';
+  value ? CARES_ABOUT_PARTNER_CHILDREN_LABELS[value] : 'Select';
 
 
 const getSmokingLabel = (value: 'no' | 'occasionally' | 'regularly' | null) =>
-  value ? SMOKING_LABELS[value] : 'Seleccionar';
+  value ? SMOKING_LABELS[value] : 'Select';
 
 const getCaresAboutPartnerSmokingLabel = (value: 'yes' | 'no' | null) =>
-  value ? CARES_ABOUT_PARTNER_SMOKING_LABELS[value] : 'Seleccionar';
+  value ? CARES_ABOUT_PARTNER_SMOKING_LABELS[value] : 'Select';
 
 const emptyForm: FormState = {
   gender: 'male',
@@ -259,14 +259,14 @@ export default function ProfileScreen() {
       } else {
         setFeedback({
           type: 'error',
-          message: result.error.message ?? 'No se pudo cargar el perfil.',
+          message: result.error.message ?? 'Could not load profile.',
         });
       }
     } catch (error) {
       console.error('[Profile] loadProfile error', error);
       setFeedback({
         type: 'error',
-        message: 'No se pudo cargar el perfil. Intentalo de nuevo.',
+        message: 'Could not load profile. Please try again.',
       });
     } finally {
       setIsLoading(false);
@@ -417,14 +417,14 @@ export default function ProfileScreen() {
             setFeedback({
               type: 'error',
               message:
-                'No se pudo guardar el rango de edad. Inténtalo de nuevo.',
+                'Could not save age range. Please try again.',
             });
           }
         } catch (error) {
           console.error('[Profile] autoSaveAgeRange error', error);
           setFeedback({
             type: 'error',
-            message: 'Error al guardar el rango de edad.',
+            message: 'Error saving age range.',
           });
         } finally {
           setIsAutoSaving(false);
@@ -475,11 +475,11 @@ export default function ProfileScreen() {
     if (Platform.OS === 'web') {
       // For web, show options for file selection
       Alert.alert(
-        'Seleccionar foto de perfil',
-        'Elige una foto desde tu computadora',
+        'Select profile photo',
+        'Choose a photo from your computer',
         [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Seleccionar archivo', onPress: handlePickFromGallery },
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Select file', onPress: handlePickFromGallery },
         ]
       );
       return;
@@ -488,7 +488,7 @@ export default function ProfileScreen() {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancelar', 'Tomar foto', 'Elegir de galería'],
+          options: ['Cancel', 'Take photo', 'Choose from gallery'],
           cancelButtonIndex: 0,
         },
         async (buttonIndex) => {
@@ -501,12 +501,12 @@ export default function ProfileScreen() {
       );
     } else {
       Alert.alert(
-        'Cambiar foto de perfil',
-        '¿De dónde quieres obtener tu foto?',
+        'Change profile photo',
+        'Where would you like to get your photo from?',
         [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Tomar foto', onPress: handleTakePhoto },
-          { text: 'Elegir de galería', onPress: handlePickFromGallery },
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Take photo', onPress: handleTakePhoto },
+          { text: 'Choose from gallery', onPress: handlePickFromGallery },
         ]
       );
     }
@@ -588,14 +588,14 @@ export default function ProfileScreen() {
           console.error('[Profile] autoSave failed', result.error);
           setFeedback({
             type: 'error',
-            message: 'No se pudo guardar el cambio. Inténtalo de nuevo.',
+            message: 'Could not save change. Please try again.',
           });
         }
       } catch (error) {
         console.error('[Profile] autoSave error', error);
         setFeedback({
           type: 'error',
-          message: 'Error al guardar el cambio.',
+          message: "Couldn't save changes.",
         });
       } finally {
         setIsAutoSaving(false);
@@ -648,7 +648,7 @@ export default function ProfileScreen() {
 
       if (!result.success) {
         const message =
-          result.error.message ?? 'No se pudo desactivar tu cuenta.';
+          result.error.message ?? 'Could not deactivate your account.';
         Alert.alert('Error', message);
         setFeedback({
           type: 'error',
@@ -667,14 +667,14 @@ export default function ProfileScreen() {
       setIsDeleteModalVisible(false);
 
       Alert.alert(
-        'Cuenta desactivada',
-        'Tu cuenta ha sido desactivada. Contacta con soporte si deseas reactivarla.'
+        'Account deactivated',
+        'Your account has been deactivated. Contact support if you want to reactivate it.'
       );
 
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('[Profile] handleDeleteConfirm error', error);
-      const message = 'No se pudo desactivar la cuenta. Intentalo de nuevo.';
+      const message = 'Could not deactivate account. Please try again.';
       Alert.alert('Error', message);
       setFeedback({
         type: 'error',
@@ -711,7 +711,7 @@ export default function ProfileScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.infoText}>
-          Tu sesion no es valida. Inicia sesion de nuevo para ver tu perfil.
+          Your session is not valid. Please sign in again to view your profile.
         </Text>
       </View>
     );
@@ -727,7 +727,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Selecciona tu genero</Text>
+            <Text style={styles.modalTitle}>Select your gender</Text>
             {GENDER_CHOICES.map((option) => {
               const isActive = form.gender === option.value;
               return (
@@ -757,7 +757,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsGenderModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancelar</Text>
+              <Text style={styles.modalCloseText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -770,7 +770,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Selecciona a quien buscas</Text>
+            <Text style={styles.modalTitle}>Select who you're looking for</Text>
             {LOOKING_FOR_CHOICES.map((option) => {
               const isActive = form.looking_for === option.value;
               return (
@@ -800,7 +800,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsLookingForModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancelar</Text>
+              <Text style={styles.modalCloseText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -814,12 +814,13 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>¿Tienes hijos?</Text>
+            <Text style={styles.modalTitle}>Do you have children?</Text>
             {[
               { value: false, label: 'No' },
-              { value: true, label: 'Sí' },
+              { value: true, label: 'Yes' },
             ].map((option) => {
               const isActive = form.has_children === option.value;
+              const label = option.value ? 'Yes' : 'No';
               return (
                 <TouchableOpacity
                   key={String(option.value)}
@@ -838,7 +839,7 @@ export default function ProfileScreen() {
                       isActive ? styles.modalOptionTextActive : null,
                     ]}
                   >
-                    {option.label}
+                    {label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -847,7 +848,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsHasChildrenModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancelar</Text>
+              <Text style={styles.modalCloseText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -860,7 +861,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>¿Quieres tener hijos en el futuro?</Text>
+            <Text style={styles.modalTitle}>Do you want to have children in the future?</Text>
             {(['yes', 'no', 'not_sure'] as const).map((value) => {
               const isActive = form.wants_children === value;
               return (
@@ -890,7 +891,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsWantsChildrenModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancelar</Text>
+              <Text style={styles.modalCloseText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -903,7 +904,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>¿Te importa si la otra persona tiene hijos?</Text>
+            <Text style={styles.modalTitle}>Does it matter to you if the other person has children?</Text>
             {(['yes', 'no'] as const).map((value) => {
               const isActive = form.cares_about_partner_children === value;
               return (
@@ -933,7 +934,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsCaresAboutPartnerChildrenModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancelar</Text>
+              <Text style={styles.modalCloseText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -947,7 +948,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>¿Fumas?</Text>
+            <Text style={styles.modalTitle}>Do you smoke?</Text>
             {(['no', 'occasionally', 'regularly'] as const).map((value) => {
               const isActive = form.smoking === value;
               return (
@@ -977,7 +978,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsSmokingModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancelar</Text>
+              <Text style={styles.modalCloseText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -990,7 +991,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>¿Te importa si la otra persona fuma?</Text>
+            <Text style={styles.modalTitle}>Does it matter to you if the other person smokes?</Text>
             {(['yes', 'no'] as const).map((value) => {
               const isActive = form.cares_about_partner_smoking === value;
               return (
@@ -1020,7 +1021,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsCaresAboutPartnerSmokingModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancelar</Text>
+              <Text style={styles.modalCloseText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1068,7 +1069,7 @@ export default function ProfileScreen() {
                 </View>
               )}
               <View style={styles.avatarEditBadge}>
-                <Text style={styles.avatarEditText}>Editar</Text>
+                <Text style={styles.avatarEditText}>Edit</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -1092,7 +1093,7 @@ export default function ProfileScreen() {
           {/* Mostrar nombre y edad de forma natural */}
           <View style={styles.nameAgeContainer}>
             <Text style={styles.nameAgeText}>
-              {profile?.name ?? user?.name ?? 'Usuario'}
+              {profile?.name ?? user?.name ?? 'User'}
               {profile?.birthDate && calculateAge(profile.birthDate) > 0
                 ? `, ${calculateAge(profile.birthDate)}`
                 : null}
@@ -1104,10 +1105,10 @@ export default function ProfileScreen() {
             ) : null}
           </View>
 
-          <Text style={styles.sectionTitle}>Información básica</Text>
+          <Text style={styles.sectionTitle}>Basic information</Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Genero</Text>
+            <Text style={styles.label}>Gender</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1131,7 +1132,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Busco</Text>
+            <Text style={styles.label}>Looking for</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1157,7 +1158,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Rango de edad que buscas</Text>
+            <Text style={styles.label}>Preferred age range</Text>
             <AgeRangePicker
               minAge={form.min_age}
               maxAge={form.max_age}
@@ -1171,10 +1172,10 @@ export default function ProfileScreen() {
           </View>
 
           {/* Plan familiar */}
-          <Text style={styles.sectionTitle}>Plan familiar</Text>
+          <Text style={styles.sectionTitle}>Family plans</Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>¿Tienes hijos?</Text>
+            <Text style={styles.label}>Do you have children?</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1188,13 +1189,13 @@ export default function ProfileScreen() {
                   form.has_children !== null ? styles.selectValue : styles.selectPlaceholder
                 }
               >
-                {form.has_children === null ? 'Seleccionar' : form.has_children ? 'Sí' : 'No'}
+                {form.has_children === null ? 'Select' : form.has_children ? 'Yes' : 'No'}
               </Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>¿Quieres tener hijos en el futuro?</Text>
+            <Text style={styles.label}>Do you want to have children in the future?</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1214,7 +1215,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>¿Te importa si la otra persona tiene hijos?</Text>
+            <Text style={styles.label}>Does it matter to you if the other person has children?</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1233,11 +1234,10 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Hábitos importantes */}
-          <Text style={styles.sectionTitle}>Hábitos importantes</Text>
+          <Text style={styles.sectionTitle}>Important habits</Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>¿Fumas?</Text>
+            <Text style={styles.label}>Do you smoke?</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1257,7 +1257,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>¿Te importa si la otra persona fuma?</Text>
+            <Text style={styles.label}>Does it matter to you if the other person smokes?</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1276,8 +1276,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Biografía */}
-          <Text style={styles.sectionTitle}>Biografía</Text>
+          <Text style={styles.sectionTitle}>Bio</Text>
 
           <View style={styles.field}>
             <Text style={styles.helperText}>Generated by Doc Love from conversations</Text>
@@ -1288,7 +1287,7 @@ export default function ProfileScreen() {
                 styles.inputDisabled,
                 formErrors.bio ? styles.inputError : null,
               ]}
-              placeholder="Tu perfil crecerá a medida que conectes con otras personas."
+              placeholder="Your profile will grow as you connect with other people."
               value={form.bio}
               onChangeText={handleChange('bio')}
               multiline
@@ -1301,7 +1300,7 @@ export default function ProfileScreen() {
           <View style={styles.field}>
             <View style={styles.toggleContainer}>
               <Text style={styles.toggleLabel}>
-                Mostrar mi descripción a otras personas
+                Show my profile to others
               </Text>
               <TouchableOpacity
                 style={[
@@ -1324,12 +1323,12 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
             <Text style={styles.toggleHelperText}>
-              Si lo desactivas, tu bio no será visible para otros usuarios y no podrás ver la bio de los demás.
+              If you turn this off, your bio won't be visible to others and you won't be able to see theirs.
             </Text>
           </View>
 
           <Text style={styles.autoSaveMessage}>
-            Los cambios se guardan automáticamente.
+            Changes are saved automatically.
           </Text>
 
           {/* Contact and Delete options */}
@@ -1338,7 +1337,7 @@ export default function ProfileScreen() {
               style={styles.actionButton}
               onPress={handleContactUs}
             >
-              <Text style={styles.actionButtonText}>Contacta con nosotros</Text>
+              <Text style={styles.actionButtonText}>Contact us</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1346,7 +1345,7 @@ export default function ProfileScreen() {
               onPress={handleDeleteAccount}
             >
               <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
-                Borrar cuenta
+                Delete account
               </Text>
             </TouchableOpacity>
           </View>
@@ -1355,7 +1354,7 @@ export default function ProfileScreen() {
         {isLoading && (
           <View style={styles.overlay}>
             <ActivityIndicator size="large" color="#e91e63" />
-            <Text style={styles.loadingText}>Cargando perfil...</Text>
+            <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
         )}
       </ScrollView>
@@ -1377,13 +1376,13 @@ export default function ProfileScreen() {
           >
             <Pressable style={styles.contactModalContent}>
               <Text style={styles.contactModalTitle}>
-                ¿En qué podemos ayudarte?
+                How can we help you?
               </Text>
 
               <View style={styles.textInputContainer}>
                 <TextInput
                   style={styles.contactTextInput}
-                  placeholder="Escribe tu mensaje aquí..."
+                  placeholder="Write your message here..."
                   value={contactMessage}
                   onChangeText={setContactMessage}
                   multiline
@@ -1396,14 +1395,14 @@ export default function ProfileScreen() {
                 </Text>
                 {showValidationError && (
                   <Text style={styles.validationError}>
-                    El mensaje debe tener al menos 10 caracteres
+                    The message must be at least 10 characters
                   </Text>
                 )}
               </View>
 
               {showToast && (
                 <Text style={styles.successMessage}>
-                  Tu mensaje ha sido enviado correctamente.
+                  Your message has been sent successfully.
                 </Text>
               )}
 
@@ -1432,7 +1431,7 @@ export default function ProfileScreen() {
                         : null,
                     ]}
                   >
-                    {isSubmitting ? 'Enviando...' : 'Enviar'}
+                    {isSubmitting ? 'Sending...' : 'Send'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1454,11 +1453,11 @@ export default function ProfileScreen() {
         >
           <Pressable style={styles.deleteModalContent}>
             <Text style={styles.deleteModalTitle}>
-              ¿Seguro que quieres eliminar tu cuenta?
+              Are you sure you want to delete your account?
             </Text>
             <Text style={styles.deleteModalSubtext}>
-              Esta acción no se puede deshacer. Perderás tu perfil, tus matches
-              y tus mensajes.
+              This action cannot be undone. You will lose your profile, your matches
+              and your messages.
             </Text>
             <View style={styles.deleteButtonContainer}>
               <TouchableOpacity
@@ -1476,7 +1475,7 @@ export default function ProfileScreen() {
                 disabled={isDeletingAccount}
               >
                 <Text style={styles.deleteConfirmButtonText}>
-                  {isDeletingAccount ? 'Desactivando...' : 'Si'}
+                  {isDeletingAccount ? 'Deactivating...' : 'Yes'}
                 </Text>
               </TouchableOpacity>
             </View>

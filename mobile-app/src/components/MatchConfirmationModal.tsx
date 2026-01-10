@@ -47,10 +47,9 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
             style={styles.gradient}
           >
             <View style={styles.content}>
-              {/* Header with heart icon */}
+              {/* Header */}
               <View style={styles.header}>
-                <Text style={styles.heartIcon}>💕</Text>
-                <Text style={styles.title}>¡Conexión Mutua!</Text>
+                <Text style={styles.title}>Connection confirmed</Text>
               </View>
 
               {/* User photo */}
@@ -64,11 +63,10 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
               {/* Explanation text */}
               <View style={styles.explanationContainer}>
                 <Text style={styles.explanationText}>
-                  ¿Quieres conocer a {otherUserName}?
+                Do you want to start an exclusive conversation with {otherUserName}?
                 </Text>
                 <Text style={styles.explanationSubtext}>
-                  Si aceptas, entrarás en modo exclusivo: tu feed de búsqueda se
-                  pausará para que puedas centrarte en esta conversación.
+                If you continue, Discover will pause so you can focus on this exclusive conversation.
                 </Text>
               </View>
 
@@ -80,7 +78,7 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
                   disabled={isConfirming}
                 >
                   <Text style={styles.cancelButtonText}>
-                    Ahora no, ha sido un error
+                    Not now
                   </Text>
                 </TouchableOpacity>
 
@@ -93,7 +91,7 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <Text style={styles.confirmButtonText}>
-                      Entrar al Chat Exclusivo
+                      Enter exclusive chat
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -137,10 +135,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 20,
-  },
-  heartIcon: {
-    fontSize: 48,
-    marginBottom: 8,
   },
   title: {
     fontSize: 28,

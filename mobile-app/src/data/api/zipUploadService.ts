@@ -24,19 +24,19 @@ function validateZipFile(
 ): string | null {
   // Check MIME type (accept multiple ZIP MIME types)
   if (file.mimeType && !ALLOWED_MIME_TYPES.includes(file.mimeType)) {
-    return 'Archivo no válido (debe ser .zip)';
+    return 'Invalid file (must be a .zip)';
   }
 
   // Check file size
   if (file.size && file.size > MAX_FILE_SIZE_BYTES) {
-    return 'Máximo permitido: 500 KB.\nNo subas contenido multimedia';
+    return 'Maximum size allowed: 500 KB.\nDo not upload multimedia content.';
   }
 
   // Check file extension (fallback if MIME type is not available)
   if (!file.mimeType && file.name) {
     const extension = file.name.split('.').pop()?.toLowerCase();
     if (extension !== 'zip') {
-      return 'Archivo no válido (debe ser .zip)';
+      return 'Invalid file (must be a .zip)';
     }
   }
 
@@ -88,7 +88,7 @@ export async function pickZipFile(): Promise<
     console.error('[ZipUploadService] Error picking ZIP file:', error);
     return failure(
       new UploadError(
-        'Error al seleccionar el archivo. Inténtalo de nuevo.',
+        "Couldn't select the file. Please try again.",
         error
       )
     );
@@ -173,7 +173,7 @@ async function uploadZipToBackend(
           console.error(
             '[ZipUploadService] No file object available, throwing error'
           );
-          throw new UploadError('No se pudo acceder al archivo para subir.');
+          throw new UploadError("Couldn't access the file for upload.");
         }
       }
     } else {
@@ -224,14 +224,14 @@ async function uploadZipToBackend(
 
       if (error.response) {
         const message =
-          error.response.data?.message || 'Error al subir el archivo.';
+          error.response.data?.message || 'An error occurred while uploading the file.';
         return failure(new UploadError(message, error));
       }
     }
 
     return failure(
       new UploadError(
-        'Error inesperado al subir el archivo. Inténtalo de nuevo.',
+        'Unexpected error while uploading the file. Please try again.',
         error instanceof Error ? error : new Error(String(error))
       )
     );
@@ -259,7 +259,7 @@ export async function uploadZipFile(
       return failure(uploadResult.error);
     }
 
-    return success('Subido con éxito.');
+    return success('Uploaded successfully.');
   } catch (error) {
     console.error(
       '[ZipUploadService] Unexpected error uploading ZIP file:',
@@ -267,7 +267,7 @@ export async function uploadZipFile(
     );
     return failure(
       new UploadError(
-        'Error inesperado al subir el archivo. Inténtalo de nuevo.',
+        'Unexpected error while uploading the file. Please try again.',
         error
       )
     );

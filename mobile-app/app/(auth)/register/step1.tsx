@@ -86,32 +86,32 @@ export default function Step1Screen() {
 
     // Validaciones básicas del formulario
     if (!name.trim()) {
-      setFeedback({ type: 'error', message: 'Por favor ingresa tu nombre' });
+      setFeedback({ type: 'error', message: 'Please enter your name' });
       return;
     }
 
     if (!email.trim()) {
-      setFeedback({ type: 'error', message: 'Por favor ingresa tu email' });
+      setFeedback({ type: 'error', message: 'Please enter your email' });
       return;
     }
 
     if (!validateEmail(email)) {
-      setFeedback({ type: 'error', message: 'Por favor ingresa un email válido' });
+      setFeedback({ type: 'error', message: 'Please enter a valid email' });
       return;
     }
 
     if (!confirmEmail.trim()) {
-      setFeedback({ type: 'error', message: 'Por favor confirma tu email' });
+      setFeedback({ type: 'error', message: 'Please confirm your email' });
       return;
     }
 
     if (email !== confirmEmail) {
-      setErrorMessage('Los emails no coinciden');
+      setErrorMessage('Emails don\'t match');
       return;
     }
 
     if (!password || password.length < 6) {
-      setFeedback({ type: 'error', message: 'La contraseña debe tener al menos 6 caracteres' });
+      setFeedback({ type: 'error', message: 'Password must be at least 6 characters' });
       return;
     }
 
@@ -124,7 +124,7 @@ export default function Step1Screen() {
       if (result.success) {
         if (result.data.exists) {
           setIsCheckingEmail(false);
-          setErrorMessage('Correo electrónico ya está registrado');
+          setErrorMessage('This email is already registered');
           return;
         }
       } else {
@@ -159,63 +159,63 @@ export default function Step1Screen() {
       const registrationData = { ...data, name, email, password };
 
       if (!registrationData.name || registrationData.name.trim() === '') {
-        setFeedback({ type: 'error', message: 'El nombre es requerido' });
+        setFeedback({ type: 'error', message: 'Name is required' });
         setIsLoading(false);
         return;
       }
 
       if (!registrationData.email || registrationData.email.trim() === '') {
-        setFeedback({ type: 'error', message: 'El email es requerido' });
+        setFeedback({ type: 'error', message: 'Email is required' });
         setIsLoading(false);
         return;
       }
 
       if (!registrationData.password || registrationData.password.length < 6) {
-        setFeedback({ type: 'error', message: 'La contraseña debe tener al menos 6 caracteres' });
+        setFeedback({ type: 'error', message: 'Password must be at least 6 characters' });
         setIsLoading(false);
         return;
       }
 
       if (!registrationData.birthDate || !(registrationData.birthDate instanceof Date) || isNaN(registrationData.birthDate.getTime())) {
-        setFeedback({ type: 'error', message: 'La fecha de nacimiento es requerida y debe ser válida' });
+        setFeedback({ type: 'error', message: 'Birthdate is required and must be valid' });
         setIsLoading(false);
         return;
       }
 
       // Validar que min_age y max_age sean números válidos
       if (typeof registrationData.minAge !== 'number' || isNaN(registrationData.minAge) || registrationData.minAge < 18 || registrationData.minAge > 100) {
-        setFeedback({ type: 'error', message: 'El rango de edad mínimo debe ser válido (18-100 años)' });
+        setFeedback({ type: 'error', message: 'Minimum age must be valid (18–100)' });
         setIsLoading(false);
         return;
       }
 
       if (typeof registrationData.maxAge !== 'number' || isNaN(registrationData.maxAge) || registrationData.maxAge < 18 || registrationData.maxAge > 100) {
-        setFeedback({ type: 'error', message: 'El rango de edad máximo debe ser válido (18-100 años)' });
+        setFeedback({ type: 'error', message: 'Maximum age must be valid (18–100)' });
         setIsLoading(false);
         return;
       }
 
       if (registrationData.minAge > registrationData.maxAge) {
-        setFeedback({ type: 'error', message: 'La edad mínima no puede ser mayor que la edad máxima' });
+        setFeedback({ type: 'error', message: 'Minimum age can\'t be greater than maximum age' });
         setIsLoading(false);
         return;
       }
 
       if (!registrationData.location || registrationData.location.trim() === '') {
-        setFeedback({ type: 'error', message: 'La ubicación es requerida' });
+        setFeedback({ type: 'error', message: 'Location is required' });
         setIsLoading(false);
         return;
       }
 
       // VALIDACIÓN CRÍTICA: gender y lookingFor son REQUERIDOS y deben ser valores válidos
-      if (!registrationData.gender || registrationData.gender === '' || !GENDER_OPTIONS.includes(registrationData.gender as GenderOption)) {
-        setFeedback({ type: 'error', message: 'Debes seleccionar tu género' });
+      if (!registrationData.gender || !GENDER_OPTIONS.includes(registrationData.gender as GenderOption)) {
+        setFeedback({ type: 'error', message: 'Please select your gender' });
         setIsLoading(false);
         return;
       }
 
-      if (!registrationData.lookingFor || registrationData.lookingFor === '') {
-        setFeedback({ type: 'error', message: 'Debes seleccionar a quién buscas' });
+      if (!registrationData.lookingFor) {
+        setFeedback({ type: 'error', message: 'Please select who you\'re looking for' });
         setIsLoading(false);
         return;
       }
@@ -238,7 +238,7 @@ export default function Step1Screen() {
       const result = await authApi.register(registerData);
 
       if (!result.success) {
-        const message = result.error.message ?? 'Error al crear la cuenta. Inténtalo de nuevo.';
+        const message = result.error.message ?? 'Couldn\'t create your account. Please try again.';
         setFeedback({ type: 'error', message });
         setIsLoading(false);
         return;
@@ -298,7 +298,7 @@ export default function Step1Screen() {
       // Validar que min_age y max_age sean números válidos
       if (typeof profileUpdates.min_age !== 'number' || typeof profileUpdates.max_age !== 'number') {
         console.error('[Register] ERROR: min_age or max_age are not numbers!', profileUpdates);
-        setFeedback({ type: 'error', message: 'Error: Los rangos de edad no son válidos' });
+        setFeedback({ type: 'error', message: 'Error: Age range is not valid' });
         setIsLoading(false);
         return;
       }
@@ -308,7 +308,7 @@ export default function Step1Screen() {
       if (!updateResult.success) {
         console.error('[Register] Failed to update profile:', updateResult.error);
         console.error('[Register] Profile updates that failed:', profileUpdates);
-        setFeedback({ type: 'error', message: 'Error al guardar las preferencias. Por favor, actualiza tu perfil después.' });
+        setFeedback({ type: 'error', message: 'Couldn\'t save your preferences. You can update them later in your profile.' });
         setIsLoading(false);
         return;
       }
@@ -319,7 +319,7 @@ export default function Step1Screen() {
       resetRegistration();
 
       // Redirigir a matches
-      setFeedback({ type: 'success', message: '¡Bienvenido! Tu cuenta ha sido creada exitosamente' });
+      setFeedback({ type: 'success', message: 'Welcome! Your account has been created.' });
       
       setTimeout(() => {
         router.replace('/(app)/matches');
@@ -327,7 +327,7 @@ export default function Step1Screen() {
 
     } catch (err) {
       console.error('Registration error:', err);
-      setFeedback({ type: 'error', message: 'Error de red. Inténtalo de nuevo.' });
+      setFeedback({ type: 'error', message: 'Network error. Please try again.' });
       setIsLoading(false);
     }
   };
@@ -364,10 +364,10 @@ export default function Step1Screen() {
             )}
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Nombre</Text>
+                <Text style={styles.label}>Name</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Tu nombre"
+                  placeholder="Your name"
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
@@ -379,12 +379,12 @@ export default function Step1Screen() {
                 <Text style={styles.label}>Email</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="tu@email.com"
+                  placeholder="you@email.com"
                   value={email}
                   onChangeText={(text) => {
                     setEmail(text);
                     // Limpiar mensaje de error cuando el usuario empiece a escribir
-                    if (errorMessage === 'Los emails no coinciden') {
+                    if (errorMessage === 'Emails don\'t match') {
                       setErrorMessage(null);
                     }
                   }}
@@ -395,15 +395,15 @@ export default function Step1Screen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirmar Email</Text>
+                <Text style={styles.label}>Confirm email</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Confirma tu email"
+                  placeholder="Confirm your email"
                   value={confirmEmail}
                   onChangeText={(text) => {
                     setConfirmEmail(text);
                     // Limpiar mensaje de error cuando el usuario empiece a escribir
-                    if (errorMessage === 'Los emails no coinciden') {
+                    if (errorMessage === 'Emails don\'t match') {
                       setErrorMessage(null);
                     }
                   }}
@@ -414,10 +414,10 @@ export default function Step1Screen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Contraseña</Text>
+                <Text style={styles.label}>Password</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Password"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -443,7 +443,7 @@ export default function Step1Screen() {
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Text style={styles.backButtonText}>Volver</Text>
+              <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

@@ -13,12 +13,12 @@ export default function Step5Screen() {
   const [caresAboutPartnerChildren, setCaresAboutPartnerChildren] = useState<'yes' | 'no' | null>(data.caresAboutPartnerChildren);
 
   const handleNext = () => {
-    // Validación: debe responder si tiene hijos y si quiere tener hijos
+    // Validation: must answer if they have children and if they want children
     if (hasChildren === null || wantsChildren === null) {
       return;
     }
 
-    // Validación: debe responder si le importa que la otra persona tenga hijos
+    // Validation: must answer if they care about the other person having children
     if (caresAboutPartnerChildren === null) {
       return;
     }
@@ -43,12 +43,12 @@ export default function Step5Screen() {
         <ProgressBar totalSteps={5} currentStep={3} />
 
         <View style={styles.content}>
-          {/* Sección: Sobre ti */}
+          {/* Section: About you */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sobre ti</Text>
+            <Text style={styles.sectionTitle}>About you</Text>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>¿Tienes hijos?</Text>
+              <Text style={styles.questionText}>Do you have children?</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -81,14 +81,14 @@ export default function Step5Screen() {
                     styles.optionText,
                     hasChildren === true && styles.optionTextSelected,
                   ]}>
-                    Sí
+                    Yes
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>¿Quieres tener hijos en el futuro?</Text>
+              <Text style={styles.questionText}>Do you want to have children in the future?</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -104,7 +104,7 @@ export default function Step5Screen() {
                     styles.optionText,
                     wantsChildren === 'yes' && styles.optionTextSelected,
                   ]}>
-                    Sí
+                    Yes
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -138,19 +138,19 @@ export default function Step5Screen() {
                     styles.optionText,
                     wantsChildren === 'not_sure' && styles.optionTextSelected,
                   ]}>
-                    No lo tengo claro
+                    I'm not sure
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
 
-          {/* Sección: Sobre la persona que buscas */}
+          {/* Section: About the person you're looking for */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sobre la persona que buscas</Text>
+            <Text style={styles.sectionTitle}>About the person you're looking for</Text>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>¿Te importa si la otra persona tiene hijos?</Text>
+              <Text style={styles.questionText}>Do you care if the other person has children?</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -166,7 +166,7 @@ export default function Step5Screen() {
                     styles.optionText,
                     caresAboutPartnerChildren === 'yes' && styles.optionTextSelected,
                   ]}>
-                    Sí, no quiero que tenga hijos
+                    Yes, I don't want them to have children
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -183,7 +183,7 @@ export default function Step5Screen() {
                     styles.optionText,
                     caresAboutPartnerChildren === 'no' && styles.optionTextSelected,
                   ]}>
-                    Me da igual
+                    I don't mind
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -191,7 +191,7 @@ export default function Step5Screen() {
           </View>
 
           <Text style={styles.infoText}>
-            Podrás cambiar estas preferencias más adelante.
+            You can change these preferences later.
           </Text>
 
           <View style={styles.buttonContainer}>
@@ -212,11 +212,11 @@ export default function Step5Screen() {
                 styles.buttonText,
                 (hasChildren === null || wantsChildren === null || 
                  caresAboutPartnerChildren === null) && styles.buttonTextDisabled
-              ]}>Continuar</Text>
+              ]}>Continue</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Volver</Text>
+              <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
         </View>

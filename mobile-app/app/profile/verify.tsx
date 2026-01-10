@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   ScrollView,
@@ -23,7 +22,6 @@ import { getApiUrl } from '../../src/utils/apiConfig';
 export default function VerifyProfileScreen() {
   const router = useRouter();
   const { user, tokens } = useAuthStore();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileGender, setProfileGender] = useState<string | null>(null);
 
   const apiClient = useMemo(() => new ApiClient(getApiUrl()), []);
@@ -64,43 +62,48 @@ export default function VerifyProfileScreen() {
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting) {
-      return;
-    }
-    setIsSubmitting(true);
+    try {
+      const pickResult = await pickImageFromGallery();
+      
+      // User cancelled - silently return, no error message
+      if (pickResult.success && !pickResult.data) {
+        return;
+      }
 
-    const pickResult = await pickImageFromGallery();
-    if (!pickResult.success) {
+      if (!pickResult.success) {
+        Alert.alert(
+          'Error',
+          pickResult.error?.message || "We couldn't open your photo library."
+        );
+        return;
+      }
+
+      if (!pickResult.data) {
+        return;
+      }
+
+      const uploadResult = await uploadVerificationSelfie(pickResult.data);
+      if (!uploadResult.success) {
+        Alert.alert(
+          'Error',
+          uploadResult.error?.message || "We couldn't upload your selfie."
+        );
+        return;
+      }
+
+      Alert.alert(
+        'Selfie received!',
+        "We've received your selfie. Our team will review your verification shortly."
+      );
+
+      router.replace('/profile');
+    } catch (error) {
+      console.error('[VerifyProfile] Error in handleSubmit:', error);
       Alert.alert(
         'Error',
-        pickResult.error.message || 'No pudimos abrir tu galería.'
+        'An unexpected error occurred. Please try again.'
       );
-      setIsSubmitting(false);
-      return;
     }
-
-    if (!pickResult.data) {
-      setIsSubmitting(false);
-      return;
-    }
-
-    const uploadResult = await uploadVerificationSelfie(pickResult.data);
-    if (!uploadResult.success) {
-      Alert.alert(
-        'Error',
-        uploadResult.error.message || 'No pudimos subir tu selfie.'
-      );
-      setIsSubmitting(false);
-      return;
-    }
-
-    Alert.alert(
-      '¡Selfie recibida!',
-      'Hemos recibido tu selfie. Nuestro equipo revisará tu verificación en breve.'
-    );
-
-    setIsSubmitting(false);
-    router.replace('/profile');
   };
 
   return (
@@ -123,10 +126,10 @@ export default function VerifyProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.title}>Verificar tu identidad</Text>
+          <Text style={styles.title}>Verify your identity</Text>
           <Text style={styles.description}>
-            Súbe un selfie claro solo para confirmar que eres tú. No aparecerá
-            en tu perfil.
+            Upload a clear selfie to confirm it's really you.
+            It won't appear on your profile.
           </Text>
 
           {illustration ? (
@@ -138,22 +141,14 @@ export default function VerifyProfileScreen() {
           ) : null}
 
           <TouchableOpacity
-            style={[
-              styles.submitButton,
-              isSubmitting ? styles.submitButtonDisabled : null,
-            ]}
+            style={styles.submitButton}
             onPress={handleSubmit}
-            disabled={isSubmitting}
             activeOpacity={0.85}
           >
-            {isSubmitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.submitButtonText}>Subir selfie</Text>
-            )}
+            <Text style={styles.submitButtonText}>Upload selfie</Text>
           </TouchableOpacity>
           <Text style={styles.helperText}>
-            Usa una foto sin filtros, bien iluminada y con tu rostro completo.
+            Use a clear photo, with good lighting and your full face visible.
           </Text>
         </View>
       </ScrollView>

@@ -32,8 +32,8 @@ export function PhotoMenuModal({
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.content} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Opciones de foto</Text>
-          <Text style={styles.message}>¿Qué quieres hacer con esta foto?</Text>
+          <Text style={styles.title}>Photo options</Text>
+          <Text style={styles.message}>What would you like to do with this photo?</Text>
 
           <View style={styles.options}>
             {!isMain && (
@@ -44,7 +44,7 @@ export function PhotoMenuModal({
                   onClose();
                 }}
               >
-                <Text style={styles.optionText}>Establecer como principal</Text>
+                <Text style={styles.optionText}>Set as main photo</Text>
               </TouchableOpacity>
             )}
 
@@ -56,13 +56,13 @@ export function PhotoMenuModal({
               }}
             >
               <Text style={[styles.optionText, styles.deleteOptionText]}>
-                Eliminar foto
+                Delete photo
               </Text>
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </Pressable>
       </Pressable>

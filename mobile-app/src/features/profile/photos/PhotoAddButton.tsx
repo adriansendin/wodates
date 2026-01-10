@@ -37,7 +37,7 @@ export function PhotoAddButton({ onPress, disabled = false, size }: Props) {
     >
       <View style={styles.content}>
         <Plus size={size ? size * 0.2 : 32} color="#e91e63" strokeWidth={2} />
-        {!size && <Text style={styles.text}>Añadir foto</Text>}
+        {!size && <Text style={styles.text}>Add photo</Text>}
       </View>
     </TouchableOpacity>
   );

@@ -46,8 +46,8 @@ export default function Step2Screen() {
     
     if (age < 18 || age > 99) {
       setError(age < 18 
-        ? 'Debes tener al menos 18 años para registrarte'
-        : 'La edad máxima permitida es 99 años'
+        ? 'You must be at least 18 years old to sign up'
+        : 'The maximum allowed age is 99 years'
       );
       return;
     }
@@ -74,8 +74,8 @@ export default function Step2Screen() {
         <View style={styles.content}>
           {/* Sección de Fecha de Nacimiento */}
           <View style={styles.section}>
-            <Text style={styles.title}>¿Cuándo naciste?</Text>
-            <Text style={styles.subtitle}>Tu edad será visible en tu perfil</Text>
+            <Text style={styles.title}>When were you born?</Text>
+            <Text style={styles.subtitle}>Your age will be visible on your profile</Text>
 
             <View style={styles.dateContainer}>
               <BirthDatePicker
@@ -94,7 +94,7 @@ export default function Step2Screen() {
 
           {/* Sección de Rango de Edad */}
           <View style={styles.section}>
-            <Text style={styles.title}>¿Qué rango de edad buscas?</Text>
+            <Text style={styles.title}>What age range are you looking for?</Text>
 
             <View style={styles.pickerContainer}>
               <AgeRangePicker
@@ -105,7 +105,7 @@ export default function Step2Screen() {
             </View>
 
             <Text style={styles.infoText}>
-              Podrás cambiar esta preferencia más adelante.
+              You can change this preference later.
             </Text>
           </View>
 
@@ -116,11 +116,11 @@ export default function Step2Screen() {
               onPress={handleNext}
               disabled={!!error}
             >
-              <Text style={styles.buttonText}>Continuar</Text>
+              <Text style={styles.buttonText}>Continue</Text>
             </TouchableOpacity>
 
             <TouchableOpacity testID="volver-step2-button" style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Volver</Text>
+              <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
         </View>
