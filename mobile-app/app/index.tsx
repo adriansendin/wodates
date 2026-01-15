@@ -21,6 +21,12 @@ export default function Home() {
     router.push('/(preview)/feed');
   };
 
+  const handleDirectRegister = () => {
+    // Navigate directly to registration onboarding (first screen: city selection)
+    // TODO: Add analytics tracking if needed: cta_register_direct_clicked
+    router.push('/(auth)/register');
+  };
+
   return (
     <>
       <Stack.Screen 
@@ -41,8 +47,8 @@ export default function Home() {
 
         {/* Tagline */}
         <View style={styles.sloganBlock}>
-                <Text style={styles.tagline}>Relaciones serias</Text>
-                <Text style={styles.tagline}>Menos swipe. Más conexión.</Text>
+                <Text style={styles.tagline}>Serious relationships</Text>
+                <Text style={styles.tagline}>Less swiping. More connection.</Text>
         </View>
 
         {/* Botones principales */}
@@ -61,6 +67,15 @@ export default function Home() {
             <Text style={styles.primaryButtonText}>Enter preview</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Link de registro directo */}
+        <TouchableOpacity
+          style={styles.registerLinkContainer}
+          onPress={handleDirectRegister}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.registerLinkText}>New here? Create an account</Text>
+        </TouchableOpacity>
       </View>
     </>
   );
@@ -141,5 +156,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2, // reduce o aumenta según prefieras
     marginTop: -10, // opcional: ajusta verticalmente si queda muy separado del logo
-  },  
+  },
+  registerLinkContainer: {
+    marginTop: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  registerLinkText: {
+    fontSize: 15,
+    color: '#F45C5C',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+    fontWeight: '500',
+    letterSpacing: 0.2,
+  },
 });

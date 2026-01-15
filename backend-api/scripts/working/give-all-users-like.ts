@@ -52,7 +52,7 @@ async function getUserByEmail(
     const normalizedSearchEmail = email.toLowerCase().trim();
     let page = 1;
     const perPage = 1000; // Máximo de usuarios por página
-    let authUser = null;
+    let authUser: { id: string; email?: string } | null = null;
     let totalUsersChecked = 0;
 
     // Paginar a través de todos los usuarios hasta encontrar el email o llegar al final

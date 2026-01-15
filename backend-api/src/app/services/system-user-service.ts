@@ -134,7 +134,9 @@ export class SystemUserService {
         const welcomeMessageResult = await this.messageRepository.create({
           matchId: matchResult.data.id,
           senderId: docLoveId,
-          content: "Welcome to Wodates, I'm Doc Love.",
+          content: `Welcome to Wodates — serious relationships only.
+I'm Doc Love. I help you discover better matches through conversations.
+One key rule: you can only chat with one person at a time — Discover pauses during a match.`,
         });
 
         // Log error but don't fail the match creation if message fails
