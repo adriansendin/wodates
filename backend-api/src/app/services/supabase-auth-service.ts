@@ -248,19 +248,46 @@ export class SupabaseAuthService implements AuthService {
       // Note: This may be slow with many users, but Supabase Admin API
       // doesn't provide a direct method to check by email
       const normalizedEmail = email.toLowerCase().trim();
-      const { data, error } = await this.adminClient.auth.admin.listUsers();
-      
-      if (error) {
-        console.error('[SupabaseAuthService] Error checking email:', error);
-        // If we can't check, assume it doesn't exist to allow registration attempt
-        return false;
+      let page = 1;
+      const perPage = 1000;
+
+      // Paginate through all users until we find the email or run out of users
+      while (true) {
+        const { data, error } = await this.adminClient.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+
+        if (error) {
+          console.error(
+            `[SupabaseAuthService] Error checking email (page ${page}):`,
+            error
+          );
+          // If we can't check, assume it doesn't exist to allow registration attempt
+          return false;
+        }
+
+        const users = data.users || [];
+
+        // Check if any user has this email (case-insensitive)
+        const userExists = users.some(
+          (user) => user.email?.toLowerCase().trim() === normalizedEmail
+        );
+
+        if (userExists) {
+          return true;
+        }
+
+        // If we got fewer users than perPage, we've reached the end
+        if (users.length < perPage) {
+          break;
+        }
+
+        // Move to next page
+        page++;
       }
 
-      // Check if any user has this email (case-insensitive)
-      const userExists = data.users.some(
-        user => user.email?.toLowerCase().trim() === normalizedEmail
-      );
-      return userExists;
+      return false;
     } catch (error) {
       console.error('[SupabaseAuthService] Unexpected error checking email:', error);
       // If we can't check, assume it doesn't exist to allow registration attempt

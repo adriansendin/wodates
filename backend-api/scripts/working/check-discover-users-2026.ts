@@ -43,22 +43,55 @@ async function getUserByEmail(
   client: any,
   email: string
 ): Promise<UserData | null> {
-  // First get user from auth.users by email
-  const { data: authUsers, error: authError } = await client.auth.admin.listUsers();
+  // First get user from auth.users by email (with pagination)
+  const normalizedSearchEmail = email.toLowerCase().trim();
+  let page = 1;
+  const perPage = 1000;
+  let authUser = null;
 
-  if (authError) {
-    console.error(`❌ Error fetching auth users:`, authError.message);
-    return null;
+  while (!authUser) {
+    const { data, error: authError } = await client.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (authError) {
+      console.error(
+        `❌ Error fetching auth users (page ${page}):`,
+        authError.message
+      );
+      return null;
+    }
+
+    const users = data.users || [];
+
+    // Search for user with matching email (case-insensitive)
+    authUser =
+      users.find(
+        (u: any) => u.email?.toLowerCase().trim() === normalizedSearchEmail
+      ) || null;
+
+    if (authUser) {
+      break;
+    }
+
+    // If we got fewer users than perPage, we've reached the end
+    if (users.length < perPage) {
+      break;
+    }
+
+    // Move to next page
+    page++;
   }
-
-  const authUser = authUsers.users.find((u: any) => u.email === email);
 
   if (!authUser) {
     console.error(`❌ User with email ${email} not found in auth.users`);
     return null;
   }
 
-  const userId = authUser.id;
+  // Type assertion after null check
+  const foundUser = authUser as { id: string; email?: string; user_metadata?: any };
+  const userId = foundUser.id;
 
   // Get user from public.users
   const { data: userData, error: userError } = await client
@@ -77,7 +110,7 @@ async function getUserByEmail(
     return null;
   }
 
-  const metadata = authUser.user_metadata as Record<string, unknown> | null;
+  const metadata = foundUser.user_metadata as Record<string, unknown> | null;
   const displayName =
     metadata && typeof metadata.display_name === 'string'
       ? metadata.display_name.trim()
@@ -85,8 +118,8 @@ async function getUserByEmail(
 
   return {
     ...userData,
-    email: authUser.email || 'N/A',
-    name: displayName || authUser.email || 'Usuario',
+    email: foundUser.email || 'N/A',
+    name: displayName || foundUser.email || 'Usuario',
   } as UserData;
 }
 

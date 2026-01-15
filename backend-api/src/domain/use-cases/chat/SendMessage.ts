@@ -14,6 +14,10 @@ import { MatchRepository } from '../../repositories/MatchRepository';
  */
 type DocLoveChatService = {
   isDocLoveConversation(matchId: string): Promise<Result<boolean, DomainError>>;
+  isDocLoveConversationWithMatch(
+    matchId: string,
+    match: { userId1: string; userId2: string }
+  ): Promise<Result<boolean, DomainError>>;
   generateAndSaveReply(
     matchId: string,
     userId: string,
@@ -34,6 +38,18 @@ export class SendMessage {
     senderId: string,
     content: string
   ): Promise<Result<Message, DomainError>> {
+    if (this.logger) {
+      this.logger.info(
+        {
+          matchId,
+          senderId,
+          contentLength: content.length,
+          docLoveServiceAvailable: !!this.docLoveChatService,
+        },
+        'SendMessage.execute: Iniciando envío de mensaje'
+      );
+    }
+
     // Verify match exists and user is part of it
     const matchResult = await this.matchRepository.findById(matchId);
     if (isFailure(matchResult)) {
@@ -72,16 +88,35 @@ export class SendMessage {
 
     // If Doc Love chat service is available, check if this is a Doc Love conversation
     // and generate AI response if needed
+    // We already have the match, so we can check directly without querying again
     if (this.docLoveChatService) {
       if (this.logger) {
-        this.logger.debug(
-          { matchId, senderId },
-          'Verificando si es conversación con Doc Love'
+        this.logger.info(
+          { matchId, senderId, userId1: match.userId1, userId2: match.userId2 },
+          '1. Doc Love chat service disponible - Verificando si es conversación con Doc Love'
         );
       }
 
+      // Check if this is a Doc Love conversation using the match we already have
       const isDocLoveResult =
-        await this.docLoveChatService.isDocLoveConversation(matchId);
+        await this.docLoveChatService.isDocLoveConversationWithMatch(
+          matchId,
+          match
+        );
+
+      if (this.logger) {
+        this.logger.info(
+          {
+            matchId,
+            senderId,
+            isDocLoveConversation: isDocLoveResult.success
+              ? isDocLoveResult.data
+              : 'check failed',
+            checkSuccess: isDocLoveResult.success,
+          },
+          '2. Resultado de verificación Doc Love'
+        );
+      }
 
       // Only generate AI response if:
       // 1. We successfully checked it's a Doc Love conversation
@@ -138,7 +173,7 @@ export class SendMessage {
         // will receive it via polling/subscription
       } else {
         if (this.logger) {
-          this.logger.debug(
+          this.logger.info(
             {
               matchId,
               senderId,
@@ -146,7 +181,7 @@ export class SendMessage {
                 ? isDocLoveResult.data
                 : 'check failed',
             },
-            'Not a Doc Love conversation'
+            'No es una conversación con Doc Love'
           );
         }
       }
@@ -154,7 +189,7 @@ export class SendMessage {
       if (this.logger) {
         this.logger.warn(
           { matchId, senderId },
-          'Doc Love chat service is not available'
+          '⚠️ Doc Love chat service NO está disponible - AI features deshabilitadas'
         );
       }
     }

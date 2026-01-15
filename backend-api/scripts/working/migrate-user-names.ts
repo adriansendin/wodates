@@ -33,20 +33,39 @@ async function migrateUserNames() {
     },
   });
 
-  // Obtener todos los usuarios
+  // Obtener todos los usuarios (con paginación)
   console.log('📥 Obteniendo lista de usuarios...');
-  const { data, error } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000, // Ajustar si tienes más de 1000 usuarios
-  });
+  let page = 1;
+  const perPage = 1000;
+  const allUsers: any[] = [];
 
-  if (error) {
-    console.error('❌ Error al obtener usuarios:', error);
-    return;
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) {
+      console.error(`❌ Error al obtener usuarios (página ${page}):`, error);
+      break;
+    }
+
+    const users = data.users || [];
+    allUsers.push(...users);
+
+    console.log(`📄 Página ${page}: ${users.length} usuarios (total: ${allUsers.length})`);
+
+    // Si obtuvimos menos usuarios que perPage, hemos llegado al final
+    if (users.length < perPage) {
+      break;
+    }
+
+    // Pasar a la siguiente página
+    page++;
   }
 
-  const users = data.users;
-  console.log(`✅ Se encontraron ${users.length} usuarios\n`);
+  const users = allUsers;
+  console.log(`✅ Se encontraron ${users.length} usuarios en total\n`);
 
   let updated = 0;
   let skipped = 0;

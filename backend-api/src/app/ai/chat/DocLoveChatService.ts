@@ -41,24 +41,103 @@ export class DocLoveChatService {
 
   /**
    * Detects if a match/conversation is with Doc Love
+   * This version queries the database for the match
    */
   async isDocLoveConversation(
     matchId: string
   ): Promise<Result<boolean, DomainError>> {
     try {
+      if (this.logger) {
+        this.logger.debug({ matchId }, 'Checking if conversation is with Doc Love');
+      }
+
       const matchResult = await this.matchRepository.findById(matchId);
       if (!matchResult.success) {
+        if (this.logger) {
+          this.logger.warn(
+            { matchId, error: matchResult.error },
+            'Match not found when checking for Doc Love conversation'
+          );
+        }
         return failure(matchResult.error);
       }
 
-      const match = matchResult.data;
+      return this.isDocLoveConversationWithMatch(matchId, matchResult.data);
+    } catch (error) {
+      if (this.logger) {
+        this.logger.error(
+          { matchId, error },
+          'Error checking if conversation is with Doc Love'
+        );
+      }
+      return failure(
+        new InternalError(
+          'Failed to check if conversation is with Doc Love',
+          error
+        )
+      );
+    }
+  }
+
+  /**
+   * Detects if a match/conversation is with Doc Love
+   * This version accepts the match directly to avoid querying the database again
+   */
+  async isDocLoveConversationWithMatch(
+    matchId: string,
+    match: { userId1: string; userId2: string }
+  ): Promise<Result<boolean, DomainError>> {
+    try {
       const docLoveId = await this.docLoveHelper.getDocLoveUserId();
 
       const isDocLoveConversation =
         match.userId1 === docLoveId || match.userId2 === docLoveId;
 
+      if (this.logger) {
+        this.logger.info(
+          {
+            matchId,
+            docLoveId,
+            userId1: match.userId1,
+            userId2: match.userId2,
+            isDocLoveConversation,
+          },
+          'Doc Love conversation check result'
+        );
+      }
+
       return success(isDocLoveConversation);
     } catch (error) {
+      // If it's a NotFoundError from getDocLoveUserId, it means Doc Love doesn't exist
+      // This is a configuration issue, not a runtime error
+      if (error instanceof DomainError && error.code === 'NOT_FOUND') {
+        if (this.logger) {
+          this.logger.warn(
+            {
+              matchId,
+              error: error.message,
+              userId1: match.userId1,
+              userId2: match.userId2,
+            },
+            'Doc Love user not found in database - AI features disabled for this conversation'
+          );
+        }
+        // Return false (not a Doc Love conversation) instead of failing
+        // This allows the message to be sent normally
+        return success(false);
+      }
+
+      // For other errors, log and return failure
+      if (this.logger) {
+        this.logger.error(
+          {
+            matchId,
+            error: error instanceof Error ? error.message : String(error),
+            errorType: error instanceof Error ? error.constructor.name : typeof error,
+          },
+          'Error checking if conversation is with Doc Love'
+        );
+      }
       return failure(
         new InternalError(
           'Failed to check if conversation is with Doc Love',
@@ -146,13 +225,47 @@ export class DocLoveChatService {
         userMessage.content
       );
 
+      // Log system prompt to verify it's being built correctly
+      if (this.logger) {
+        this.logger.info(
+          {
+            systemPromptLength: systemPrompt.length,
+            systemPromptPreview: systemPrompt.substring(0, 200),
+            hasSystemInstructions: !!AIConfig.prompt.systemInstructions,
+            systemInstructionsLength: AIConfig.prompt.systemInstructions?.length || 0,
+            messagesCount: messages.length,
+          },
+          'Doc Love: System prompt built and ready to send to ai-service'
+        );
+      }
+
       const aiServiceResponse = await this.aiServiceChatClient.generateChat({
         messages,
         system: systemPrompt,
       });
 
+      // Validate response is not empty
+      if (!aiServiceResponse.content || aiServiceResponse.content.trim().length === 0) {
+        if (this.logger) {
+          this.logger.error(
+            {
+              matchId,
+              userId,
+              systemPromptLength: systemPrompt.length,
+              messagesCount: messages.length,
+            },
+            'Doc Love: ai-service returned empty response!'
+          );
+        }
+        return failure(
+          new InternalError(
+            'Doc Love chat response is empty. Check ai-service logs and model configuration.'
+          )
+        );
+      }
+
       const chatResponse = {
-        content: aiServiceResponse.content,
+        content: aiServiceResponse.content.trim(),
         provider: 'ai-service',
         model: 'ai-service',
       };
@@ -163,10 +276,11 @@ export class DocLoveChatService {
             matchId,
             userId,
             responseLength: chatResponse.content.length,
+            responsePreview: chatResponse.content.substring(0, 100),
             provider: chatResponse.provider,
             model: chatResponse.model,
           },
-          'Doc Love chat response generated'
+          'Doc Love chat response generated successfully'
         );
       }
 
@@ -342,6 +456,16 @@ export class DocLoveChatService {
       lastMessage?: string;
     }>
   ): string {
+    // Verify systemInstructions exists and is not empty
+    if (!AIConfig.prompt.systemInstructions || AIConfig.prompt.systemInstructions.trim().length === 0) {
+      if (this.logger) {
+        this.logger.error(
+          'AIConfig.prompt.systemInstructions is empty or undefined!'
+        );
+      }
+      throw new Error('System instructions are missing or empty');
+    }
+
     let systemPrompt = `${AIConfig.prompt.systemInstructions}\n\n`;
 
     if (userContext?.name) {

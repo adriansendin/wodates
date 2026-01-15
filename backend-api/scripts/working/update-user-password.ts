@@ -43,16 +43,44 @@ async function updateUserPassword() {
     },
   });
 
-  // Buscar usuario por email
+  // Buscar usuario por email (con paginación)
   console.log('📥 Buscando usuario...');
-  const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
+  const normalizedSearchEmail = TARGET_EMAIL.toLowerCase().trim();
+  let page = 1;
+  const perPage = 1000;
+  let user = null;
 
-  if (listError) {
-    console.error('❌ Error al obtener usuarios:', listError);
-    process.exit(1);
+  while (!user) {
+    const { data: usersData, error: listError } = await supabase.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (listError) {
+      console.error(`❌ Error al obtener usuarios (página ${page}):`, listError);
+      process.exit(1);
+    }
+
+    const users = usersData.users || [];
+
+    // Buscar usuario con email coincidente (case-insensitive)
+    user =
+      users.find(
+        (u) => u.email?.toLowerCase().trim() === normalizedSearchEmail
+      ) || null;
+
+    if (user) {
+      break;
+    }
+
+    // Si obtuvimos menos usuarios que perPage, hemos llegado al final
+    if (users.length < perPage) {
+      break;
+    }
+
+    // Pasar a la siguiente página
+    page++;
   }
-
-  const user = usersData.users.find((u) => u.email?.toLowerCase() === TARGET_EMAIL.toLowerCase());
 
   if (!user) {
     console.error(`❌ Error: No se encontró el usuario con email ${TARGET_EMAIL}`);

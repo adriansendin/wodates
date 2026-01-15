@@ -235,6 +235,7 @@ export default function ChatScreen() {
   const [message, setMessage] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showAboutDocLoveModal, setShowAboutDocLoveModal] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -1008,15 +1009,14 @@ export default function ChatScreen() {
               </Text>
             </TouchableOpacity>
           ),
-          headerRight: () =>
-            !isBot ? (
-              <TouchableOpacity
-                onPress={() => setShowMenu(true)}
-                style={styles.menuButton}
-              >
-                <Ionicons name="ellipsis-vertical" size={24} color="#333" />
-              </TouchableOpacity>
-            ) : null,
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => setShowMenu(true)}
+              style={styles.menuButton}
+            >
+              <Ionicons name="ellipsis-vertical" size={24} color="#333" />
+            </TouchableOpacity>
+          ),
         }}
       />
       <SafeAreaView style={styles.safeArea}>
@@ -1259,16 +1259,29 @@ export default function ChatScreen() {
           onPress={() => setShowMenu(false)}
         >
           <View style={styles.menuContainer}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setShowMenu(false);
-                setShowBlockModal(true);
-              }}
-            >
-              <Ionicons name="ban" size={20} color="#e91e63" />
-              <Text style={styles.menuItemText}>End conversation</Text>
-            </TouchableOpacity>
+            {isBot ? (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  setShowMenu(false);
+                  setShowAboutDocLoveModal(true);
+                }}
+              >
+                <Ionicons name="information-circle" size={20} color="#e91e63" />
+                <Text style={styles.menuItemText}>About Doc Love</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  setShowMenu(false);
+                  setShowBlockModal(true);
+                }}
+              >
+                <Ionicons name="ban" size={20} color="#e91e63" />
+                <Text style={styles.menuItemText}>End conversation</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </TouchableOpacity>
       </Modal>
@@ -1369,6 +1382,37 @@ export default function ChatScreen() {
               onPress={() => setShowUploadErrorModal(false)}
             >
               <Text style={styles.modalButtonTextConfirm}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* About Doc Love Modal */}
+      <Modal
+        visible={showAboutDocLoveModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAboutDocLoveModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.aboutDocLoveTitle}>Info</Text>
+            <View style={styles.modalTextContainer}>
+              <Text style={styles.modalText}>
+                Doc Love helps you discover better matches by asking thoughtful questions over time.
+                {'\n\n'}
+                If you don't feel like answering a question, you can simply skip it or ask for a different one. You can answer briefly or go into more detail — whatever feels natural.
+                {'\n\n'}
+                What you share with Doc Love (and your in-app chats) helps Wodates improve your future match recommendations.
+                {'\n\n'}
+                One key rule: you can only have one active human chat at a time — while you're matched, Discover pauses.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonConfirm]}
+              onPress={() => setShowAboutDocLoveModal(false)}
+            >
+              <Text style={styles.modalButtonTextConfirm}>Got it</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1720,5 +1764,12 @@ const styles = StyleSheet.create({
     color: '#e91e63',
     fontSize: 14,
     fontWeight: '600',
+  },
+  aboutDocLoveTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e91e63',
+    marginBottom: 20,
+    textAlign: 'center',
   },
 });

@@ -116,7 +116,16 @@ class OllamaClient:
 
         # Add system message if provided
         if system:
+            logger.info(
+                f"OllamaClient.chat: Adding system message to model '{model}', "
+                f"system_length={len(system)}, preview={system[:200]}"
+            )
             ollama_messages.append({"role": "system", "content": system})
+        else:
+            logger.warning(
+                f"OllamaClient.chat: No system message provided for model '{model}'! "
+                f"This may cause Doc Love to not respond correctly."
+            )
 
         # Add conversation messages
         for msg in messages:

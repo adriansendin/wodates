@@ -50,27 +50,80 @@ export class DocLoveHelper {
     }
 
     try {
-      // Search for user by email using Admin API
-      const { data, error } = await this.client.auth.admin.listUsers();
+      // Search for user by email using Admin API with pagination
+      // listUsers() returns max 50 users per page, so we need to paginate
+      const normalizedSearchEmail = DOC_LOVE_EMAIL.toLowerCase().trim();
+      let page = 1;
+      let perPage = 50;
+      let docLoveUser: { id: string; email: string | undefined } | null = null;
+      let totalUsersChecked = 0;
 
-      if (error) {
-        throw new InternalError(
-          `Failed to list users: ${this.formatSupabaseError(error)}`
-        );
-      }
-
-      // Find Doc Love by email
-      const docLoveUser = data.users.find(
-        (user) => user.email === DOC_LOVE_EMAIL
+      console.log(
+        `[DocLoveHelper] Searching for email "${DOC_LOVE_EMAIL}" (normalized: "${normalizedSearchEmail}")`
       );
 
+      // Paginate through all users until we find Doc Love or run out of users
+      while (!docLoveUser) {
+        const { data, error } = await this.client.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+
+        if (error) {
+          throw new InternalError(
+            `Failed to list users (page ${page}): ${this.formatSupabaseError(error)}`
+          );
+        }
+
+        const users = data.users || [];
+        totalUsersChecked += users.length;
+
+        console.log(
+          `[DocLoveHelper] Checking page ${page}: ${users.length} users (total checked: ${totalUsersChecked})`
+        );
+
+        // Find Doc Love by email (case-insensitive comparison)
+        docLoveUser =
+          users.find(
+            (user) =>
+              user.email?.toLowerCase().trim() === normalizedSearchEmail
+          ) || null;
+
+        // If found, break out of loop
+        if (docLoveUser) {
+          console.log(
+            `[DocLoveHelper] Found Doc Love user on page ${page}: id=${docLoveUser.id}, email=${docLoveUser.email}`
+          );
+          break;
+        }
+
+        // If we got fewer users than perPage, we've reached the end
+        if (users.length < perPage) {
+          console.log(
+            `[DocLoveHelper] Reached end of user list. Checked ${totalUsersChecked} users total.`
+          );
+          break;
+        }
+
+        // Move to next page
+        page++;
+      }
+
       if (!docLoveUser) {
+        console.error(
+          `[DocLoveHelper] Doc Love user not found after checking ${totalUsersChecked} users across ${page} page(s)`
+        );
         throw new NotFoundError(
-          `Doc Love user not found with email: ${DOC_LOVE_EMAIL}`
+          `Doc Love user not found with email: ${DOC_LOVE_EMAIL}. Checked ${totalUsersChecked} users. Make sure the user exists in auth.users.`
         );
       }
 
       const userId = docLoveUser.id;
+      const foundEmail = docLoveUser.email;
+
+      console.log(
+        `[DocLoveHelper] Found Doc Love user: id=${userId}, email=${foundEmail}`
+      );
 
       // Validate that user exists in public.users and is marked as bot
       const { data: publicUser, error: publicUserError } = await this.client

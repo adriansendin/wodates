@@ -50,13 +50,15 @@ export class AiServiceChatClient {
 
     try {
       if (this.logger) {
-        this.logger.debug(
+        this.logger.info(
           {
             baseUrl: this.baseUrl,
             messagesCount: request.messages.length,
             hasSystem: !!request.system,
+            systemLength: request.system?.length || 0,
+            systemPreview: request.system?.substring(0, 200) || 'N/A',
           },
-          'Calling ai-service /chat/generate'
+          'Sending chat request to ai-service /chat/generate with system prompt'
         );
       }
 

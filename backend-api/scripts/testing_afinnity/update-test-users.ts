@@ -217,16 +217,47 @@ async function getUserIdFromEmail(
   email: string
 ): Promise<string | null> {
   try {
-    const { data, error } = await adminClient.auth.admin.listUsers();
-    
-    if (error) {
-      throw new Error(`Failed to list users: ${error.message}`);
+    const normalizedSearchEmail = email.toLowerCase().trim();
+    let page = 1;
+    const perPage = 1000;
+
+    while (true) {
+      const { data, error } = await adminClient.auth.admin.listUsers({
+        page,
+        perPage,
+      });
+
+      if (error) {
+        throw new Error(`Failed to list users (page ${page}): ${error.message}`);
+      }
+
+      const users = data.users || [];
+
+      // Search for user with matching email (case-insensitive)
+      const user = users.find(
+        (u: any) => u.email?.toLowerCase().trim() === normalizedSearchEmail
+      );
+
+      if (user) {
+        return user.id;
+      }
+
+      // If we got fewer users than perPage, we've reached the end
+      if (users.length < perPage) {
+        break;
+      }
+
+      // Move to next page
+      page++;
     }
-    
-    const user = data.users.find((u: any) => u.email === email);
-    return user?.id || null;
+
+    return null;
   } catch (error) {
-    throw new Error(`Failed to get user ID from email: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Failed to get user ID from email: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
   }
 }
 
