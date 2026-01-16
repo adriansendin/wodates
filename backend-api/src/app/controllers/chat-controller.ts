@@ -2,7 +2,10 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { SendMessage } from '../../domain/use-cases/chat/SendMessage';
 import { GetMessages } from '../../domain/use-cases/chat/GetMessages';
 import { BlockUser } from '../../domain/use-cases/chat/BlockUser';
-import { DomainError } from '../../domain/errors/DomainError';
+import { DomainError, NotFoundError, ForbiddenError, InternalError } from '../../domain/errors/DomainError';
+import { MatchRepository } from '../../domain/repositories/MatchRepository';
+import { MessageRepository } from '../../domain/repositories/MessageRepository';
+import { AffinitySentenceService } from '../services/affinity-sentence-service';
 import { z } from 'zod';
 
 const SendMessageSchema = z.object({
@@ -35,7 +38,10 @@ export class ChatController {
   constructor(
     private sendMessageUseCase: SendMessage,
     private getMessagesUseCase: GetMessages,
-    private blockUserUseCase: BlockUser
+    private blockUserUseCase: BlockUser,
+    private matchRepository: MatchRepository,
+    private messageRepository: MessageRepository,
+    private affinitySentenceService?: AffinitySentenceService
   ) {}
 
   async sendMessage(request: FastifyRequest, reply: FastifyReply) {
@@ -130,6 +136,92 @@ export class ChatController {
       message: error.message,
       details: error.details,
     });
+  }
+
+  async getAffinitySentence(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const userId = request.user!.id;
+      const { matchId } = request.params as { matchId: string };
+
+      // Verify match exists and user is part of it
+      const matchResult = await this.matchRepository.findById(matchId);
+      if (!matchResult.success || !matchResult.data) {
+        return this.handleError(reply, new NotFoundError('Match not found'));
+      }
+
+      const match = matchResult.data;
+      if (match.userId1 !== userId && match.userId2 !== userId) {
+        return this.handleError(reply, new ForbiddenError('User is not part of this match'));
+      }
+
+      // Get affinity sentence from chat
+      const affinityResult = await this.matchRepository.getAffinitySentence(matchId);
+      if (!affinityResult.success) {
+        return this.handleError(reply, affinityResult.error);
+      }
+
+      let sentence = affinityResult.data;
+
+      // If null (legacy chat), generate on-demand and store
+      if (!sentence && this.affinitySentenceService) {
+        const generateResult = await this.affinitySentenceService.generateAffinitySentence(
+          match.userId1,
+          match.userId2
+        );
+
+        if (generateResult.success) {
+          sentence = generateResult.data;
+          // Store it for future requests
+          await this.matchRepository.updateAffinitySentence(matchId, sentence);
+        } else {
+          // Use fallback if generation fails
+          sentence = 'Initial affinity is low—conversation will sharpen recommendations.';
+        }
+      }
+
+      // If still null (service not available), use fallback
+      if (!sentence) {
+        sentence = 'Initial affinity is low—conversation will sharpen recommendations.';
+      }
+
+      return reply.send({ sentence });
+    } catch (error) {
+      return this.handleValidationError(reply, error);
+    }
+  }
+
+  async hasSentMessage(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const userId = request.user!.id;
+      const { matchId } = request.params as { matchId: string };
+
+      // Verify match exists and user is part of it
+      const matchResult = await this.matchRepository.findById(matchId);
+      if (!matchResult.success || !matchResult.data) {
+        return this.handleError(reply, new NotFoundError('Match not found'));
+      }
+
+      const match = matchResult.data;
+      if (match.userId1 !== userId && match.userId2 !== userId) {
+        return this.handleError(reply, new ForbiddenError('User is not part of this match'));
+      }
+
+      // Check if user has sent any message in this chat
+      const messagesResult = await this.messageRepository.findByMatchId(matchId, 1);
+      if (!messagesResult.success) {
+        return this.handleError(
+          reply,
+          new InternalError('Failed to check messages')
+        );
+      }
+
+      // Check if any message was sent by this user
+      const hasSent = messagesResult.data.some((msg) => msg.senderId === userId);
+
+      return reply.send({ hasSent });
+    } catch (error) {
+      return this.handleValidationError(reply, error);
+    }
   }
 
   private handleValidationError(reply: FastifyReply, error: unknown) {

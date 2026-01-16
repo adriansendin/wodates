@@ -657,6 +657,115 @@ export class SupabaseMatchRepository implements MatchRepository {
     }
   }
 
+  async updateLastReadAt(
+    chatId: string,
+    userId: string,
+    readAt: Date | null
+  ): Promise<Result<void, DomainError>> {
+    try {
+      const { error } = await this.client
+        .from('chat_participants')
+        .update({ last_read_at: readAt?.toISOString() ?? null })
+        .eq('chat_id', chatId)
+        .eq('user_id', userId);
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to update last read timestamp: ${this.formatSupabaseError(error)}`
+          )
+        );
+      }
+
+      return success(undefined);
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error updating last read timestamp', error)
+      );
+    }
+  }
+
+  async getLastReadAt(
+    chatId: string,
+    userId: string
+  ): Promise<Result<Date | null, DomainError>> {
+    try {
+      const { data, error } = await this.client
+        .from('chat_participants')
+        .select('last_read_at')
+        .eq('chat_id', chatId)
+        .eq('user_id', userId)
+        .maybeSingle<{ last_read_at: string | null }>();
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to get last read timestamp: ${this.formatSupabaseError(error)}`
+          )
+        );
+      }
+
+      const lastReadAt = data?.last_read_at ? new Date(data.last_read_at) : null;
+      return success(lastReadAt);
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error getting last read timestamp', error)
+      );
+    }
+  }
+
+  async getAffinitySentence(
+    chatId: string
+  ): Promise<Result<string | null, DomainError>> {
+    try {
+      const { data, error } = await this.client
+        .from('chats')
+        .select('affinity_sentence')
+        .eq('id', chatId)
+        .maybeSingle<{ affinity_sentence: string | null }>();
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to get affinity sentence: ${this.formatSupabaseError(error)}`
+          )
+        );
+      }
+
+      return success(data?.affinity_sentence ?? null);
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error getting affinity sentence', error)
+      );
+    }
+  }
+
+  async updateAffinitySentence(
+    chatId: string,
+    sentence: string
+  ): Promise<Result<void, DomainError>> {
+    try {
+      const { error } = await this.client
+        .from('chats')
+        .update({ affinity_sentence: sentence })
+        .eq('id', chatId);
+
+      if (error) {
+        return failure(
+          new InternalError(
+            `Failed to update affinity sentence: ${this.formatSupabaseError(error)}`
+          )
+        );
+      }
+
+      return success(undefined);
+    } catch (error) {
+      return failure(
+        new InternalError('Unexpected error updating affinity sentence', error)
+      );
+    }
+  }
+
   private formatSupabaseError(error: unknown): string {
     if (error && typeof error === 'object') {
       const message = (error as { message?: string }).message;

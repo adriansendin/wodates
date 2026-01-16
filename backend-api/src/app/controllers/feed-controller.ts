@@ -149,38 +149,37 @@ export class FeedController {
           this.userAIProfileRepository.findByUserId(candidateId),
         ]);
 
-      // Check if we have both profiles
-      if (
-        !currentUserProfileResult.success ||
-        !currentUserProfileResult.data?.summary ||
-        !candidateProfileResult.success ||
-        !candidateProfileResult.data?.summary
-      ) {
-        // Log missing profiles but don't show anything visually
+      // Check if we have both profiles with non-empty summaries
+      const currentUserHasProfile =
+        currentUserProfileResult.success &&
+        currentUserProfileResult.data?.summary &&
+        currentUserProfileResult.data.summary.trim().length > 0;
+      const candidateHasProfile =
+        candidateProfileResult.success &&
+        candidateProfileResult.data?.summary &&
+        candidateProfileResult.data.summary.trim().length > 0;
+
+      if (!currentUserHasProfile || !candidateHasProfile) {
+        // Return fallback sentence when either profile is missing/empty
+        // This avoids useless LLM calls and ensures stable UX
         if (this.logger) {
           this.logger.warn(
             {
               userId,
               candidateId,
-              currentUserHasProfile: !!(
-                currentUserProfileResult.success &&
-                currentUserProfileResult.data?.summary
-              ),
-              candidateHasProfile: !!(
-                candidateProfileResult.success &&
-                candidateProfileResult.data?.summary
-              ),
+              currentUserHasProfile,
+              candidateHasProfile,
             },
-            'Missing AI profiles for affinity sentences, returning empty array'
+            'Missing AI profiles for affinity sentences, returning fallback sentence'
           );
         }
         return reply.send({
-          sentences: [],
+          sentences: AIConfig.affinitySentencesFallback,
         });
       }
 
-      const currentUserProfile = currentUserProfileResult.data.summary;
-      const candidateProfile = candidateProfileResult.data.summary;
+      const currentUserProfile = currentUserProfileResult.data.summary ?? '';
+      const candidateProfile = candidateProfileResult.data.summary ?? '';
 
       // Build complete prompt in backend (following chat pattern)
       const fullPrompt = AIConfig.prompt.affinitySentences.buildPrompt(
@@ -189,16 +188,13 @@ export class FeedController {
       );
 
       // Call ai-service chat endpoint with the complete prompt
-      // Following the same pattern as DocLove chat - backend builds prompt, ai-service just calls LLM
-      // Use the affinity sentences model from config
-      const affinityModel = process.env.OLLAMA_AFFINITY || 'gemma3:1b';
-
+      // Backend sends task identifier; ai-service selects model internally
       if (this.logger) {
         this.logger.debug(
           {
             userId,
             candidateId,
-            model: affinityModel,
+            task: 'AFFINITY_SENTENCE',
             promptLength: fullPrompt.length,
           },
           'Generating affinity sentences'
@@ -209,7 +205,7 @@ export class FeedController {
         const response = await this.aiServiceChatClient.generateChat({
           messages: [{ role: 'user', content: fullPrompt }],
           // No system prompt needed, everything is in the user message
-          model: affinityModel, // Use the configured model for affinity sentences
+          task: 'AFFINITY_SENTENCE', // ai-service will select model and parameters internally
         });
 
         // Parse and validate the response
@@ -227,12 +223,12 @@ export class FeedController {
           );
         }
 
-        if (sentences.length >= 2) {
+        if (sentences.length >= 1) {
           return reply.send({
-            sentences: sentences.slice(0, 2), // Ensure exactly 2 sentences
+            sentences: sentences.slice(0, 1), // Ensure exactly 1 sentence
           });
         } else {
-          // If parsing resulted in less than 2 sentences, return empty array
+          // If parsing resulted in no sentences, return fallback
           if (this.logger) {
             this.logger.warn(
               {
@@ -241,16 +237,16 @@ export class FeedController {
                 parsedCount: sentences.length,
                 rawResponse: response.content.substring(0, 200),
               },
-              'Parsed less than 2 sentences, returning empty array'
+              'Parsed no sentences, returning fallback sentence'
             );
           }
           return reply.send({
-            sentences: [],
+            sentences: AIConfig.affinitySentencesFallback,
           });
         }
       } catch (error) {
-        // If ai-service fails, return empty array (non-blocking)
-        // Log error for debugging but don't show anything visually
+        // If ai-service fails, return fallback sentence (non-blocking)
+        // Log error for debugging
         if (this.logger) {
           this.logger.warn(
             {
@@ -258,11 +254,11 @@ export class FeedController {
               candidateId,
               error: error instanceof Error ? error.message : String(error),
             },
-            'Failed to generate affinity sentences, returning empty array'
+            'Failed to generate affinity sentences, returning fallback sentence'
           );
         }
         return reply.send({
-          sentences: [],
+          sentences: AIConfig.affinitySentencesFallback,
         });
       }
     } catch (error) {
@@ -276,7 +272,7 @@ export class FeedController {
   /**
    * Parses affinity sentences from LLM response
    * Handles various formats: one per line, numbered lists, bullet points
-   * Returns exactly 2 sentences (as per updated prompt requirement)
+   * Returns exactly 1 sentence (as per prompt requirement)
    */
   private parseAffinitySentences(text: string): string[] {
     // Remove common prefixes and markers
@@ -315,7 +311,7 @@ export class FeedController {
       }
     }
 
-    // Filter and validate: max 12 words per sentence, take exactly 2 sentences
+    // Filter and validate: max 12 words per sentence, take exactly 1 sentence
     const validated = sentences
       .filter((s) => s.split(/\s+/).length > 0)
       .map((s) => {
@@ -325,7 +321,7 @@ export class FeedController {
         }
         return s;
       })
-      .slice(0, 2); // Take exactly 2 sentences (updated requirement)
+      .slice(0, 1); // Take exactly 1 sentence
 
     return validated;
   }

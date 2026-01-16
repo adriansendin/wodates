@@ -87,11 +87,13 @@ export class MatchApi {
 
   async markAsRead(
     matchId: string,
-    token: string
+    token: string,
+    readAt?: Date
   ): Promise<Result<void, DomainError>> {
+    const body = readAt ? { readAt: readAt.toISOString() } : undefined;
     const response = await this.apiClient.put<void>(
       `/matches/${matchId}/read`,
-      undefined,
+      body,
       token
     );
 

@@ -43,26 +43,26 @@ class ChatService:
         for msg in request.messages:
             messages.append({"role": msg.role, "content": msg.content})
 
-        # Determine which model to use
-        # If model is specified in request, use it; otherwise use default from AI_MODEL_DOC_LOVE
-        model = request.model or settings.ollama_model
-        model_source = "request" if request.model else "AI_MODEL_DOC_LOVE (default)"
-
-        # Use different parameters for affinity sentences (faster, lower temperature)
-        # Check if it's the affinity sentences model
-        is_affinity_model = (
-            request.model == settings.ollama_model_affinity_sentences
-            or request.model == "gemma3:1b"
-        )
-
-        temperature = 0.3 if is_affinity_model else settings.ollama_temperature
-        max_tokens = 150 if is_affinity_model else settings.ollama_num_predict
-        top_p = 0.7 if is_affinity_model else settings.ollama_top_p
-        # Use timeout for affinity sentences (60 seconds to match backend)
-        # Backend has 60s timeout, so ai-service should match
-        timeout = (
-            60.0 if is_affinity_model else settings.ollama_timeout / 1000
-        )  # Convert ms to seconds
+        # Task-based routing: if task is provided, ai-service owns model selection
+        # Backward compatibility: if no task, use existing behavior (request.model or default)
+        if request.task == "AFFINITY_SENTENCE":
+            # Task-based: ai-service selects model and parameters internally
+            # Ignore any client-sent model when task is present
+            model = settings.ollama_model_affinity
+            model_source = "AI_MODEL_AFFINITY (task: AFFINITY_SENTENCE)"
+            # Fast, low-risk parameters for affinity sentences
+            temperature = 0.3
+            max_tokens = 150
+            top_p = 0.7
+            timeout = 60.0  # 60 seconds (matches backend timeout)
+        else:
+            # Backward compatibility: use existing behavior
+            model = request.model or settings.ollama_model
+            model_source = "request" if request.model else "AI_MODEL_DOC_LOVE (default)"
+            temperature = settings.ollama_temperature
+            max_tokens = settings.ollama_num_predict
+            top_p = settings.ollama_top_p
+            timeout = settings.ollama_timeout / 1000  # Convert ms to seconds
 
         # Generate response using LLM
         try:
@@ -72,6 +72,7 @@ class ChatService:
             logger.info(
                 f"ChatService.generate_chat: "
                 f"model='{model}' (from {model_source}), "
+                f"task={request.task or 'none'}, "
                 f"system_prompt_present={request.system is not None}, "
                 f"system_length={len(request.system) if request.system else 0}, "
                 f"system_preview={request.system[:200] if request.system else 'N/A'}, "

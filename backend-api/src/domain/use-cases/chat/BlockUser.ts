@@ -9,6 +9,17 @@ import { BlockedUserRepository } from '../../repositories/BlockedUserRepository'
 import { MatchRepository } from '../../repositories/MatchRepository';
 
 /**
+ * Optional service for sending Doc Love close messages
+ */
+type ChatCloseMessageService = {
+  sendCloseMessages(
+    blockerId: string,
+    blockedId: string,
+    closedMatchId: string
+  ): Promise<void>;
+};
+
+/**
  * BlockUser use case
  *
  * Blocks a user. The match remains in the database but is hidden from both users.
@@ -18,7 +29,8 @@ import { MatchRepository } from '../../repositories/MatchRepository';
 export class BlockUser {
   constructor(
     private blockedUserRepository: BlockedUserRepository,
-    private matchRepository: MatchRepository
+    private matchRepository: MatchRepository,
+    private chatCloseMessageService?: ChatCloseMessageService
   ) {}
 
   async execute(
@@ -72,6 +84,23 @@ export class BlockUser {
       blockerId,
       blockedId,
     ]);
+
+    // Send Doc Love close messages to both users
+    if (this.chatCloseMessageService) {
+      try {
+        await this.chatCloseMessageService.sendCloseMessages(
+          blockerId,
+          blockedId,
+          matchId
+        );
+      } catch (error) {
+        // Log error but don't fail the block operation
+        console.error(
+          '[BlockUser] Failed to send chat close messages:',
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    }
 
     // The match is preserved in the database but will be filtered out
     // by the match-overview-service based on the blocked_users table

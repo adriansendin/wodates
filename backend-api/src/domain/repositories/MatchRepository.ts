@@ -37,4 +37,37 @@ export interface MatchRepository {
     chatId: string,
     userId: string
   ): Promise<Result<string | null, DomainError>>;
+  /**
+   * Updates the last_read_at timestamp for a user in a chat/match
+   * @param chatId - The chat/match ID
+   * @param userId - The user ID
+   * @param readAt - The timestamp when messages were read (null to clear)
+   */
+  updateLastReadAt(
+    chatId: string,
+    userId: string,
+    readAt: Date | null
+  ): Promise<Result<void, DomainError>>;
+  /**
+   * Gets the last_read_at timestamp for a user in a chat/match
+   * @param chatId - The chat/match ID
+   * @param userId - The user ID
+   */
+  getLastReadAt(
+    chatId: string,
+    userId: string
+  ): Promise<Result<Date | null, DomainError>>;
+  /**
+   * Gets the affinity sentence for a chat/match
+   */
+  getAffinitySentence(
+    chatId: string
+  ): Promise<Result<string | null, DomainError>>;
+  /**
+   * Updates the affinity sentence for a chat/match
+   */
+  updateAffinitySentence(
+    chatId: string,
+    sentence: string
+  ): Promise<Result<void, DomainError>>;
 }

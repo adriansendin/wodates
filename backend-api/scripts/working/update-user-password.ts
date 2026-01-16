@@ -28,7 +28,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-const TARGET_EMAIL = 'testia1@example.com';
+const TARGET_EMAIL = 'testia3@example.com';
 const NEW_PASSWORD = '123456';
 
 async function updateUserPassword() {
@@ -48,7 +48,7 @@ async function updateUserPassword() {
   const normalizedSearchEmail = TARGET_EMAIL.toLowerCase().trim();
   let page = 1;
   const perPage = 1000;
-  let user = null;
+  let user: { id: string; email?: string; user_metadata?: any } | null = null;
 
   while (!user) {
     const { data: usersData, error: listError } = await supabase.auth.admin.listUsers({

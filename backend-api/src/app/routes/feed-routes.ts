@@ -153,8 +153,8 @@ export async function feedRoutes(fastify: FastifyInstance) {
               sentences: {
                 type: 'array',
                 items: { type: 'string' },
-                minItems: 2,
-                maxItems: 2,
+                minItems: 0,
+                maxItems: 1,
               },
             },
           },

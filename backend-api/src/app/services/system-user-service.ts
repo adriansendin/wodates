@@ -129,22 +129,32 @@ export class SystemUserService {
         return failure(matchResult.error);
       }
 
-      // Send welcome message from Doc Love (static message, not AI-generated)
+      // Send welcome messages from Doc Love (static messages, not AI-generated)
+      // Split into 5 separate chat bubbles
       if (this.messageRepository) {
-        const welcomeMessageResult = await this.messageRepository.create({
-          matchId: matchResult.data.id,
-          senderId: docLoveId,
-          content: `Welcome to Wodates — serious relationships only.
-I'm Doc Love. I help you discover better matches through conversations.
-One key rule: you can only chat with one person at a time — Discover pauses during a match.`,
-        });
+        const welcomeMessages = [
+          "Hi — I'm Doc Love.",
+          "Wodates learns from conversation to show you a better fit over time. Wodates is built for intentional dating — real compatibility, not noise.",
+          "That's why you can only have one active chat with a human at a time.",
+          "In Discover (where you'll see new people and your shared compatibility highlights), it's available when you're not in a chat — it pauses while you're matched.",
+          "Ready?",
+        ];
 
-        // Log error but don't fail the match creation if message fails
-        if (!welcomeMessageResult.success) {
-          console.error(
-            '[SystemUserService] Failed to send welcome message:',
-            welcomeMessageResult.error
-          );
+        // Create each message sequentially
+        for (const content of welcomeMessages) {
+          const welcomeMessageResult = await this.messageRepository.create({
+            matchId: matchResult.data.id,
+            senderId: docLoveId,
+            content,
+          });
+
+          // Log error but don't fail the match creation if message fails
+          if (!welcomeMessageResult.success) {
+            console.error(
+              '[SystemUserService] Failed to send welcome message:',
+              welcomeMessageResult.error
+            );
+          }
         }
       }
 

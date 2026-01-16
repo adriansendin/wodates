@@ -26,16 +26,17 @@ interface Message {
 
 // Doc Love messages in order
 const DOC_LOVE_MESSAGES = [
-  "Welcome to Wodates — serious relationships only.",
-  "I'm Doc Love. I help you discover better matches through conversations.",
-  "One key rule: you can only chat with one person at a time — Discover pauses during a match.",
-  "Ready? In one sentence, what are you looking for in a relationship?",
+  "Hi — I'm Doc Love.",
+  "Wodates learns from conversation to show you a better fit over time. Wodates is built for intentional dating — real compatibility, not noise.",
+  "That's why you can only have one active chat with a human at a time.",
+  "In Discover (where you'll see new people and your shared compatibility highlights), it's available when you're not in a chat — it pauses while you're matched.",
+  "Ready?",
 ];
 
 const USER_RESPONSE_MESSAGE = "Perfect — that's the kind of signal I use to improve your matches.";
 
 // Typing delays for each message (in ms)
-const TYPING_DELAYS = [300, 800, 900, 700];
+const TYPING_DELAYS = [300, 800, 900, 700, 600];
 const USER_RESPONSE_TYPING_DELAY = 900;
 
 export default function PreviewMatchesScreen() {

@@ -17,7 +17,8 @@ export interface AiServiceChatRequest {
     content: string;
   }>;
   system?: string | undefined;
-  model?: string | undefined; // Optional model override (e.g., 'gemma3:1b' for affinity sentences)
+  model?: string | undefined; // Optional model override. Ignored if task is provided.
+  task?: string | undefined; // Optional task identifier (e.g., 'AFFINITY_SENTENCE'). When provided, ai-service selects model internally.
 }
 
 export interface AiServiceChatResponse {
@@ -71,6 +72,7 @@ export class AiServiceChatClient {
           messages: request.messages,
           system: request.system,
           model: request.model,
+          task: request.task,
         }),
         signal: controller.signal,
       });

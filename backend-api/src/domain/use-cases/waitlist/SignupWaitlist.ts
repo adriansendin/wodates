@@ -1,5 +1,5 @@
 import { CreateWaitlistSignup, WaitlistSignup } from '../../entities/WaitlistSignup';
-import { Result, success, failure } from '../../Result';
+import { Result } from '../../Result';
 import { DomainError } from '../../errors/DomainError';
 import { WaitlistRepository } from '../../repositories/WaitlistRepository';
 

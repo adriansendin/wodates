@@ -7,6 +7,9 @@ declare module 'fastify' {
     getMessages: any;
     blockUser: any;
     authMiddleware: any;
+    matchRepository: any;
+    messageRepository: any;
+    affinitySentenceService: any; // AffinitySentenceService | undefined
   }
 }
 
@@ -14,7 +17,10 @@ export async function chatRoutes(fastify: FastifyInstance) {
   const chatController = new ChatController(
     fastify.sendMessage,
     fastify.getMessages,
-    fastify.blockUser
+    fastify.blockUser,
+    fastify.matchRepository,
+    fastify.messageRepository,
+    fastify.affinitySentenceService
   );
 
   fastify.get(
@@ -154,5 +160,59 @@ export async function chatRoutes(fastify: FastifyInstance) {
       preHandler: fastify.authMiddleware,
     },
     chatController.blockUser.bind(chatController)
+  );
+
+  fastify.get(
+    '/chats/:matchId/affinity',
+    {
+      schema: {
+        description: 'Get affinity sentence for a match',
+        tags: ['chat'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            matchId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              sentence: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    chatController.getAffinitySentence.bind(chatController)
+  );
+
+  fastify.get(
+    '/chats/:matchId/has-sent-message',
+    {
+      schema: {
+        description: 'Check if user has sent a message in this chat',
+        tags: ['chat'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            matchId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              hasSent: { type: 'boolean' },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    chatController.hasSentMessage.bind(chatController)
   );
 }

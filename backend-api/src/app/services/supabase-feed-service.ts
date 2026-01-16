@@ -251,7 +251,7 @@ export class SupabaseFeedService {
   private async fetchExcludedUserIds(userId: string): Promise<Set<string>> {
     const excluded = new Set<string>();
 
-    const [likes, passes, receivedPasses] = (await Promise.all([
+    const [likes, passes, receivedPasses, blockedUsers] = (await Promise.all([
       // Users the current user has liked
       this.client
         .from('interactions')
@@ -270,10 +270,16 @@ export class SupabaseFeedService {
         .select('from_user')
         .eq('to_user', userId)
         .eq('action', 'pass'),
+      // Users the current user has blocked (closed chats)
+      this.client
+        .from('blocked_users')
+        .select('blocked_id')
+        .eq('blocker_id', userId),
     ])) as [
       PostgrestResponse<InteractionRow>,
       PostgrestResponse<InteractionRow>,
       PostgrestResponse<{ from_user: string }>,
+      PostgrestResponse<{ blocked_id: string }>,
     ];
 
     const processResult = (result: PostgrestResponse<InteractionRow>) => {
@@ -304,6 +310,19 @@ export class SupabaseFeedService {
     (receivedPasses.data ?? []).forEach((row) => {
       if (row?.from_user) {
         excluded.add(row.from_user);
+      }
+    });
+
+    // Process blocked users (users the current user has blocked)
+    if (blockedUsers.error) {
+      throw new InternalError(
+        `Failed to fetch blocked users for feed exclusion: ${this.formatSupabaseError(blockedUsers.error)}`
+      );
+    }
+
+    (blockedUsers.data ?? []).forEach((row) => {
+      if (row?.blocked_id) {
+        excluded.add(row.blocked_id);
       }
     });
 

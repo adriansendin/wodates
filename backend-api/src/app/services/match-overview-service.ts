@@ -329,21 +329,21 @@ export class MatchOverviewService {
     otherUserId: string
   ): Promise<number> {
     try {
-      // Get the last read message ID for this user
-      const lastReadResult = await this.matchRepository.getLastReadMessageId(
+      // Get the last read timestamp for this user
+      const lastReadResult = await this.matchRepository.getLastReadAt(
         matchId,
         userId
       );
 
+      // Treat repository failures as "never read" - count all messages from other user
+      // This prevents badge bouncing due to intermittent repository failures
+      const lastReadAt = lastReadResult.success ? lastReadResult.data : null;
+
       if (!lastReadResult.success) {
-        // If we can't get the last read message, assume no unread messages
-        // This is a safe fallback
-        return 0;
+        // Repository failure treated as "never read" - stable fallback for unread count calculation
       }
 
-      const lastReadMessageId = lastReadResult.data;
-
-      if (lastReadMessageId === null) {
+      if (lastReadAt === null) {
         // User has never read any messages, count all messages from the other user
         const { count, error } = await this.client
           .from('messages')
@@ -358,127 +358,29 @@ export class MatchOverviewService {
           return 0;
         }
 
+        // Count all messages since user has never read any
         return count ?? 0;
       }
 
-      // Get the last read message to get its timestamp
-      const lastReadMessageResult =
-        await this.messageRepository.findById(lastReadMessageId);
-
-      if (!lastReadMessageResult.success || !lastReadMessageResult.data) {
-        // If the message doesn't exist anymore, count all messages from the other user
-        const { count, error } = await this.client
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('chat_id', matchId)
-          .eq('sender_id', otherUserId);
-
-        if (error) {
-          console.error(
-            `[MatchOverviewService] Error counting unread messages: ${this.formatSupabaseError(error)}`
-          );
-          return 0;
-        }
-
-        return count ?? 0;
-      }
-
-      const lastReadMessage = lastReadMessageResult.data;
-      const lastReadTimestamp = lastReadMessage.createdAt;
-      const lastReadMessageIdFromMessage = lastReadMessage.id;
-      const lastReadSenderId = lastReadMessage.senderId;
-
-      // First, verify if the last read message is actually the latest message in the chat
-      // If it is, then there are no unread messages
-      const { data: latestMessageRow, error: latestMessageError } = await this.client
+      // Count messages from the other user that were sent AFTER the last read timestamp
+      const { count, error } = await this.client
         .from('messages')
-        .select('id, created_at')
-        .eq('chat_id', matchId)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(1)
-        .maybeSingle<{ id: string; created_at: string }>();
-
-      if (latestMessageError) {
-        console.error(
-          `[MatchOverviewService] Error getting latest message: ${this.formatSupabaseError(latestMessageError)}`
-        );
-        // Continue with calculation as fallback
-      } else if (latestMessageRow) {
-        // If the last read message is the latest message in the chat, there are no unread messages
-        if (latestMessageRow.id === lastReadMessageIdFromMessage) {
-          console.log(
-            `[MatchOverviewService] Last read message is the latest message in chat ${matchId}, unreadCount = 0`
-          );
-          return 0;
-        }
-      }
-
-      console.log(
-        `[MatchOverviewService] Calculating unread count - match: ${matchId}, userId: ${userId}, otherUserId: ${otherUserId}, lastReadMessageId: ${lastReadMessageIdFromMessage}, lastReadTimestamp: ${lastReadTimestamp}, lastReadSenderId: ${lastReadSenderId}`
-      );
-
-      // Use a more reliable method: get all messages from the other user that come after the last read message
-      // and count them directly, ensuring we don't count the last read message itself
-      const { data: allOtherUserMessages, error: messagesError } = await this.client
-        .from('messages')
-        .select('id, created_at')
+        .select('*', { count: 'exact', head: true })
         .eq('chat_id', matchId)
         .eq('sender_id', otherUserId)
-        .gte('created_at', lastReadTimestamp)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false });
+        .gt('created_at', lastReadAt.toISOString()); // Use > to exclude messages sent at exactly the same time
 
-      if (messagesError) {
+      if (error) {
         console.error(
-          `[MatchOverviewService] Error fetching messages: ${this.formatSupabaseError(messagesError)}`
+          `[MatchOverviewService] Error counting unread messages: ${this.formatSupabaseError(error)}`
         );
         return 0;
       }
 
-      if (!allOtherUserMessages || allOtherUserMessages.length === 0) {
-        console.log(
-          `[MatchOverviewService] No messages from other user found, unreadCount = 0`
-        );
-        return 0;
-      }
+      const unreadCount = count ?? 0;
 
-      // Filter out the last read message and count only messages that come AFTER it
-      const unreadMessages = allOtherUserMessages.filter(
-        (msg) => {
-          // Exclude the last read message itself
-          if (msg.id === lastReadMessageIdFromMessage) {
-            return false;
-          }
-          
-          const msgTimestamp = new Date(msg.created_at).getTime();
-          const lastReadTimestampMs = new Date(lastReadTimestamp).getTime();
-          
-          // Include messages with timestamp > lastReadTimestamp
-          if (msgTimestamp > lastReadTimestampMs) {
-            return true;
-          }
-          
-          // Include messages with same timestamp but later ID (only if last read is from other user)
-          if (
-            msgTimestamp === lastReadTimestampMs &&
-            lastReadSenderId === otherUserId &&
-            msg.id > lastReadMessageIdFromMessage
-          ) {
-            return true;
-          }
-          
-          return false;
-        }
-      );
+      // Successfully calculated unread count with timestamp filter
 
-      const unreadCount = unreadMessages.length;
-
-      // Debug logging
-      console.log(
-        `[MatchOverviewService] Final unread count for match ${matchId}: ${unreadCount} (userId: ${userId}, otherUserId: ${otherUserId}, lastRead: ${lastReadMessageIdFromMessage}, lastReadSender: ${lastReadSenderId}, totalMessagesFromOtherUser: ${allOtherUserMessages.length})`
-      );
-      
       // Safety check: ensure we're only counting messages from otherUserId, not from userId
       if (otherUserId === userId) {
         console.error(
@@ -500,55 +402,36 @@ export class MatchOverviewService {
 
   /**
    * Marks all messages in a match/chat as read for a user
-   * Updates last_read_message_id to the latest message in the chat
+   * Updates last_read_at to current server timestamp (ignores client timestamp for clock drift protection)
    * This ensures that when calculating unreadCount, we know the user has seen all messages up to this point
    */
   async markAsRead(
     matchId: string,
-    userId: string
+    userId: string,
+    _readAt?: Date
   ): Promise<Result<void, DomainError>> {
     try {
-      // Get the latest message in the chat using a direct SQL query to ensure we get the truly latest
-      // This is more efficient and reliable than getting multiple messages and sorting
-      const { data: latestMessageRow, error: latestMessageError } = await this.client
-        .from('messages')
-        .select('id, created_at')
-        .eq('chat_id', matchId)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(1)
-        .maybeSingle<{ id: string; created_at: string }>();
+      // Always use server time for consistency and protection against clock drift
+      // Client _readAt is accepted for API compatibility but ignored
+      const timestamp = new Date();
 
-      if (latestMessageError) {
-        return failure(
-          new InternalError(
-            `Failed to get latest message: ${this.formatSupabaseError(latestMessageError)}`
-          )
-        );
-      }
-
-      // If there are no messages, we can still mark as read (set to null)
-      const lastMessageId = latestMessageRow?.id ?? null;
-
-      // Update last_read_message_id
-      const updateResult = await this.matchRepository.updateLastReadMessage(
+      // Update last_read_at timestamp
+      const updateResult = await this.matchRepository.updateLastReadAt(
         matchId,
         userId,
-        lastMessageId
+        timestamp
       );
 
       if (!updateResult.success) {
         return failure(updateResult.error);
       }
 
-      console.log(
-        `[MatchOverviewService] Marked messages as read for match ${matchId}, user ${userId}, lastMessageId: ${lastMessageId}`
-      );
+      // Successfully marked messages as read using server timestamp
 
       return success(undefined);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error marking messages as read', error)
+        new InternalError('Failed to mark messages as read', error)
       );
     }
   }

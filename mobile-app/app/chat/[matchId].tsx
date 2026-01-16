@@ -16,9 +16,11 @@ import {
   Modal,
   Keyboard,
   Image,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams, Redirect, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, Redirect, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { ChatApi } from '../../src/data/api/chatApi';
@@ -42,11 +44,39 @@ import { getApiUrl } from '../../src/utils/apiConfig';
 
 const API_URL = getApiUrl();
 
+// Debug logging helper (only in development)
+const debugLog = (...args: unknown[]): void => { if (__DEV__) console.log(...args); };
+
+// Two-part Spanish opener templates for blank human-human chats
+const OPENER_TEMPLATES = [
+  "I'll skip the usual 'hi' 😅 — would you rather start with a quick question or something more open?",
+  "First messages are always a bit awkward… fixing that now. — what sounds better: a calm chat here or getting straight to the point?",
+  "Better than an empty 'how are you?' — how do you like conversations to start so they feel comfortable?",
+  "Starting with an easy one to break the ice. — what made you smile today, even something small?",
+  "Not sure if you're into long chats, so I'll keep it simple. — do you prefer short-and-to-the-point or more free-flowing conversations?",
+  "First impression, no pressure. — what tires you most about dating apps, and what would you like to be different here?",
+  "Let's try a practical start. — do you prefer asking each other questions, or just talking and seeing where it goes?",
+  "So this doesn't stay blank: — what topic feels easiest to start with: plans, work, shows, life…?",
+  "Breaking the ice with a mini question. — are you more of a quick reply person, or do you like to think before answering?",
+  "I'll start so it's not awkward. — what's a small thing you enjoy that helps you relax?",
+  "Skipping the empty greeting — here's a curiosity. — what helps you connect with someone early on: humor, calm, chemistry, conversation…?",
+  "If you're up for it, let's keep this easy. — I ask a question, then you ask me one?",
+  "Keeping it simple, no fluff. — what are you looking for here, in one short sentence?",
+  "I like starting with intention, but without intensity. — what pace feels comfortable when getting to know someone?",
+  "I don't want this to turn into an endless 'hi'. — what would you like to know about me first?",
+  "You can choose how we start. — quick question, short voice note, or normal text?",
+  "So the conversation has some shape from minute one: — what's something you'd rather not have happen here (ghosting, ambiguity, etc.)?",
+  "Breaking the ice with a tiny game. — give me two words that describe you today and I'll share mine.",
+  "First message, simple version. — should we start light, or a bit more real?",
+  "Okay, new chat, zero context. — what works better for you right now: chatting a bit or picking this up later?"
+];
+
 // Simple global flag to prevent any duplicate API calls during the entire chat session
 const activeChatSession = {
   matchId: null as string | null,
   isActive: false,
   lastMessageLoad: 0,
+  lastImmediateLoad: 0, // Track immediate loads separately
   markedAsRead: false,
 
   startSession(matchId: string): boolean {
@@ -66,11 +96,15 @@ const activeChatSession = {
     this.matchId = matchId;
     this.isActive = true;
     this.lastMessageLoad = 0;
+    this.lastImmediateLoad = 0;
     this.markedAsRead = false;
     console.log(`[ChatSession] STARTED NEW SESSION for ${matchId} at ${new Date(now).toISOString()}`);
     return true;
   },
 
+  /**
+   * Check if regular polling is allowed (2s minimum between regular polls)
+   */
   canLoadMessages(): boolean {
     const now = Date.now();
     console.log(`[ChatSession] canLoadMessages called at ${new Date(now).toISOString()}, isActive: ${this.isActive}, matchId: ${this.matchId}`);
@@ -81,7 +115,7 @@ const activeChatSession = {
     }
 
     const timeSinceLastLoad = now - this.lastMessageLoad;
-    if (timeSinceLastLoad < 2000) { // 2 seconds minimum between loads
+    if (timeSinceLastLoad < 2000) { // 2 seconds minimum between regular loads
       console.log(`[ChatSession] BLOCKED - only ${timeSinceLastLoad}ms since last load (need 2000ms)`);
       return false;
     }
@@ -90,10 +124,41 @@ const activeChatSession = {
     return true;
   },
 
+  /**
+   * Check if immediate poll is allowed (300ms minimum between immediate polls)
+   * This allows faster polling for immediate triggers (send, focus, foreground)
+   */
+  canLoadMessagesImmediate(): boolean {
+    const now = Date.now();
+    if (!this.isActive) {
+      return false;
+    }
+
+    const timeSinceLastImmediate = now - this.lastImmediateLoad;
+    if (timeSinceLastImmediate < 300) { // 300ms minimum between immediate loads
+      return false;
+    }
+
+    // Also respect regular polling minimum (unless it's been 2s since last regular load)
+    const timeSinceLastLoad = now - this.lastMessageLoad;
+    if (timeSinceLastLoad < 300) { // Still need 300ms minimum
+      return false;
+    }
+
+    return true;
+  },
+
   markMessageLoad(): void {
     const now = Date.now();
     this.lastMessageLoad = now;
     console.log(`[ChatSession] Marked message load at ${new Date(now).toISOString()}`);
+  },
+
+  markImmediateLoad(): void {
+    const now = Date.now();
+    this.lastImmediateLoad = now;
+    this.lastMessageLoad = now; // Also update regular load time
+    console.log(`[ChatSession] Marked immediate load at ${new Date(now).toISOString()}`);
   },
 
   canMarkAsRead(): boolean {
@@ -119,6 +184,7 @@ const activeChatSession = {
     this.matchId = null;
     this.isActive = false;
     this.lastMessageLoad = 0;
+    this.lastImmediateLoad = 0;
     this.markedAsRead = false;
     console.log(`[ChatSession] Session ended - state reset`);
   }
@@ -248,12 +314,32 @@ export default function ChatScreen() {
   const [pastedTextToSplit, setPastedTextToSplit] = useState<string | null>(null);
   const oldestMessageCursorRef = useRef<string | null>(null);
   const flatListRef = useRef<FlatList<Message>>(null);
+  const userClearedInputRef = useRef(false); // Track if user intentionally cleared input
+  const hasSentMessageInSessionRef = useRef(false); // Track if user has sent a message in this chat session
+  const [affinitySentence, setAffinitySentence] = useState<string | null>(null);
+  const [hasSentMessage, setHasSentMessage] = useState<boolean>(false);
+  const [showAffinityModal, setShowAffinityModal] = useState(false);
+
+  // Blank chat opener state
+  const [openerTemplateIndex, setOpenerTemplateIndex] = useState<number>(() => {
+    // Deterministic initial template selection based on matchId + userId hash
+    // This ensures each user in the match gets a different template
+    if (!matchId || !user?.id) return 0;
+    // Combine matchId and userId for unique template per user per match
+    const combinedId = `${matchId}-${user.id}`;
+    let hash = 0;
+    for (let i = 0; i < combinedId.length; i++) {
+      hash += combinedId.charCodeAt(i);
+    }
+    return hash % OPENER_TEMPLATES.length;
+  });
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const chatApi = useMemo(() => new ChatApi(apiClient), [apiClient]);
   const blockApi = useMemo(() => new BlockApi(apiClient), [apiClient]);
   const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
   const isInitialLoad = useRef(true);
+  const hasInitialLoadCompleted = useRef(false); // Track if initial message load has completed (independent of scroll)
   const hasScrolledToBottom = useRef(false);
   const lastMessageIdRef = useRef<string | null>(null);
   const isUserAtBottom = useRef(true);
@@ -262,6 +348,27 @@ export default function ChatScreen() {
   const isLoadingMessagesRef = useRef(false);
   const lastLoadTimeRef = useRef<number>(0);
   const loadMessagesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const matchHeartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Latency instrumentation: track message send time and receive time
+  const messageSendTimesRef = useRef<Map<string, number>>(new Map()); // messageId -> sendTimestamp
+  const lastReceivedMessageTimeRef = useRef<number>(0);
+
+  // Shared helper to extract status code from error (handles both DomainError and axios errors)
+  const getStatusCode = useCallback((error: unknown): number | null => {
+    // Check if it's a DomainError with statusCode property
+    if (error && typeof error === 'object' && 'statusCode' in error && typeof error.statusCode === 'number') {
+      return error.statusCode;
+    }
+    // Check if it's an axios error with response.status
+    if (error && typeof error === 'object' && 'response' in error) {
+      const response = (error as { response?: { status?: number } }).response;
+      if (response && typeof response.status === 'number') {
+        return response.status;
+      }
+    }
+    return null;
+  }, []);
 
   const matchMessages = useMemo(
     () => (matchId ? messages[matchId] || [] : []),
@@ -270,6 +377,7 @@ export default function ChatScreen() {
 
   useEffect(() => {
     isInitialLoad.current = true;
+    hasInitialLoadCompleted.current = false; // Reset when matchId changes
     hasScrolledToBottom.current = false;
     lastMessageIdRef.current = null;
     isUserAtBottom.current = true;
@@ -278,7 +386,45 @@ export default function ChatScreen() {
     isLoadingMessagesRef.current = false;
     setHasMoreMessages(true);
     setIsLoadingOlder(false);
+    userClearedInputRef.current = false; // Reset clear flag for new chat
+    hasSentMessageInSessionRef.current = false; // Reset sent message flag for new chat
+    setAffinitySentence(null); // Reset affinity sentence for new chat
+    setHasSentMessage(false); // Reset has sent message for new chat
   }, [matchId]);
+
+  // Fetch affinity sentence and has-sent-message on mount and when matchId changes
+  useEffect(() => {
+    if (!matchId || !tokens?.accessToken || isBot) {
+      return;
+    }
+
+    const fetchAffinityAndHasSent = async () => {
+      try {
+        // Fetch both in parallel
+        const [affinityResult, hasSentResult] = await Promise.all([
+          chatApi.getAffinitySentence(matchId, tokens.accessToken),
+          chatApi.hasSentMessage(matchId, tokens.accessToken),
+        ]);
+
+        if (affinityResult.success) {
+          setAffinitySentence(affinityResult.data.sentence);
+        } else {
+          // Use fallback if fetch fails
+          setAffinitySentence('Initial affinity is low—conversation will sharpen recommendations.');
+        }
+
+        if (hasSentResult.success) {
+          setHasSentMessage(hasSentResult.data.hasSent);
+        }
+      } catch (error) {
+        console.error('Failed to fetch affinity sentence or has-sent-message:', error);
+        // Use fallback on error
+        setAffinitySentence('Initial affinity is low—conversation will sharpen recommendations.');
+      }
+    };
+
+    fetchAffinityAndHasSent();
+  }, [matchId, tokens?.accessToken, isBot]);
 
   // Scroll inicial solo una vez, sin animación
   // Este efecto se ejecuta cuando los mensajes cambian, pero esperamos a que el contenido esté renderizado
@@ -361,6 +507,7 @@ export default function ChatScreen() {
   const matchApiRef = useRef(matchApi);
   const tokensRef = useRef(tokens?.accessToken);
   const matchIdRef = useRef(matchId);
+  const userRef = useRef(user);
 
   // Update refs when values change
   useEffect(() => {
@@ -368,7 +515,8 @@ export default function ChatScreen() {
     matchApiRef.current = matchApi;
     tokensRef.current = tokens?.accessToken;
     matchIdRef.current = matchId;
-  }, [chatApi, matchApi, tokens?.accessToken, matchId]);
+    userRef.current = user;
+  }, [chatApi, matchApi, tokens?.accessToken, matchId, user]);
 
   const loadMessages = useCallback(async () => {
     const currentMatchId = matchIdRef.current;
@@ -376,7 +524,7 @@ export default function ChatScreen() {
     const componentId = `ChatScreen-${componentInstanceId.current}`;
     const callTime = Date.now();
 
-    console.log(`[${componentId}] loadMessages CALLED at ${new Date(callTime).toISOString()}, matchId: ${currentMatchId}, timeSinceMount: ${callTime - mountTime.current}ms`);
+    debugLog(`[${componentId}] loadMessages CALLED at ${new Date(callTime).toISOString()}, matchId: ${currentMatchId}, timeSinceMount: ${callTime - mountTime.current}ms`);
 
     if (!currentToken || !currentMatchId) {
       console.log(`[${componentId}] loadMessages SKIPPED - missing token or matchId`);
@@ -385,20 +533,20 @@ export default function ChatScreen() {
 
     // Global protection: prevent multiple instances from loading the same matchId
     if (!activeChatSession.canLoadMessages()) {
-      console.log(`[ChatScreen] loadMessages blocked by session protection`);
+      debugLog(`[ChatScreen] loadMessages blocked by session protection`);
       return;
     }
 
     // Prevent concurrent calls (local protection)
     if (isLoadingMessagesRef.current) {
-      console.log('[ChatScreen] Already loading (local ref), skipping');
+      debugLog('[ChatScreen] Already loading (local ref), skipping');
       return;
     }
 
     // Mark as loading globally and locally
     activeChatSession.markMessageLoad();
     isLoadingMessagesRef.current = true;
-    console.log(`[ChatScreen] Starting to load messages for matchId: ${currentMatchId}`);
+    debugLog(`[ChatScreen] Starting to load messages for matchId: ${currentMatchId}`);
 
     if (isInitialLoad.current) {
       setLoading(true);
@@ -468,6 +616,28 @@ export default function ChatScreen() {
         const newMessages = orderedMessages.filter((msg) => !currentIds.has(msg.id));
         
         if (newMessages.length > 0) {
+          // Latency instrumentation: measure time from send to receive
+          const receiveTime = Date.now();
+          const currentUser = userRef.current;
+          newMessages.forEach((msg) => {
+            // Check if this message was sent by the other user (not us)
+            if (msg.senderId !== currentUser?.id) {
+              const sendTime = messageSendTimesRef.current.get(msg.id);
+              if (sendTime) {
+                const latency = receiveTime - sendTime;
+                debugLog(`[ChatLatency] Message ${msg.id} latency: ${latency}ms (sent at ${new Date(sendTime).toISOString()}, received at ${new Date(receiveTime).toISOString()})`);
+                messageSendTimesRef.current.delete(msg.id); // Clean up
+              } else {
+                // Message sent by other user, but we don't have send time (normal case)
+                // This means it was sent before we started tracking or from another device
+                debugLog(`[ChatLatency] Received message ${msg.id} from other user (no send time tracked)`);
+              }
+            }
+          });
+          
+          // Track receive time for latency analysis
+          lastReceivedMessageTimeRef.current = receiveTime;
+          
           // Añadir solo los mensajes nuevos al final, preservando todos los anteriores
           addMessages(currentMatchId, newMessages);
         }
@@ -477,15 +647,29 @@ export default function ChatScreen() {
       if (orderedMessages.length > 0) {
         const latestMessage = orderedMessages[orderedMessages.length - 1];
         const oldestMessage = orderedMessages[0];
-        updateMatch(currentMatchId, { lastMessage: latestMessage, unreadCount: 0 });
+        updateMatch(currentMatchId, { lastMessage: latestMessage });
         
         // Actualizar referencias
         lastMessageIdRef.current = latestMessage.id;
         if (isInitialLoad.current) {
           oldestMessageCursorRef.current = oldestMessage.id;
-          // Verificar si hay más mensajes (si recibimos menos de 25, no hay más)
-          setHasMoreMessages(result.data.messages.length === 25);
         }
+        
+        // Usar hasMore del backend en lugar de calcularlo
+        // Actualizar hasMoreMessages durante la carga inicial
+        // También actualizar cuando no hay cursor (chat nuevo sin mensajes anteriores cargados)
+        // o cuando el mensaje más antiguo es el primero (no hay mensajes anteriores)
+        if (isInitialLoad.current) {
+          // Usar pagination.hasMore del backend si está disponible, sino calcularlo
+          const hasMore = result.data.pagination?.hasMore ?? (result.data.messages.length === 25);
+          setHasMoreMessages(hasMore);
+        } else if (!oldestMessageCursorRef.current) {
+          // Si no hay cursor, significa que no hemos cargado mensajes anteriores
+          // Usar pagination.hasMore del backend para determinar si hay más mensajes anteriores
+          const hasMore = result.data.pagination?.hasMore ?? false;
+          setHasMoreMessages(hasMore);
+        }
+        // Durante el polling con mensajes anteriores ya cargados, no actualizar para preservar el estado
         
         // Auto-scroll solo si llegó un mensaje nuevo Y el usuario está abajo
         if (hasNewMessage && isUserAtBottom.current && hasScrolledToBottom.current) {
@@ -494,8 +678,9 @@ export default function ChatScreen() {
           }, 100);
         }
       } else {
-        updateMatch(currentMatchId, { lastMessage: undefined, unreadCount: 0 });
-        if (isInitialLoad.current) {
+        updateMatch(currentMatchId, { lastMessage: undefined });
+        // Si no hay mensajes, no hay más mensajes anteriores
+        if (isInitialLoad.current || !oldestMessageCursorRef.current) {
           setHasMoreMessages(false);
         }
       }
@@ -504,8 +689,9 @@ export default function ChatScreen() {
       if (isInitialLoad.current && currentToken && activeChatSession.canMarkAsRead()) {
         activeChatSession.markAsReadDone();
         hasMarkedAsReadRef.current = true;
-        // Await to ensure it completes before user can navigate away
-        matchApiRef.current.markAsRead(currentMatchId, currentToken).catch((error) => {
+        // Mark as read with current timestamp to ensure server has the exact read time
+        const readAt = new Date();
+        matchApiRef.current.markAsRead(currentMatchId, currentToken, readAt).catch((error) => {
           console.error('[ChatScreen] Failed to mark messages as read:', error);
           // Log error but don't block UI
         });
@@ -521,6 +707,9 @@ export default function ChatScreen() {
       // Mark load as complete (no specific endLoad needed with new system)
       if (isInitialLoad.current) {
         setLoading(false);
+        // Mark initial load as complete after messages have been loaded
+        // This ensures the opener template logic works even if scroll doesn't complete
+        hasInitialLoadCompleted.current = true;
         // El scroll se maneja en el useEffect y onContentSizeChange
         // No hacer scroll aquí para evitar conflictos
       }
@@ -582,6 +771,45 @@ export default function ChatScreen() {
     }
   }, [chatApi, clearError, matchId, prependMessages, setError, tokens?.accessToken, isLoadingOlder, hasMoreMessages]);
 
+  // Lightweight match-alive heartbeat: checks if match still exists (detects if blocked/closed)
+  const checkMatchAlive = useCallback(async () => {
+    const currentMatchId = matchIdRef.current;
+    const currentToken = tokensRef.current;
+
+    if (!currentToken || !currentMatchId || isBlocked) {
+      return;
+    }
+
+    try {
+      // Lightweight check: getMessages with limit=1 to verify match exists
+      // This will return 404/403 if match is closed/blocked
+      const result = await chatApiRef.current.getMessages(currentMatchId, 1, undefined, currentToken);
+      
+      if (!result.success) {
+        // Match not found (404) or forbidden (403) means match is closed/blocked
+        const statusCode = result.error.statusCode;
+        const isMatchClosed = statusCode === 404 || statusCode === 403;
+        if (isMatchClosed && !isBlocked) {
+          debugLog(`[ChatScreen] Match ${currentMatchId} is closed/blocked (statusCode: ${statusCode}) - setting isBlocked`);
+          setIsBlocked(true);
+        }
+      }
+      // If success, match is still alive - no action needed
+    } catch (error) {
+      // Check if error indicates match closure (403/404), otherwise ignore transient network errors
+      const statusCode = getStatusCode(error);
+      if (statusCode === 403 || statusCode === 404) {
+        if (!isBlocked) {
+          debugLog(`[ChatScreen] Match ${currentMatchId} is closed/blocked (caught error, statusCode: ${statusCode}) - setting isBlocked`);
+          setIsBlocked(true);
+        }
+      } else {
+        // Network errors (no status code) are ignored - don't mark as blocked on transient failures
+        debugLog(`[ChatScreen] Match heartbeat check failed (ignored, no statusCode):`, error);
+      }
+    }
+  }, [isBlocked, getStatusCode]);
+
   useEffect(() => {
     const componentId = `ChatScreen-${componentInstanceId.current}`;
     const effectTime = Date.now();
@@ -630,19 +858,19 @@ export default function ChatScreen() {
     loadMessagesTimeoutRef.current = timeoutId;
 
     // Poll for new messages while chat is active
-    // 30 seconds is a reasonable balance between responsiveness and API load
-    // This works well for both development and production
-    const pollInterval = 30000; // 30 seconds
+    // 5 seconds provides good balance between responsiveness and API load
+    // Reduced from 30s to improve message delivery latency
+    const pollInterval = 5000; // 5 seconds
 
     const interval = setInterval(() => {
       const componentId = `ChatScreen-${componentInstanceId.current}`;
       const intervalTime = Date.now();
       // Only poll if not currently loading and not in initial load
       if (!isLoadingMessagesRef.current && !isInitialLoad.current && activeChatSession.canLoadMessages()) {
-        console.log(`[${componentId}] Polling INTERVAL TRIGGERED at ${new Date(intervalTime).toISOString()}, matchId: ${matchId}, timeSinceMount: ${intervalTime - mountTime.current}ms`);
+        debugLog(`[${componentId}] Polling INTERVAL TRIGGERED at ${new Date(intervalTime).toISOString()}, matchId: ${matchId}, timeSinceMount: ${intervalTime - mountTime.current}ms`);
         loadMessages();
       } else {
-        console.log(`[${componentId}] Polling skipped - loading: ${isLoadingMessagesRef.current}, initialLoad: ${isInitialLoad.current}, canLoad: ${activeChatSession.canLoadMessages()}`);
+        debugLog(`[${componentId}] Polling skipped - loading: ${isLoadingMessagesRef.current}, initialLoad: ${isInitialLoad.current}, canLoad: ${activeChatSession.canLoadMessages()}`);
       }
     }, pollInterval);
     
@@ -656,6 +884,11 @@ export default function ChatScreen() {
         clearTimeout(loadMessagesTimeoutRef.current);
         loadMessagesTimeoutRef.current = null;
       }
+      // Clear heartbeat interval
+      if (matchHeartbeatIntervalRef.current) {
+        clearInterval(matchHeartbeatIntervalRef.current);
+        matchHeartbeatIntervalRef.current = null;
+      }
       // End chat session on unmount
       activeChatSession.endSession();
       // Mark messages as read when leaving the chat (only if not already marked)
@@ -663,12 +896,82 @@ export default function ChatScreen() {
       const currentMatchId = matchIdRef.current;
       if (currentToken && currentMatchId && !hasMarkedAsReadRef.current && activeChatSession.canMarkAsRead()) {
         activeChatSession.markAsReadDone();
-        matchApiRef.current.markAsRead(currentMatchId, currentToken).catch((error) => {
+        // Mark as read with current timestamp
+        const readAt = new Date();
+        matchApiRef.current.markAsRead(currentMatchId, currentToken, readAt).catch((error) => {
           console.error(`[${componentId}] Failed to mark messages as read on unmount:`, error);
         });
       }
     };
   }, [matchId]); // Re-run when matchId changes to setup polling for new chat
+
+  // Poll immediately when chat screen comes into focus (user navigates back to chat)
+  useFocusEffect(
+    useCallback(() => {
+      if (!matchId || isInitialLoad.current) {
+        return; // Skip if no matchId or still in initial load
+      }
+
+      // Small delay to ensure component is ready
+      const timeoutId = setTimeout(() => {
+        if (activeChatSession.canLoadMessagesImmediate()) {
+          debugLog('[ChatScreen] Screen focused - triggering immediate poll');
+          activeChatSession.markImmediateLoad();
+          loadMessages();
+        }
+      }, 200);
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }, [matchId, loadMessages])
+  );
+
+  // Poll when app comes to foreground (user switches back to app)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active' && matchId && !isInitialLoad.current) {
+        // App came to foreground - poll for new messages
+        if (activeChatSession.canLoadMessagesImmediate()) {
+          debugLog('[ChatScreen] App came to foreground - triggering immediate poll');
+          activeChatSession.markImmediateLoad();
+          loadMessages();
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [matchId, loadMessages]);
+
+  // Match-alive heartbeat: check if match still exists every 15 seconds while screen is focused
+  // This detects if the other user closed/blocked the chat
+  useFocusEffect(
+    useCallback(() => {
+      if (!matchId || isInitialLoad.current || isBlocked) {
+        return;
+      }
+
+      // Start heartbeat interval
+      const heartbeatInterval = setInterval(() => {
+        if (!isBlocked && !isInitialLoad.current) {
+          debugLog(`[ChatScreen] Match heartbeat check triggered for matchId: ${matchId}`);
+          checkMatchAlive();
+        }
+      }, 15000); // 15 seconds
+
+      matchHeartbeatIntervalRef.current = heartbeatInterval;
+
+      // Cleanup on unfocus/unmount
+      return () => {
+        if (matchHeartbeatIntervalRef.current) {
+          clearInterval(matchHeartbeatIntervalRef.current);
+          matchHeartbeatIntervalRef.current = null;
+        }
+      };
+    }, [matchId, checkMatchAlive, isBlocked])
+  );
 
   // Check if this match still exists (detect if blocked)
   useEffect(() => {
@@ -680,6 +983,32 @@ export default function ChatScreen() {
       setIsBlocked(true);
     }
   }, [matchId, matches]);
+
+  // Handle blank chat opener initialization
+  // Only show opener if chat is completely empty (no messages from anyone)
+  // This ensures the template only appears for truly new chats, not chats with existing messages
+  // We need to check that initial load has completed AND messages have been loaded
+  // Use persistent hasSentMessage check instead of session-only ref
+  const shouldShowOpener = 
+    !isLoading && 
+    hasInitialLoadCompleted.current &&  // Ensure initial load has completed (independent of scroll)
+    matchMessages.length === 0 && 
+    !isBot && 
+    !hasSentMessage && // Use persistent check instead of hasSentMessageInSessionRef
+    !hasSentMessageInSessionRef.current; // Also check session ref for immediate feedback
+    
+  useEffect(() => {
+    // Check if current message is one of the templates
+    const isTemplateMessage = OPENER_TEMPLATES.includes(message);
+    
+    if (shouldShowOpener && message === '' && !userClearedInputRef.current) {
+      // Only set initial template when chat is blank, input is empty, user hasn't cleared it, and hasn't sent a message yet
+      setMessage(OPENER_TEMPLATES[openerTemplateIndex]);
+    } else if (!shouldShowOpener && isTemplateMessage && !userClearedInputRef.current) {
+      // Clear template if chat is no longer blank (messages were loaded) or if loading is still in progress
+      setMessage('');
+    }
+  }, [shouldShowOpener, message, openerTemplateIndex, isLoading]);
 
   // Redirect if blocked
   useEffect(() => {
@@ -759,6 +1088,19 @@ export default function ChatScreen() {
       console.log('[ChatScreen] Send result:', { success: result.success, hasData: result.success && !!result.data });
 
       if (!result.success) {
+        // Check if match/chat is closed (403/404)
+        const statusCode = result.error.statusCode;
+        const isMatchClosed = statusCode === 404 || statusCode === 403;
+        
+        if (isMatchClosed) {
+          // Match/chat is closed - stop send flow and trigger chat unavailable UX
+          debugLog(`[ChatScreen] Match ${matchIdRef.current} is closed/blocked during send (statusCode: ${statusCode}) - setting isBlocked`);
+          setIsBlocked(true);
+          // Don't restore message - chat is closed
+          return;
+        }
+        
+        // Other errors - show error and restore message
         const messageText = result.error.message || 'Could not send your message.';
         setError(messageText);
         Alert.alert('Error', messageText);
@@ -776,9 +1118,20 @@ export default function ChatScreen() {
       }
 
       console.log('[ChatScreen] Adding message to store');
-      addMessage(matchId, validation.data);
-      updateMatch(matchId, { lastMessage: validation.data, unreadCount: 0 });
       
+      // Latency instrumentation: track send time for this message
+      const sendTime = Date.now();
+      messageSendTimesRef.current.set(validation.data.id, sendTime);
+      debugLog(`[ChatLatency] Tracked send time for message ${validation.data.id} at ${new Date(sendTime).toISOString()}`);
+      
+      addMessage(matchId, validation.data);
+      updateMatch(matchId, { lastMessage: validation.data });
+
+      // Mark that user has sent a message in this session
+      hasSentMessageInSessionRef.current = true;
+      // Also update persistent state
+      setHasSentMessage(true);
+
       // Actualizar referencia y hacer scroll cuando se envía un mensaje
       lastMessageIdRef.current = validation.data.id;
       if (hasScrolledToBottom.current) {
@@ -786,11 +1139,47 @@ export default function ChatScreen() {
           flatListRef.current?.scrollToEnd({ animated: true });
         }, 100);
       }
+
+      // Trigger immediate poll to check for responses (improves latency)
+      // This helps the other user see the message faster if they're also in the chat
+      if (!isInitialLoad.current && activeChatSession.canLoadMessagesImmediate()) {
+        // First poll after 300ms - fast enough to catch immediate responses
+        setTimeout(() => {
+          if (activeChatSession.canLoadMessagesImmediate()) {
+            debugLog('[ChatScreen] Triggering immediate poll after sending message (300ms)');
+            activeChatSession.markImmediateLoad();
+            loadMessages();
+          }
+        }, 300);
+        
+        // Follow-up poll after 1 second to catch any delayed responses
+        setTimeout(() => {
+          if (activeChatSession.canLoadMessagesImmediate()) {
+            debugLog('[ChatScreen] Triggering follow-up poll after sending message (1s)');
+            activeChatSession.markImmediateLoad();
+            loadMessages();
+          }
+        }, 1000);
+      }
     } catch (error) {
+      const statusCode = getStatusCode(error);
+      const isMatchClosed = statusCode === 403 || statusCode === 404;
+      
+      if (isMatchClosed) {
+        // Match/chat is closed - stop send flow and trigger chat unavailable UX
+        debugLog(`[ChatScreen] Match ${matchIdRef.current} is closed/blocked during send (caught error, statusCode: ${statusCode}) - setting isBlocked`);
+        setIsBlocked(true);
+        // Don't restore message - chat is closed
+        return;
+      }
+      
+      // Network/other errors - show error
       console.error('[ChatScreen] Failed to send message', error);
       const fallbackMessage = 'Network error. Please try again.';
       setError(fallbackMessage);
       Alert.alert('Error', fallbackMessage);
+      // Restore message on network error so user can retry
+      setMessage(messageContent);
     } finally {
       setSending(false);
     }
@@ -798,6 +1187,7 @@ export default function ChatScreen() {
     addMessage,
     chatApi,
     clearError,
+    getStatusCode,
     isBlocked,
     isBot,
     isSending,
@@ -829,6 +1219,18 @@ export default function ChatScreen() {
     const messageContent = message.trim();
     await handleSendMessageInternal(messageContent);
   }, [message, handleSendMessageInternal]);
+
+  // Blank chat opener functions
+  const handleChangeOpener = useCallback(() => {
+    userClearedInputRef.current = false; // Reset clear flag when changing template
+    setOpenerTemplateIndex((prev) => (prev + 1) % OPENER_TEMPLATES.length);
+    setMessage(OPENER_TEMPLATES[(openerTemplateIndex + 1) % OPENER_TEMPLATES.length]);
+  }, [openerTemplateIndex]);
+
+  const handleClearOpener = useCallback(() => {
+    userClearedInputRef.current = true; // Mark that user intentionally cleared
+    setMessage('');
+  }, []);
 
   const handleBlockUser = useCallback(async () => {
     if (!matchId || !otherUserId || !tokens?.accessToken) {
@@ -1139,6 +1541,15 @@ export default function ChatScreen() {
             />
           </View>
 
+          {/* Blank chat opener tip card */}
+          {shouldShowOpener && (
+            <View style={styles.openerTipContainer}>
+              <Text style={styles.openerTipText}>
+                {affinitySentence || 'Initial affinity is low—conversation will sharpen recommendations.'}
+              </Text>
+            </View>
+          )}
+
           <View style={[
             styles.inputContainer,
             Platform.OS === 'android' && { marginBottom: keyboardHeight > 0 ? keyboardHeight : 0 }
@@ -1234,6 +1645,23 @@ export default function ChatScreen() {
                   )}
                 </View>
               )}
+              {/* Blank chat opener buttons */}
+              {shouldShowOpener && (
+                <View style={styles.openerButtonsContainer}>
+                  <TouchableOpacity
+                    style={styles.openerButton}
+                    onPress={handleChangeOpener}
+                  >
+                    <Text style={styles.openerButtonText}>Change</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.openerButton, styles.openerButtonClear]}
+                    onPress={handleClearOpener}
+                  >
+                    <Text style={styles.openerButtonTextClear}>Clear</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
             <TouchableOpacity
               style={[styles.sendButton, (!message.trim() || isSending || isBlocked) && styles.sendButtonDisabled]}
@@ -1271,17 +1699,56 @@ export default function ChatScreen() {
                 <Text style={styles.menuItemText}>About Doc Love</Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  setShowMenu(false);
-                  setShowBlockModal(true);
-                }}
-              >
-                <Ionicons name="ban" size={20} color="#e91e63" />
-                <Text style={styles.menuItemText}>End conversation</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setShowMenu(false);
+                    setShowAffinityModal(true);
+                  }}
+                >
+                  <Ionicons name="heart" size={20} color="#e91e63" />
+                  <Text style={styles.menuItemText}>Affinity</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setShowMenu(false);
+                    setShowBlockModal(true);
+                  }}
+                >
+                  <Ionicons name="ban" size={20} color="#e91e63" />
+                  <Text style={styles.menuItemText}>End conversation</Text>
+                </TouchableOpacity>
+              </>
             )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Affinity Modal */}
+      <Modal
+        visible={showAffinityModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAffinityModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAffinityModal(false)}
+        >
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Affinity</Text>
+            <Text style={styles.modalText}>
+              {affinitySentence || 'Initial affinity is low—conversation will sharpen recommendations.'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonConfirm]}
+              onPress={() => setShowAffinityModal(false)}
+            >
+              <Text style={styles.modalButtonTextConfirm}>Close</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -1295,10 +1762,10 @@ export default function ChatScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>End conversation</Text>
+            <Text style={styles.modalTitle}>End conversation?</Text>
             <Text style={styles.modalText}>
-              Ending this conversation is permanent. You won't be able to chat with this person again on Wodates.{'\n'}
-              Discover will then be reactivated to help you meet other people with higher affinity.{'\n'}
+              Once closed, the chat ends for both of you and can’t be reopened.{'\n'}
+              Discover will be available again after.{'\n'}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -1771,5 +2238,47 @@ const styles = StyleSheet.create({
     color: '#e91e63',
     marginBottom: 20,
     textAlign: 'center',
+  },
+  // Blank chat opener styles
+  openerTipContainer: {
+    backgroundColor: '#e8f5e8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
+  openerTipText: {
+    fontSize: 14,
+    color: '#2e7d32',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  openerButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  openerButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e91e63',
+    backgroundColor: '#fff',
+  },
+  openerButtonClear: {
+    borderColor: '#666',
+  },
+  openerButtonText: {
+    fontSize: 12,
+    color: '#e91e63',
+    fontWeight: '600',
+  },
+  openerButtonTextClear: {
+    color: '#666',
   },
 });

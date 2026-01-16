@@ -90,15 +90,15 @@ export const AIConfig = {
    * Feature flag for affinity sentences generation
    * If false, affinity sentences feature is disabled and returns empty array
    */
-  affinitySentencesEnabled: process.env.OLLAMA_AFFINITY_ENABLED === 'true',
+  affinitySentencesEnabled: process.env.AFFINITY_ENABLED === 'true',
 
   /**
-   * Fallback sentences for affinity sentences when generation fails
-   * Used when profiles are missing, LLM fails, or parsing fails
+   * Fallback sentence for affinity sentences when profiles are missing
+   * Used when either user's AI profile (or summary) is missing/empty
+   * This avoids useless LLM calls and ensures stable UX for users with incomplete profiles
    */
   affinitySentencesFallback: [
-    'Ask Doc Love',
-    'to improve affinity.',
+    'Initial affinity is low—conversation will sharpen recommendations.',
   ],
 
   /**
@@ -115,8 +115,8 @@ export const AIConfig = {
        * Base prompt template for affinity sentences
        * The backend will inject the user profiles into this template
        */
-      basePrompt: `ROL:
-       You generate a single short affinity micro-phrase explaining why a profile appears in someone’s feed,
+      basePrompt: `ROLE:
+You generate a single short affinity micro-phrase explaining why a profile appears in someone’s feed,
 based ONLY on explicit overlaps in both AI profiles.
 
 GOAL:
@@ -137,7 +137,7 @@ MANDATORY FALLBACK:
 If there are fewer than 2 explicit shared points between both profiles,
 return EXACTLY this sentence (unchanged):
 
-Matches your filters; shared details will grow as you interact.
+Initial affinity is low—conversation will sharpen recommendations.
 
 OUTPUT FORMAT:
 Return ONLY the final sentence.

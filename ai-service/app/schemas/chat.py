@@ -26,7 +26,11 @@ class GenerateChatRequest(BaseModel):
     )
     model: str | None = Field(
         default=None,
-        description="Optional model name to override default (e.g., 'gemma3:1b' for affinity sentences)",
+        description="Optional model name to override default. Ignored if task is provided.",
+    )
+    task: str | None = Field(
+        default=None,
+        description="Optional task identifier (e.g., 'AFFINITY_SENTENCE'). When provided, ai-service selects model and parameters internally.",
     )
 
 

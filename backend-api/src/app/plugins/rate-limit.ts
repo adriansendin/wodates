@@ -2,6 +2,11 @@ import { FastifyInstance } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 
 export async function registerRateLimit(fastify: FastifyInstance) {
+  // Skip rate limiting if explicitly disabled
+  if (process.env.DISABLE_RATE_LIMIT === 'true') {
+    return;
+  }
+
   // In development, use much more permissive limits to avoid blocking during testing
   const isDevelopment = process.env.NODE_ENV === 'development';
   
@@ -16,7 +21,5 @@ export async function registerRateLimit(fastify: FastifyInstance) {
   await fastify.register(rateLimit, {
     max,
     timeWindow,
-    // Skip rate limiting if explicitly disabled
-    skip: process.env.DISABLE_RATE_LIMIT === 'true',
   });
 }

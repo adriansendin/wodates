@@ -16,7 +16,7 @@ import { fileURLToPath } from 'url';
 // ============================================================================
 // CONFIGURACIÓN: Cambia este email por el del usuario que quieres que reciba likes
 // ============================================================================
-const TARGET_USER_EMAIL = 'test4@example.com'; // ⬅️ CAMBIA ESTE EMAIL
+const TARGET_USER_EMAIL = 'koko31@example.com'; // ⬅️ CAMBIA ESTE EMAIL
 // ============================================================================
 
 const __filename = fileURLToPath(import.meta.url);

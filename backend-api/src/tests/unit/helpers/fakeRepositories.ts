@@ -164,6 +164,19 @@ export class TestMatchRepository implements MatchRepository {
     return success(exists);
   }
 
+  async getMatchBetween(
+    userId1: string,
+    userId2: string
+  ): Promise<Result<Match | null, DomainError>> {
+    const match = Array.from(this.matches.values()).find((match) => {
+      const sameOrder = match.userId1 === userId1 && match.userId2 === userId2;
+      const reverseOrder =
+        match.userId1 === userId2 && match.userId2 === userId1;
+      return sameOrder || reverseOrder;
+    });
+    return success(match ?? null);
+  }
+
   async delete(matchId: string): Promise<Result<void, DomainError>> {
     this.matches.delete(matchId);
     return success(undefined);
@@ -183,6 +196,50 @@ export class TestMatchRepository implements MatchRepository {
       result.set(userId, userMatches.length);
     }
     return result;
+  }
+
+  // Stub implementations for new read receipt methods
+  async updateLastReadMessage(
+    _chatId: string,
+    _userId: string,
+    _messageId: string | null
+  ): Promise<Result<void, DomainError>> {
+    return success(undefined);
+  }
+
+  async getLastReadMessageId(
+    _chatId: string,
+    _userId: string
+  ): Promise<Result<string | null, DomainError>> {
+    return success(null);
+  }
+
+  async updateLastReadAt(
+    _chatId: string,
+    _userId: string,
+    _readAt: Date | null
+  ): Promise<Result<void, DomainError>> {
+    return success(undefined);
+  }
+
+  async getLastReadAt(
+    _chatId: string,
+    _userId: string
+  ): Promise<Result<Date | null, DomainError>> {
+    return success(null);
+  }
+
+  async getAffinitySentence(
+    _chatId: string
+  ): Promise<Result<string | null, DomainError>> {
+    return success(null);
+  }
+
+  async updateAffinitySentence(
+    _chatId: string,
+    _sentence: string
+  ): Promise<Result<void, DomainError>> {
+    return success(undefined);
   }
 }
 

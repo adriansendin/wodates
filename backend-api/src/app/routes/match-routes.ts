@@ -116,6 +116,13 @@ export async function matchRoutes(fastify: FastifyInstance) {
           },
           required: ['matchId'],
         },
+        body: {
+          type: 'object',
+          properties: {
+            readAt: { type: 'string', format: 'date-time' },
+          },
+          required: [],
+        },
         response: {
           204: {
             description: 'Messages marked as read successfully',

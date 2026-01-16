@@ -3,11 +3,13 @@ import { Result, success, failure } from '../../Result';
 import { DomainError, ConflictError, ForbiddenError } from '../../errors/DomainError';
 import { LikeRepository } from '../../repositories/LikeRepository';
 import { MatchRepository } from '../../repositories/MatchRepository';
+import { AffinitySentenceGenerator } from '../../services/AffinitySentenceGenerator';
 
 export class ConfirmMatch {
   constructor(
     private likeRepository: LikeRepository,
-    private matchRepository: MatchRepository
+    private matchRepository: MatchRepository,
+    private affinitySentenceGenerator?: AffinitySentenceGenerator
   ) {}
 
   async execute(
@@ -76,14 +78,70 @@ export class ConfirmMatch {
       return failure(matchResult.error);
     }
 
-    return success(matchResult.data);
-  }
-}
+    const match = matchResult.data;
 
-function isSuccess<T, E>(
-  result: Result<T, E>
-): result is import('../../Result').Success<T> {
-  return result.success;
+    // Generate and store affinity sentence asynchronously (non-blocking)
+    // If generation fails, we still proceed with match creation
+    if (this.affinitySentenceGenerator) {
+      this.generateAndStoreAffinitySentence(
+        match.id,
+        userId,
+        targetUserId
+      ).catch((error) => {
+        // Log error but don't fail match creation
+        console.error(
+          `Failed to generate affinity sentence for chat ${match.id}:`,
+          error instanceof Error ? error.message : String(error)
+        );
+      });
+    }
+
+    return success(match);
+  }
+
+  /**
+   * Generates and stores affinity sentence for a chat (non-blocking)
+   * Called asynchronously after match creation
+   */
+  private async generateAndStoreAffinitySentence(
+    chatId: string,
+    userId1: string,
+    userId2: string
+  ): Promise<void> {
+    if (!this.affinitySentenceGenerator) {
+      return;
+    }
+
+    const FALLBACK_SENTENCE = 'Initial affinity is low—conversation will sharpen recommendations.';
+
+    try {
+      const result = await this.affinitySentenceGenerator.generateAffinitySentence(
+        userId1,
+        userId2
+      );
+
+      const sentence = result.success ? result.data : FALLBACK_SENTENCE;
+
+      // Store the affinity sentence in the chat
+      const updateResult = await this.matchRepository.updateAffinitySentence(chatId, sentence);
+      if (!updateResult.success) {
+        console.error(
+          `Failed to store affinity sentence for chat ${chatId}:`,
+          updateResult.error.message
+        );
+      }
+    } catch (error) {
+      // If anything fails, store fallback sentence
+      try {
+        await this.matchRepository.updateAffinitySentence(chatId, FALLBACK_SENTENCE);
+      } catch (updateError) {
+        console.error(
+          `Failed to store fallback affinity sentence for chat ${chatId}:`,
+          updateError instanceof Error ? updateError.message : String(updateError)
+        );
+      }
+    }
+  }
 }
 
 function isFailure<T, E>(

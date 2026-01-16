@@ -40,4 +40,18 @@ export class ChatApi {
   ): Promise<Result<{ message: Message }, DomainError>> {
     return this.apiClient.post(`/chats/${matchId}/messages`, message, token);
   }
+
+  async getAffinitySentence(
+    matchId: string,
+    token?: string
+  ): Promise<Result<{ sentence: string }, DomainError>> {
+    return this.apiClient.get(`/chats/${matchId}/affinity`, token);
+  }
+
+  async hasSentMessage(
+    matchId: string,
+    token?: string
+  ): Promise<Result<{ hasSent: boolean }, DomainError>> {
+    return this.apiClient.get(`/chats/${matchId}/has-sent-message`, token);
+  }
 }

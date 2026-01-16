@@ -354,13 +354,21 @@ export class SupabaseAuthService implements AuthService {
         ? metadata.birthDate
         : undefined;
 
-    return {
+    const authUser: AuthUser = {
       id: user.id,
       email: user.email ?? '',
       name: displayName ?? user.email ?? 'User',
-      gender,
-      birthDate,
     };
+
+    if (gender !== undefined) {
+      authUser.gender = gender;
+    }
+
+    if (birthDate !== undefined) {
+      authUser.birthDate = birthDate;
+    }
+
+    return authUser;
   }
 
   private ensureUserIsActive(user: User): void {

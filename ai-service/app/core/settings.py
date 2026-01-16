@@ -84,11 +84,11 @@ class Settings(BaseSettings):
         description="Model for merging profiles. Uses AI_MODEL_PROFILE_MERGE_RESUMES from .env if available."
     )
 
-    # Model for feed affinity sentences
-    ollama_model_affinity_sentences: str = Field(
+    # Model for affinity sentences task
+    ollama_model_affinity: str = Field(
         default="gemma3:1b",
-        validation_alias="OLLAMA_AFFINITY",
-        description="Model for generating affinity sentences in feed. Uses OLLAMA_AFFINITY from .env if available."
+        validation_alias="AI_MODEL_AFFINITY",
+        description="Model for AFFINITY_SENTENCE task. Uses AI_MODEL_AFFINITY from .env if available."
     )
 
     ollama_timeout: int = Field(

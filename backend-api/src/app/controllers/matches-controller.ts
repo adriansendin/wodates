@@ -65,11 +65,13 @@ export class MatchesController {
   async markAsRead(request: FastifyRequest, reply: FastifyReply) {
     const userId = request.user!.id;
     const matchId = (request.params as { matchId: string }).matchId;
+    const body = request.body as { readAt?: string } | undefined;
+    const readAt = body?.readAt ? new Date(body.readAt) : undefined;
 
-    request.log.info({ userId, matchId }, 'PUT /matches/:matchId/read - Starting request');
+    request.log.info({ userId, matchId, readAt }, 'PUT /matches/:matchId/read - Starting request');
 
     try {
-      const result = await this.matchOverviewService.markAsRead(matchId, userId);
+      const result = await this.matchOverviewService.markAsRead(matchId, userId, readAt);
 
       if (!result.success) {
         request.log.error(

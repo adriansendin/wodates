@@ -85,8 +85,9 @@ El servicio se configura mediante variables de entorno (con valores por defecto 
 
 ```bash
 # Ollama Configuration
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.2:1b
+OLLAMA_URL=http://localhost:11434
+AI_MODEL_DOC_LOVE=llama3.2:1b
+AI_MODEL_AFFINITY=gemma3:1b
 OLLAMA_TIMEOUT=60000
 
 # Embeddings

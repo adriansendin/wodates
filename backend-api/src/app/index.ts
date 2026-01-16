@@ -24,7 +24,6 @@ import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepos
 import { SupabaseMessageRepository } from '../data/repositories/SupabaseMessageRepository';
 import { SupabaseBlockedUserRepository } from '../data/repositories/SupabaseBlockedUserRepository';
 import { SupabaseQuestionBankRepository } from '../data/repositories/SupabaseQuestionBankRepository';
-import { SupabaseUserAskedQuestionRepository } from '../data/repositories/SupabaseUserAskedQuestionRepository';
 import { LikeUser } from '../domain/use-cases/feed/LikeUser';
 import { PassUser } from '../domain/use-cases/feed/PassUser';
 import { ConfirmMatch } from '../domain/use-cases/feed/ConfirmMatch';
@@ -34,6 +33,7 @@ import { BlockUser } from '../domain/use-cases/chat/BlockUser';
 import { MatchOverviewService } from './services/match-overview-service';
 import { DocLoveHelper } from './services/doc-love-helper';
 import { DocLoveChatService } from './ai/chat/DocLoveChatService';
+import { ChatCloseMessageService } from './services/chat-close-message-service';
 import { createChatModel } from './ai/core/config';
 import { UserAIProfileEmbeddingService } from './ai/profile/UserAIProfileEmbeddingService';
 import { SupabaseUserAIProfileRepository } from '../data/repositories/SupabaseUserAIProfileRepository';
@@ -42,6 +42,8 @@ import { GetAllUserChats } from '../domain/use-cases/chat/GetAllUserChats';
 import { GetUnprocessedMessages } from '../domain/use-cases/chat/GetUnprocessedMessages';
 import { GenerateUserProfileFromChats } from '../domain/use-cases/chat/GenerateUserProfileFromChats';
 import { startJobScheduler } from './jobs/scheduler';
+import { AffinitySentenceService } from './services/affinity-sentence-service';
+import { AiServiceChatClient } from './ai/clients/AiServiceChatClient';
 
 async function buildApp() {
   // Startup guard: AI_PROVIDER must be 'ai-service'
@@ -120,14 +122,15 @@ async function buildApp() {
   // Initialize repositories
   const likeRepository = new SupabaseLikeRepository();
   const passRepository = new SupabasePassRepository();
-  const matchRepository = new SupabaseMatchRepository();
   const messageRepository = new SupabaseMessageRepository();
   const blockedUserRepository = new SupabaseBlockedUserRepository();
   const questionBankRepository = new SupabaseQuestionBankRepository();
-  const userAskedQuestionRepository = new SupabaseUserAskedQuestionRepository();
+  // const userAskedQuestionRepository = new SupabaseUserAskedQuestionRepository(); // Currently unused
+  const matchRepository = new SupabaseMatchRepository();
 
-  // Initialize AI services (for Doc Love chatbot)
+  // Initialize AI services (for Doc Love chatbot and affinity sentences)
   let docLoveChatService: DocLoveChatService | undefined;
+  let affinitySentenceService: AffinitySentenceService | undefined;
 
   try {
     // Create chat model (ChatModelHttp wrapper for ai-service)
@@ -158,6 +161,18 @@ async function buildApp() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     void userAIProfileEmbeddingService;
 
+    // Initialize Affinity Sentence Service for match creation
+    const aiServiceChatClient = new AiServiceChatClient(
+      undefined, // Use default from AIConfig
+      60000, // 60 seconds timeout
+      fastify.log
+    );
+    affinitySentenceService = new AffinitySentenceService(
+      userAIProfileRepository,
+      aiServiceChatClient,
+      fastify.log
+    );
+
     // Show active AI provider in console
     console.log(`🤖 AI Provider: AI-SERVICE | Model: ${chatModel.model}`);
     fastify.log.info(
@@ -170,10 +185,30 @@ async function buildApp() {
     );
   }
 
+  // Initialize chat close message service (for Doc Love close messages)
+  let chatCloseMessageService: ChatCloseMessageService | undefined;
+  try {
+    const docLoveHelper = new DocLoveHelper();
+    chatCloseMessageService = new ChatCloseMessageService(
+      docLoveHelper,
+      matchRepository,
+      messageRepository,
+      fastify.log
+    );
+  } catch (error) {
+    fastify.log.warn(
+      `Failed to initialize chat close message service: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+
   // Initialize use cases
   const likeUser = new LikeUser(likeRepository, matchRepository);
   const passUser = new PassUser(passRepository);
-  const confirmMatch = new ConfirmMatch(likeRepository, matchRepository);
+  const confirmMatch = new ConfirmMatch(
+    likeRepository,
+    matchRepository,
+    affinitySentenceService // Pass affinity sentence generator for match creation
+  );
   const sendMessage = new SendMessage(
     messageRepository,
     matchRepository,
@@ -181,7 +216,11 @@ async function buildApp() {
     fastify.log // Pass logger to SendMessage
   );
   const getMessages = new GetMessages(messageRepository, matchRepository);
-  const blockUser = new BlockUser(blockedUserRepository, matchRepository);
+  const blockUser = new BlockUser(
+    blockedUserRepository,
+    matchRepository,
+    chatCloseMessageService // Pass chat close message service if available
+  );
   const matchOverviewService = new MatchOverviewService(
     matchRepository,
     messageRepository,
@@ -221,7 +260,7 @@ async function buildApp() {
     );
   }
 
-  // Decorate fastify with use cases
+  // Decorate fastify with use cases and repositories
   fastify.decorate('likeUser', likeUser);
   fastify.decorate('passUser', passUser);
   fastify.decorate('confirmMatch', confirmMatch);
@@ -230,6 +269,9 @@ async function buildApp() {
   fastify.decorate('blockUser', blockUser);
   fastify.decorate('matchOverviewService', matchOverviewService);
   fastify.decorate('generateUserProfile', generateUserProfile);
+  fastify.decorate('matchRepository', matchRepository);
+  fastify.decorate('messageRepository', messageRepository);
+  fastify.decorate('affinitySentenceService', affinitySentenceService);
 
   // Register routes
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });

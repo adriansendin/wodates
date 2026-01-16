@@ -64,7 +64,7 @@ export class WaitlistController {
     });
   }
 
-  private handleUnexpectedError(reply: FastifyReply, error: unknown) {
+  private handleUnexpectedError(reply: FastifyReply, _error: unknown) {
     return reply.status(500).send({
       error: 'INTERNAL_SERVER_ERROR',
       message: 'Unexpected error while processing request',

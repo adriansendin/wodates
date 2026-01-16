@@ -83,11 +83,13 @@ export class DocLoveHelper {
         );
 
         // Find Doc Love by email (case-insensitive comparison)
-        docLoveUser =
-          users.find(
-            (user) =>
-              user.email?.toLowerCase().trim() === normalizedSearchEmail
-          ) || null;
+        const foundUser = users.find(
+          (user) =>
+            user.email?.toLowerCase().trim() === normalizedSearchEmail
+        );
+        docLoveUser = foundUser
+          ? { id: foundUser.id, email: foundUser.email }
+          : null;
 
         // If found, break out of loop
         if (docLoveUser) {
