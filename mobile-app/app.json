@@ -26,7 +26,23 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "single",
+      "name": "Wodates",
+      "shortName": "Wodates",
+      "lang": "en-US",
+      "scope": "/",
+      "themeColor": "#e91e63",
+      "backgroundColor": "#ffffff",
+      "description": "Wodates - Dating app",
+      "display": "standalone",
+      "orientation": "portrait",
+      "startUrl": "/",
+      "splash": {
+        "backgroundColor": "#ffffff",
+        "resizeMode": "contain",
+        "image": "./assets/splash.png"
+      }
     },
     "plugins": [
       "expo-font",

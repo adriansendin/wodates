@@ -1,9 +1,10 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Text, View } from 'react-native';
+import { Text, View, Platform } from 'react-native';
 import { useAuthStore } from '../src/domain/stores/authStore';
 import { useEffect } from 'react';
+import { registerServiceWorker } from '../src/utils/pwa';
 
 // Component to initialize auth state
 function AuthInitializer() {
@@ -17,11 +18,23 @@ function AuthInitializer() {
   return null; // This component doesn't render anything
 }
 
+// Component to initialize PWA (web only)
+function PWAInitializer() {
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      registerServiceWorker();
+    }
+  }, []);
+
+  return null;
+}
+
 export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
       <AuthInitializer />
+      <PWAInitializer />
       <StatusBar style="auto" />
       <Stack
         screenOptions={({ route }: { route: { name?: string | null } }) => ({
