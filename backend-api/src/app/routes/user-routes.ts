@@ -28,9 +28,15 @@ export async function userRoutes(fastify: FastifyInstance) {
   const genderEnum = [...GENDER_VALUES, null];
   const lookingForEnum = [...LOOKING_FOR_VALUES, null];
   const wantsChildrenEnum = [...WANTS_CHILDREN_VALUES, null];
-  const caresAboutPartnerChildrenEnum = [...CARES_ABOUT_PARTNER_CHILDREN_VALUES, null];
+  const caresAboutPartnerChildrenEnum = [
+    ...CARES_ABOUT_PARTNER_CHILDREN_VALUES,
+    null,
+  ];
   const smokingEnum = [...SMOKING_VALUES, null];
-  const caresAboutPartnerSmokingEnum = [...CARES_ABOUT_PARTNER_SMOKING_VALUES, null];
+  const caresAboutPartnerSmokingEnum = [
+    ...CARES_ABOUT_PARTNER_SMOKING_VALUES,
+    null,
+  ];
 
   fastify.get(
     '/users/me',
@@ -59,10 +65,19 @@ export async function userRoutes(fastify: FastifyInstance) {
                 enum: ['none', 'pending', 'verified', 'rejected'],
               },
               has_children: { type: ['boolean', 'null'] },
-              wants_children: { type: ['string', 'null'], enum: wantsChildrenEnum },
-              cares_about_partner_children: { type: ['string', 'null'], enum: caresAboutPartnerChildrenEnum },
+              wants_children: {
+                type: ['string', 'null'],
+                enum: wantsChildrenEnum,
+              },
+              cares_about_partner_children: {
+                type: ['string', 'null'],
+                enum: caresAboutPartnerChildrenEnum,
+              },
               smoking: { type: ['string', 'null'], enum: smokingEnum },
-              cares_about_partner_smoking: { type: ['string', 'null'], enum: caresAboutPartnerSmokingEnum },
+              cares_about_partner_smoking: {
+                type: ['string', 'null'],
+                enum: caresAboutPartnerSmokingEnum,
+              },
             },
           },
         },
@@ -91,10 +106,19 @@ export async function userRoutes(fastify: FastifyInstance) {
             city: { type: ['string', 'null'] },
             show_bio_in_feed: { type: ['boolean', 'null'] },
             has_children: { type: ['boolean', 'null'] },
-            wants_children: { type: ['string', 'null'], enum: wantsChildrenEnum },
-            cares_about_partner_children: { type: ['string', 'null'], enum: caresAboutPartnerChildrenEnum },
+            wants_children: {
+              type: ['string', 'null'],
+              enum: wantsChildrenEnum,
+            },
+            cares_about_partner_children: {
+              type: ['string', 'null'],
+              enum: caresAboutPartnerChildrenEnum,
+            },
             smoking: { type: ['string', 'null'], enum: smokingEnum },
-            cares_about_partner_smoking: { type: ['string', 'null'], enum: caresAboutPartnerSmokingEnum },
+            cares_about_partner_smoking: {
+              type: ['string', 'null'],
+              enum: caresAboutPartnerSmokingEnum,
+            },
           },
         },
         response: {
@@ -116,10 +140,19 @@ export async function userRoutes(fastify: FastifyInstance) {
                 enum: ['none', 'pending', 'verified', 'rejected'],
               },
               has_children: { type: ['boolean', 'null'] },
-              wants_children: { type: ['string', 'null'], enum: wantsChildrenEnum },
-              cares_about_partner_children: { type: ['string', 'null'], enum: caresAboutPartnerChildrenEnum },
+              wants_children: {
+                type: ['string', 'null'],
+                enum: wantsChildrenEnum,
+              },
+              cares_about_partner_children: {
+                type: ['string', 'null'],
+                enum: caresAboutPartnerChildrenEnum,
+              },
               smoking: { type: ['string', 'null'], enum: smokingEnum },
-              cares_about_partner_smoking: { type: ['string', 'null'], enum: caresAboutPartnerSmokingEnum },
+              cares_about_partner_smoking: {
+                type: ['string', 'null'],
+                enum: caresAboutPartnerSmokingEnum,
+              },
             },
           },
         },

@@ -2,7 +2,12 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { SendMessage } from '../../domain/use-cases/chat/SendMessage';
 import { GetMessages } from '../../domain/use-cases/chat/GetMessages';
 import { BlockUser } from '../../domain/use-cases/chat/BlockUser';
-import { DomainError, NotFoundError, ForbiddenError, InternalError } from '../../domain/errors/DomainError';
+import {
+  DomainError,
+  NotFoundError,
+  ForbiddenError,
+  InternalError,
+} from '../../domain/errors/DomainError';
 import { MatchRepository } from '../../domain/repositories/MatchRepository';
 import { MessageRepository } from '../../domain/repositories/MessageRepository';
 import { AffinitySentenceService } from '../services/affinity-sentence-service';
@@ -151,11 +156,15 @@ export class ChatController {
 
       const match = matchResult.data;
       if (match.userId1 !== userId && match.userId2 !== userId) {
-        return this.handleError(reply, new ForbiddenError('User is not part of this match'));
+        return this.handleError(
+          reply,
+          new ForbiddenError('User is not part of this match')
+        );
       }
 
       // Get affinity sentence from chat
-      const affinityResult = await this.matchRepository.getAffinitySentence(matchId);
+      const affinityResult =
+        await this.matchRepository.getAffinitySentence(matchId);
       if (!affinityResult.success) {
         return this.handleError(reply, affinityResult.error);
       }
@@ -164,10 +173,11 @@ export class ChatController {
 
       // If null (legacy chat), generate on-demand and store
       if (!sentence && this.affinitySentenceService) {
-        const generateResult = await this.affinitySentenceService.generateAffinitySentence(
-          match.userId1,
-          match.userId2
-        );
+        const generateResult =
+          await this.affinitySentenceService.generateAffinitySentence(
+            match.userId1,
+            match.userId2
+          );
 
         if (generateResult.success) {
           sentence = generateResult.data;
@@ -175,13 +185,15 @@ export class ChatController {
           await this.matchRepository.updateAffinitySentence(matchId, sentence);
         } else {
           // Use fallback if generation fails
-          sentence = 'Initial affinity is low—conversation will sharpen recommendations.';
+          sentence =
+            'Initial affinity is low—conversation will sharpen recommendations.';
         }
       }
 
       // If still null (service not available), use fallback
       if (!sentence) {
-        sentence = 'Initial affinity is low—conversation will sharpen recommendations.';
+        sentence =
+          'Initial affinity is low—conversation will sharpen recommendations.';
       }
 
       return reply.send({ sentence });
@@ -203,11 +215,17 @@ export class ChatController {
 
       const match = matchResult.data;
       if (match.userId1 !== userId && match.userId2 !== userId) {
-        return this.handleError(reply, new ForbiddenError('User is not part of this match'));
+        return this.handleError(
+          reply,
+          new ForbiddenError('User is not part of this match')
+        );
       }
 
       // Check if user has sent any message in this chat
-      const messagesResult = await this.messageRepository.findByMatchId(matchId, 1);
+      const messagesResult = await this.messageRepository.findByMatchId(
+        matchId,
+        1
+      );
       if (!messagesResult.success) {
         return this.handleError(
           reply,
@@ -216,7 +234,9 @@ export class ChatController {
       }
 
       // Check if any message was sent by this user
-      const hasSent = messagesResult.data.some((msg) => msg.senderId === userId);
+      const hasSent = messagesResult.data.some(
+        (msg) => msg.senderId === userId
+      );
 
       return reply.send({ hasSent });
     } catch (error) {

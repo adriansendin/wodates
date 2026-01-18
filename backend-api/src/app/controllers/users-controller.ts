@@ -104,14 +104,19 @@ const UpdateProfileSchema = z
     max_age: nullableInt(18, 100).optional(),
     bio: nullableText(500).optional(),
     city: nullableString(100).optional(),
+    avatarUrl: nullableString(500).optional(),
     show_bio_in_feed: z.boolean().optional(),
     // Family plan
     has_children: z.boolean().nullable().optional(),
     wants_children: nullableEnum(WANTS_CHILDREN_VALUES).optional(),
-    cares_about_partner_children: nullableEnum(CARES_ABOUT_PARTNER_CHILDREN_VALUES).optional(),
+    cares_about_partner_children: nullableEnum(
+      CARES_ABOUT_PARTNER_CHILDREN_VALUES
+    ).optional(),
     // Habits
     smoking: nullableEnum(SMOKING_VALUES).optional(),
-    cares_about_partner_smoking: nullableEnum(CARES_ABOUT_PARTNER_SMOKING_VALUES).optional(),
+    cares_about_partner_smoking: nullableEnum(
+      CARES_ABOUT_PARTNER_SMOKING_VALUES
+    ).optional(),
   })
   .refine(
     (data) => {
@@ -161,10 +166,15 @@ export class UsersController {
       console.log('[UsersController] ===== UPDATE PROFILE REQUEST =====');
       console.log('[UsersController] Raw request body:', request.body);
       console.log('[UsersController] Request body type:', typeof request.body);
-      console.log('[UsersController] Request body keys:', request.body && typeof request.body === 'object' ? Object.keys(request.body) : []);
+      console.log(
+        '[UsersController] Request body keys:',
+        request.body && typeof request.body === 'object'
+          ? Object.keys(request.body)
+          : []
+      );
 
       const payload = UpdateProfileSchema.parse(request.body ?? {});
-      
+
       console.log('[UsersController] Parsed payload:', payload);
       console.log('[UsersController] Payload keys:', Object.keys(payload));
       console.log('[UsersController] ===================================');
@@ -182,13 +192,23 @@ export class UsersController {
       }
       if ('min_age' in payload) {
         updateInput.min_age = payload.min_age ?? null;
-        console.log('[UsersController] Processing min_age:', payload.min_age, '->', updateInput.min_age);
+        console.log(
+          '[UsersController] Processing min_age:',
+          payload.min_age,
+          '->',
+          updateInput.min_age
+        );
       } else {
         console.log('[UsersController] min_age NOT in payload');
       }
       if ('max_age' in payload) {
         updateInput.max_age = payload.max_age ?? null;
-        console.log('[UsersController] Processing max_age:', payload.max_age, '->', updateInput.max_age);
+        console.log(
+          '[UsersController] Processing max_age:',
+          payload.max_age,
+          '->',
+          updateInput.max_age
+        );
       } else {
         console.log('[UsersController] max_age NOT in payload');
       }
@@ -198,44 +218,81 @@ export class UsersController {
       if ('city' in payload) {
         updateInput.city = payload.city ?? null;
       }
+      if ('avatarUrl' in payload) {
+        updateInput.avatarUrl = payload.avatarUrl ?? null;
+      }
       if ('show_bio_in_feed' in payload) {
         updateInput.show_bio_in_feed = payload.show_bio_in_feed ?? null;
       }
       // Family plan
       if ('has_children' in payload) {
         updateInput.has_children = payload.has_children ?? null;
-        console.log('[UsersController] Processing has_children:', payload.has_children, '->', updateInput.has_children);
+        console.log(
+          '[UsersController] Processing has_children:',
+          payload.has_children,
+          '->',
+          updateInput.has_children
+        );
       } else {
         console.log('[UsersController] has_children NOT in payload');
       }
       if ('wants_children' in payload) {
         updateInput.wants_children = payload.wants_children ?? null;
-        console.log('[UsersController] Processing wants_children:', payload.wants_children, '->', updateInput.wants_children);
+        console.log(
+          '[UsersController] Processing wants_children:',
+          payload.wants_children,
+          '->',
+          updateInput.wants_children
+        );
       } else {
         console.log('[UsersController] wants_children NOT in payload');
       }
       if ('cares_about_partner_children' in payload) {
-        updateInput.cares_about_partner_children = payload.cares_about_partner_children ?? null;
-        console.log('[UsersController] Processing cares_about_partner_children:', payload.cares_about_partner_children, '->', updateInput.cares_about_partner_children);
+        updateInput.cares_about_partner_children =
+          payload.cares_about_partner_children ?? null;
+        console.log(
+          '[UsersController] Processing cares_about_partner_children:',
+          payload.cares_about_partner_children,
+          '->',
+          updateInput.cares_about_partner_children
+        );
       } else {
-        console.log('[UsersController] cares_about_partner_children NOT in payload');
+        console.log(
+          '[UsersController] cares_about_partner_children NOT in payload'
+        );
       }
       // Habits
       if ('smoking' in payload) {
         updateInput.smoking = payload.smoking ?? null;
-        console.log('[UsersController] Processing smoking:', payload.smoking, '->', updateInput.smoking);
+        console.log(
+          '[UsersController] Processing smoking:',
+          payload.smoking,
+          '->',
+          updateInput.smoking
+        );
       } else {
         console.log('[UsersController] smoking NOT in payload');
       }
       if ('cares_about_partner_smoking' in payload) {
-        updateInput.cares_about_partner_smoking = payload.cares_about_partner_smoking ?? null;
-        console.log('[UsersController] Processing cares_about_partner_smoking:', payload.cares_about_partner_smoking, '->', updateInput.cares_about_partner_smoking);
+        updateInput.cares_about_partner_smoking =
+          payload.cares_about_partner_smoking ?? null;
+        console.log(
+          '[UsersController] Processing cares_about_partner_smoking:',
+          payload.cares_about_partner_smoking,
+          '->',
+          updateInput.cares_about_partner_smoking
+        );
       } else {
-        console.log('[UsersController] cares_about_partner_smoking NOT in payload');
+        console.log(
+          '[UsersController] cares_about_partner_smoking NOT in payload'
+        );
       }
 
       console.log('[UsersController] Final updateInput:', updateInput);
-      console.log('[UsersController] updateInput keys:', Object.keys(updateInput));
+      console.log(
+        '[UsersController] updateInput keys:',
+        Object.keys(updateInput)
+      );
 
       const profile = await this.userService.updateProfile(
         authUser.id,

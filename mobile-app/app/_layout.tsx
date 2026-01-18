@@ -24,7 +24,7 @@ export default function RootLayout() {
       <AuthInitializer />
       <StatusBar style="auto" />
       <Stack
-        screenOptions={({ route }) => ({
+        screenOptions={({ route }: { route: { name?: string | null } }) => ({
           headerStyle: {
             backgroundColor: '#ffffff',
           },

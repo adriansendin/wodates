@@ -54,7 +54,7 @@ export class DocLoveHelper {
       // listUsers() returns max 50 users per page, so we need to paginate
       const normalizedSearchEmail = DOC_LOVE_EMAIL.toLowerCase().trim();
       let page = 1;
-      let perPage = 50;
+      const perPage = 50;
       let docLoveUser: { id: string; email: string | undefined } | null = null;
       let totalUsersChecked = 0;
 
@@ -84,8 +84,7 @@ export class DocLoveHelper {
 
         // Find Doc Love by email (case-insensitive comparison)
         const foundUser = users.find(
-          (user) =>
-            user.email?.toLowerCase().trim() === normalizedSearchEmail
+          (user) => user.email?.toLowerCase().trim() === normalizedSearchEmail
         );
         docLoveUser = foundUser
           ? { id: foundUser.id, email: foundUser.email }

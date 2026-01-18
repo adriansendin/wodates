@@ -41,7 +41,12 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (
   let systemUserService = options.systemUserService;
 
   // Only initialize if we have Supabase credentials and are not in test environment
-  if (!systemUserService && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NODE_ENV !== 'test') {
+  if (
+    !systemUserService &&
+    process.env.SUPABASE_URL &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    process.env.NODE_ENV !== 'test'
+  ) {
     try {
       const docLoveHelper = new DocLoveHelper();
       const likeRepository = new SupabaseLikeRepository();

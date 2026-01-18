@@ -28,7 +28,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-const TARGET_EMAIL = 'testia3@example.com';
+const TARGET_EMAIL = 'testia7@example.com';
 const NEW_PASSWORD = '123456';
 
 async function updateUserPassword() {

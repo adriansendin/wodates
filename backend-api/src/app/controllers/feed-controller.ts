@@ -83,8 +83,9 @@ export class FeedController {
         // Check if it's a Match entity (already created match)
         const isMatch = 'userId1' in data;
         // Check if it's a potential match (like mutuo pero sin confirmar)
-        const isPotentialMatch = 'isPotentialMatch' in data && data.isPotentialMatch === true;
-        
+        const isPotentialMatch =
+          'isPotentialMatch' in data && data.isPotentialMatch === true;
+
         return reply.send({
           action: 'like',
           result: data,
@@ -246,13 +247,15 @@ export class FeedController {
         }
       } catch (error) {
         // If ai-service fails, return fallback sentence (non-blocking)
-        // Log error for debugging
+        // Log error with full details for debugging
         if (this.logger) {
-          this.logger.warn(
+          this.logger.error(
             {
               userId,
               candidateId,
               error: error instanceof Error ? error.message : String(error),
+              errorType: error instanceof Error ? error.constructor.name : typeof error,
+              stack: error instanceof Error ? error.stack : undefined,
             },
             'Failed to generate affinity sentences, returning fallback sentence'
           );
@@ -262,10 +265,28 @@ export class FeedController {
         });
       }
     } catch (error) {
-      if (error instanceof DomainError) {
-        return this.handleError(reply, error);
+      // Always return fallback sentence on any error, but log it for debugging
+      // User should never see error UI, only the fallback message
+      const userId = request.user?.id || 'unknown';
+      const candidateId = (request.params as { candidateId?: string })?.candidateId || 'unknown';
+      
+      if (this.logger) {
+        this.logger.error(
+          {
+            userId,
+            candidateId,
+            error: error instanceof Error ? error.message : String(error),
+            errorType: error instanceof Error ? error.constructor.name : typeof error,
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+          'Unexpected error in getAffinitySentences, returning fallback sentence'
+        );
       }
-      return this.handleValidationError(reply, error);
+      
+      // Always return fallback sentence instead of error response
+      return reply.send({
+        sentences: AIConfig.affinitySentencesFallback,
+      });
     }
   }
 

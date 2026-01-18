@@ -1,8 +1,8 @@
 /**
  * Script para copiar los datos de user_ai_profiles de un usuario a otro
- * 
- * Este script copia los datos de user_ai_profiles de test@example.com a koko32@example.com
- * 
+ *
+ * Este script copia los datos de user_ai_profiles de koko31@example.com a lisa@example.com
+ *
  * Uso:
  *   npx tsx scripts/working/copy-user-ai-profile.ts
  */
@@ -43,7 +43,7 @@ type UserAIProfileRow = {
  * Busca un usuario por email y retorna su ID
  */
 async function getUserIdFromEmail(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   email: string
 ): Promise<string | null> {
   const normalizedSearchEmail = email.toLowerCase().trim();
@@ -88,14 +88,14 @@ async function getUserIdFromEmail(
  * Obtiene los datos de user_ai_profiles para un usuario
  */
 async function getUserAIProfile(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   userId: string
 ): Promise<UserAIProfileRow | null> {
   const { data, error } = await supabase
     .from('user_ai_profiles')
     .select('user_id, summary, summary_incremental, summary_updated_at, summary_embedding')
     .eq('user_id', userId)
-    .maybeSingle<UserAIProfileRow>();
+    .maybeSingle();
 
   if (error) {
     console.error(`❌ Error al obtener user_ai_profiles:`, error);

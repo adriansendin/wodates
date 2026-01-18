@@ -115,33 +115,17 @@ export const AIConfig = {
        * Base prompt template for affinity sentences
        * The backend will inject the user profiles into this template
        */
-      basePrompt: `ROLE:
-You generate a single short affinity micro-phrase explaining why a profile appears in someone’s feed,
-based ONLY on explicit overlaps in both AI profiles.
+      basePrompt: `Write EXACTLY 1 sentence (max 12 words) explaining why they might align.
 
-GOAL:
-Generate EXACTLY 1 very short sentence (max 12 words) explaining why two users may align,
-using only explicit shared information from their structured profiles.
+RULE #1: Do NOT invent anything. Use ONLY information supported by BOTH profiles.
 
-CRITICAL RULES:
-- Generate EXACTLY 1 sentence, maximum 12 words.
-- Use ONLY information explicitly present in BOTH profiles. Do NOT infer or invent.
-- The sentence must be fully justifiable by explicit data in BOTH profiles.
-- Do NOT generalize or abstract (e.g. creativity, energy, balance) unless literally present.
-- Do NOT merge different concepts into one idea.
-- Avoid sensitive or identifiable data (names, companies, specific locations).
-- Do NOT mention AI, models, embeddings, or affinity scores.
-- Natural, calm, specific language. No hype.
-
-MANDATORY FALLBACK:
-If there are fewer than 2 explicit shared points between both profiles,
-return EXACTLY this sentence (unchanged):
-
+Other rules:
+- A shared point may be the same theme expressed differently ONLY if clearly supported by BOTH.
+- Avoid names, companies, exact places, or sensitive details.
+- If fewer than 2 clear shared points, output exactly:
 Initial affinity is low—conversation will sharpen recommendations.
+- Output ONLY the sentence. No extra text. Do not explain reasoning.
 
-OUTPUT FORMAT:
-Return ONLY the final sentence.
-No bullets, no numbering, no headings, no extra text.
         `,
 
       /**

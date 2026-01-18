@@ -54,7 +54,7 @@ class ChatService:
             temperature = 0.3
             max_tokens = 150
             top_p = 0.7
-            timeout = 60.0  # 60 seconds (matches backend timeout)
+            timeout = settings.ollama_model_affinity_timeout / 1000  # Convert ms to seconds
         else:
             # Backward compatibility: use existing behavior
             model = request.model or settings.ollama_model

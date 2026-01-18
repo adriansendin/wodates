@@ -1,4 +1,7 @@
-import { CreateWaitlistSignup, WaitlistSignup } from '../../entities/WaitlistSignup';
+import {
+  CreateWaitlistSignup,
+  WaitlistSignup,
+} from '../../entities/WaitlistSignup';
 import { Result } from '../../Result';
 import { DomainError } from '../../errors/DomainError';
 import { WaitlistRepository } from '../../repositories/WaitlistRepository';
@@ -8,7 +11,9 @@ export class SignupWaitlist {
 
   async execute(
     signup: CreateWaitlistSignup
-  ): Promise<Result<{ signup: WaitlistSignup; alreadyExisted: boolean }, DomainError>> {
+  ): Promise<
+    Result<{ signup: WaitlistSignup; alreadyExisted: boolean }, DomainError>
+  > {
     return this.waitlistRepository.createOrGet(signup);
   }
 }

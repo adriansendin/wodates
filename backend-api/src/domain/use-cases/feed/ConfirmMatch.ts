@@ -1,6 +1,10 @@
 import { Match } from '../../entities/Match';
 import { Result, success, failure } from '../../Result';
-import { DomainError, ConflictError, ForbiddenError } from '../../errors/DomainError';
+import {
+  DomainError,
+  ConflictError,
+  ForbiddenError,
+} from '../../errors/DomainError';
 import { LikeRepository } from '../../repositories/LikeRepository';
 import { MatchRepository } from '../../repositories/MatchRepository';
 import { AffinitySentenceGenerator } from '../../services/AffinitySentenceGenerator';
@@ -17,17 +21,25 @@ export class ConfirmMatch {
     targetUserId: string
   ): Promise<Result<Match, DomainError>> {
     // Verify that both users have liked each other
-    const userLikedTarget = await this.likeRepository.hasLiked(userId, targetUserId);
+    const userLikedTarget = await this.likeRepository.hasLiked(
+      userId,
+      targetUserId
+    );
     if (isFailure(userLikedTarget) || !userLikedTarget.data) {
       return failure(
         new ForbiddenError('You must like the user before confirming a match')
       );
     }
 
-    const targetLikedUser = await this.likeRepository.hasLiked(targetUserId, userId);
+    const targetLikedUser = await this.likeRepository.hasLiked(
+      targetUserId,
+      userId
+    );
     if (isFailure(targetLikedUser) || !targetLikedUser.data) {
       return failure(
-        new ForbiddenError('The other user must also like you to create a match')
+        new ForbiddenError(
+          'The other user must also like you to create a match'
+        )
       );
     }
 
@@ -112,18 +124,23 @@ export class ConfirmMatch {
       return;
     }
 
-    const FALLBACK_SENTENCE = 'Initial affinity is low—conversation will sharpen recommendations.';
+    const FALLBACK_SENTENCE =
+      'Initial affinity is low—conversation will sharpen recommendations.';
 
     try {
-      const result = await this.affinitySentenceGenerator.generateAffinitySentence(
-        userId1,
-        userId2
-      );
+      const result =
+        await this.affinitySentenceGenerator.generateAffinitySentence(
+          userId1,
+          userId2
+        );
 
       const sentence = result.success ? result.data : FALLBACK_SENTENCE;
 
       // Store the affinity sentence in the chat
-      const updateResult = await this.matchRepository.updateAffinitySentence(chatId, sentence);
+      const updateResult = await this.matchRepository.updateAffinitySentence(
+        chatId,
+        sentence
+      );
       if (!updateResult.success) {
         console.error(
           `Failed to store affinity sentence for chat ${chatId}:`,
@@ -133,11 +150,16 @@ export class ConfirmMatch {
     } catch (error) {
       // If anything fails, store fallback sentence
       try {
-        await this.matchRepository.updateAffinitySentence(chatId, FALLBACK_SENTENCE);
+        await this.matchRepository.updateAffinitySentence(
+          chatId,
+          FALLBACK_SENTENCE
+        );
       } catch (updateError) {
         console.error(
           `Failed to store fallback affinity sentence for chat ${chatId}:`,
-          updateError instanceof Error ? updateError.message : String(updateError)
+          updateError instanceof Error
+            ? updateError.message
+            : String(updateError)
         );
       }
     }
@@ -149,4 +171,3 @@ function isFailure<T, E>(
 ): result is import('../../Result').Failure<E> {
   return !result.success;
 }
-

@@ -30,7 +30,8 @@ export const waitlistRoutes: FastifyPluginAsync = async (
               type: 'string',
               minLength: 1,
               maxLength: 80,
-              description: 'City name (e.g., "Paris (Central)", "NYC (Manhattan)", or custom city)',
+              description:
+                'City name (e.g., "Paris (Central)", "NYC (Manhattan)", or custom city)',
             },
             email: {
               type: 'string',

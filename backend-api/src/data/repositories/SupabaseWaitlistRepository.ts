@@ -4,10 +4,7 @@ import {
   CreateWaitlistSignup,
 } from '../../domain/entities/WaitlistSignup';
 import { Result, success, failure } from '../../domain/Result';
-import {
-  DomainError,
-  InternalError,
-} from '../../domain/errors/DomainError';
+import { DomainError, InternalError } from '../../domain/errors/DomainError';
 import { WaitlistRepository } from '../../domain/repositories/WaitlistRepository';
 
 type SupabaseConfig = {
@@ -37,7 +34,9 @@ export class SupabaseWaitlistRepository implements WaitlistRepository {
 
   async createOrGet(
     signup: CreateWaitlistSignup
-  ): Promise<Result<{ signup: WaitlistSignup; alreadyExisted: boolean }, DomainError>> {
+  ): Promise<
+    Result<{ signup: WaitlistSignup; alreadyExisted: boolean }, DomainError>
+  > {
     try {
       // Try to insert first
       const { data: insertedData, error: insertError } = await this.client
@@ -70,7 +69,9 @@ export class SupabaseWaitlistRepository implements WaitlistRepository {
 
           if (!existingData) {
             return failure(
-              new InternalError('Unique constraint violation but record not found')
+              new InternalError(
+                'Unique constraint violation but record not found'
+              )
             );
           }
 
@@ -104,7 +105,10 @@ export class SupabaseWaitlistRepository implements WaitlistRepository {
       return failure(
         error instanceof DomainError
           ? error
-          : new InternalError('Unexpected error creating waitlist signup', error)
+          : new InternalError(
+              'Unexpected error creating waitlist signup',
+              error
+            )
       );
     }
   }

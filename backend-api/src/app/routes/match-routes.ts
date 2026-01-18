@@ -139,7 +139,8 @@ export async function matchRoutes(fastify: FastifyInstance) {
     '/matches/confirm',
     {
       schema: {
-        description: 'Confirm a potential match (create match from mutual likes)',
+        description:
+          'Confirm a potential match (create match from mutual likes)',
         tags: ['matches'],
         security: [{ bearerAuth: [] }],
         body: {

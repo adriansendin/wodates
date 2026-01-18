@@ -48,7 +48,10 @@ export class DocLoveChatService {
   ): Promise<Result<boolean, DomainError>> {
     try {
       if (this.logger) {
-        this.logger.debug({ matchId }, 'Checking if conversation is with Doc Love');
+        this.logger.debug(
+          { matchId },
+          'Checking if conversation is with Doc Love'
+        );
       }
 
       const matchResult = await this.matchRepository.findById(matchId);
@@ -133,7 +136,8 @@ export class DocLoveChatService {
           {
             matchId,
             error: error instanceof Error ? error.message : String(error),
-            errorType: error instanceof Error ? error.constructor.name : typeof error,
+            errorType:
+              error instanceof Error ? error.constructor.name : typeof error,
           },
           'Error checking if conversation is with Doc Love'
         );
@@ -232,7 +236,8 @@ export class DocLoveChatService {
             systemPromptLength: systemPrompt.length,
             systemPromptPreview: systemPrompt.substring(0, 200),
             hasSystemInstructions: !!AIConfig.prompt.systemInstructions,
-            systemInstructionsLength: AIConfig.prompt.systemInstructions?.length || 0,
+            systemInstructionsLength:
+              AIConfig.prompt.systemInstructions?.length || 0,
             messagesCount: messages.length,
           },
           'Doc Love: System prompt built and ready to send to ai-service'
@@ -245,7 +250,10 @@ export class DocLoveChatService {
       });
 
       // Validate response is not empty
-      if (!aiServiceResponse.content || aiServiceResponse.content.trim().length === 0) {
+      if (
+        !aiServiceResponse.content ||
+        aiServiceResponse.content.trim().length === 0
+      ) {
         if (this.logger) {
           this.logger.error(
             {
@@ -457,7 +465,10 @@ export class DocLoveChatService {
     }>
   ): string {
     // Verify systemInstructions exists and is not empty
-    if (!AIConfig.prompt.systemInstructions || AIConfig.prompt.systemInstructions.trim().length === 0) {
+    if (
+      !AIConfig.prompt.systemInstructions ||
+      AIConfig.prompt.systemInstructions.trim().length === 0
+    ) {
       if (this.logger) {
         this.logger.error(
           'AIConfig.prompt.systemInstructions is empty or undefined!'

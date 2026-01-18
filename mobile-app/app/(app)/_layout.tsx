@@ -18,7 +18,7 @@ export default function AppTabsLayout() {
 
   return (
     <Tabs
-      screenOptions={({ route }) => ({
+      screenOptions={({ route }: { route: { name: string } }) => ({
         tabBarActiveTintColor: '#e91e63',
         tabBarInactiveTintColor: 'gray',
         headerShown: true,
@@ -40,7 +40,7 @@ export default function AppTabsLayout() {
         ),
         headerRight: undefined,
         headerBackVisible: false,
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
             feed: focused ? 'heart' : 'heart-outline',
             matches: focused ? 'people' : 'people-outline',

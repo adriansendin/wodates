@@ -32,6 +32,7 @@ type UserProfileRow = {
   max_age: number | null;
   bio: string | null;
   city: string | null;
+  // avatar_url removed - photos are now stored in user_photos table
   show_bio_in_feed: boolean | null;
   verification_status: VerificationStatus;
   // Family plan
@@ -54,6 +55,7 @@ export type UserProfile = {
   max_age: number | null;
   bio: string | null;
   city: string | null;
+  avatarUrl: string | null;
   show_bio_in_feed: boolean | null;
   verification_status: VerificationStatus;
   // Family plan
@@ -73,6 +75,7 @@ export type UpdateUserProfileInput = {
   max_age?: number | null;
   bio?: string | null;
   city?: string | null;
+  avatarUrl?: string | null;
   show_bio_in_feed?: boolean | null;
   // Family plan
   has_children?: boolean | null;
@@ -153,14 +156,26 @@ export class SupabaseUserService {
         console.log('[SupabaseUserService] Processing min_age:', input.min_age);
         // Validar que min_age sea un número válido antes de guardar
         if (input.min_age !== null && input.min_age !== undefined) {
-          if (typeof input.min_age !== 'number' || isNaN(input.min_age) || input.min_age < 18 || input.min_age > 100) {
-            throw new InternalError('min_age must be a valid number between 18 and 100');
+          if (
+            typeof input.min_age !== 'number' ||
+            isNaN(input.min_age) ||
+            input.min_age < 18 ||
+            input.min_age > 100
+          ) {
+            throw new InternalError(
+              'min_age must be a valid number between 18 and 100'
+            );
           }
           updatePayload.min_age = input.min_age;
-          console.log('[SupabaseUserService] min_age validated and added to updatePayload:', updatePayload.min_age);
+          console.log(
+            '[SupabaseUserService] min_age validated and added to updatePayload:',
+            updatePayload.min_age
+          );
         } else {
           updatePayload.min_age = null;
-          console.log('[SupabaseUserService] min_age is null/undefined, setting to null in updatePayload');
+          console.log(
+            '[SupabaseUserService] min_age is null/undefined, setting to null in updatePayload'
+          );
         }
       } else {
         console.log('[SupabaseUserService] min_age NOT in input');
@@ -169,14 +184,26 @@ export class SupabaseUserService {
         console.log('[SupabaseUserService] Processing max_age:', input.max_age);
         // Validar que max_age sea un número válido antes de guardar
         if (input.max_age !== null && input.max_age !== undefined) {
-          if (typeof input.max_age !== 'number' || isNaN(input.max_age) || input.max_age < 18 || input.max_age > 100) {
-            throw new InternalError('max_age must be a valid number between 18 and 100');
+          if (
+            typeof input.max_age !== 'number' ||
+            isNaN(input.max_age) ||
+            input.max_age < 18 ||
+            input.max_age > 100
+          ) {
+            throw new InternalError(
+              'max_age must be a valid number between 18 and 100'
+            );
           }
           updatePayload.max_age = input.max_age;
-          console.log('[SupabaseUserService] max_age validated and added to updatePayload:', updatePayload.max_age);
+          console.log(
+            '[SupabaseUserService] max_age validated and added to updatePayload:',
+            updatePayload.max_age
+          );
         } else {
           updatePayload.max_age = null;
-          console.log('[SupabaseUserService] max_age is null/undefined, setting to null in updatePayload');
+          console.log(
+            '[SupabaseUserService] max_age is null/undefined, setting to null in updatePayload'
+          );
         }
       } else {
         console.log('[SupabaseUserService] max_age NOT in input');
@@ -195,54 +222,99 @@ export class SupabaseUserService {
           updatePayload.city = null;
         }
       }
+      // avatarUrl removed - photos are now stored in user_photos table
+      // if ('avatarUrl' in input) {
+      //   updatePayload.avatar_url = input.avatarUrl ?? null;
+      // }
       if ('show_bio_in_feed' in input) {
         updatePayload.show_bio_in_feed = input.show_bio_in_feed ?? null;
       }
       // Family plan
       if ('has_children' in input) {
         updatePayload.has_children = input.has_children ?? null;
-        console.log('[SupabaseUserService] Processing has_children:', input.has_children, '->', updatePayload.has_children);
+        console.log(
+          '[SupabaseUserService] Processing has_children:',
+          input.has_children,
+          '->',
+          updatePayload.has_children
+        );
       } else {
         console.log('[SupabaseUserService] has_children NOT in input');
       }
       if ('wants_children' in input) {
         updatePayload.wants_children = input.wants_children ?? null;
-        console.log('[SupabaseUserService] Processing wants_children:', input.wants_children, '->', updatePayload.wants_children);
+        console.log(
+          '[SupabaseUserService] Processing wants_children:',
+          input.wants_children,
+          '->',
+          updatePayload.wants_children
+        );
       } else {
         console.log('[SupabaseUserService] wants_children NOT in input');
       }
       if ('cares_about_partner_children' in input) {
-        updatePayload.cares_about_partner_children = input.cares_about_partner_children ?? null;
-        console.log('[SupabaseUserService] Processing cares_about_partner_children:', input.cares_about_partner_children, '->', updatePayload.cares_about_partner_children);
+        updatePayload.cares_about_partner_children =
+          input.cares_about_partner_children ?? null;
+        console.log(
+          '[SupabaseUserService] Processing cares_about_partner_children:',
+          input.cares_about_partner_children,
+          '->',
+          updatePayload.cares_about_partner_children
+        );
       } else {
-        console.log('[SupabaseUserService] cares_about_partner_children NOT in input');
+        console.log(
+          '[SupabaseUserService] cares_about_partner_children NOT in input'
+        );
       }
       // Habits
       if ('smoking' in input) {
         updatePayload.smoking = input.smoking ?? null;
-        console.log('[SupabaseUserService] Processing smoking:', input.smoking, '->', updatePayload.smoking);
+        console.log(
+          '[SupabaseUserService] Processing smoking:',
+          input.smoking,
+          '->',
+          updatePayload.smoking
+        );
       } else {
         console.log('[SupabaseUserService] smoking NOT in input');
       }
       if ('cares_about_partner_smoking' in input) {
-        updatePayload.cares_about_partner_smoking = input.cares_about_partner_smoking ?? null;
-        console.log('[SupabaseUserService] Processing cares_about_partner_smoking:', input.cares_about_partner_smoking, '->', updatePayload.cares_about_partner_smoking);
+        updatePayload.cares_about_partner_smoking =
+          input.cares_about_partner_smoking ?? null;
+        console.log(
+          '[SupabaseUserService] Processing cares_about_partner_smoking:',
+          input.cares_about_partner_smoking,
+          '->',
+          updatePayload.cares_about_partner_smoking
+        );
       } else {
-        console.log('[SupabaseUserService] cares_about_partner_smoking NOT in input');
+        console.log(
+          '[SupabaseUserService] cares_about_partner_smoking NOT in input'
+        );
       }
 
       console.log('[SupabaseUserService] Final updatePayload:', updatePayload);
-      console.log('[SupabaseUserService] updatePayload keys:', Object.keys(updatePayload));
-      console.log('[SupabaseUserService] updatePayload JSON:', JSON.stringify(updatePayload));
+      console.log(
+        '[SupabaseUserService] updatePayload keys:',
+        Object.keys(updatePayload)
+      );
+      console.log(
+        '[SupabaseUserService] updatePayload JSON:',
+        JSON.stringify(updatePayload)
+      );
 
       if (Object.keys(updatePayload).length === 0) {
-        console.log('[SupabaseUserService] WARNING: updatePayload is empty, no fields to update');
+        console.log(
+          '[SupabaseUserService] WARNING: updatePayload is empty, no fields to update'
+        );
         // Get auth user data even if no profile updates
         const authUser = await this.getAuthUser(userId);
         return this.mapRow(profile, authUser);
       }
 
-      console.log('[SupabaseUserService] Executing UPDATE query on users table');
+      console.log(
+        '[SupabaseUserService] Executing UPDATE query on users table'
+      );
       console.log('[SupabaseUserService] UPDATE SET:', updatePayload);
       console.log('[SupabaseUserService] WHERE id =', userId);
 
@@ -368,7 +440,11 @@ export class SupabaseUserService {
     if (error) {
       // If the error is a duplicate key error (user already exists), try to fetch it again
       // This can happen in race conditions where the profile was created between findProfileRow and insert
-      if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('already exists')) {
+      if (
+        error.code === '23505' ||
+        error.message?.includes('duplicate key') ||
+        error.message?.includes('already exists')
+      ) {
         console.warn(
           `[SupabaseUserService] Profile for user ${userId} was created between findProfileRow and insert. Fetching existing profile...`
         );
@@ -377,7 +453,7 @@ export class SupabaseUserService {
           return existingProfile;
         }
       }
-      
+
       console.error('[SupabaseUserService] ensureProfileRow insert failed', {
         userId,
         defaults,
@@ -560,6 +636,7 @@ export class SupabaseUserService {
       max_age: row.max_age,
       bio: row.bio,
       city: row.city,
+      avatarUrl: null, // Photos are now stored in user_photos table, not in users.avatar_url
       show_bio_in_feed: row.show_bio_in_feed,
       verification_status: row.verification_status ?? 'pending',
       // Family plan
@@ -749,21 +826,24 @@ export class SupabaseUserService {
       console.log(`[SupabaseUserService] Upload successful: ${avatarUrl}`);
 
       // Step 4: Update avatar_url in public.users table
-      const { error: updateError } = await this.client
-        .from('users')
-        .update({ avatar_url: avatarUrl })
-        .eq('id', userId);
+      // NOTE: avatar_url column has been removed from users table
+      // Photos are now stored in user_photos table instead
+      // This method may be deprecated in favor of UserPhotoService
+      // const { error: updateError } = await this.client
+      //   .from('users')
+      //   .update({ avatar_url: avatarUrl })
+      //   .eq('id', userId);
 
-      if (updateError) {
-        console.error(
-          '[SupabaseUserService] Error updating avatar_url in database:',
-          updateError
-        );
-        throw new InternalError(
-          `Failed to update user avatar: ${this.formatSupabaseError(updateError)}`,
-          updateError
-        );
-      }
+      // if (updateError) {
+      //   console.error(
+      //     '[SupabaseUserService] Error updating avatar_url in database:',
+      //     updateError
+      //   );
+      //   throw new InternalError(
+      //     `Failed to update user avatar: ${this.formatSupabaseError(updateError)}`,
+      //     updateError
+      //   );
+      // }
 
       // Step 5: ONLY NOW delete previous avatars (after everything succeeded)
       await this.deleteUserAvatars(userId, filePath); // Exclude the new file

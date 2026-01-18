@@ -245,20 +245,24 @@ export default function FeedScreen() {
           setAffinitySentences(result.data.sentences);
           setAffinitySentencesError(false);
         } else {
+          // On error, always show fallback sentence instead of error message
+          // Error is logged in backend, user should not see error UI
           console.error('Backend returned error for affinity sentences:', result.error);
-          setAffinitySentences([]);
-          setAffinitySentencesError(true);
+          setAffinitySentences(['Initial affinity is low—conversation will sharpen recommendations.']);
+          setAffinitySentencesError(false);
         }
       } catch (error) {
         // Check if request was aborted or candidate changed
         if (abortController.signal.aborted || currentCandidateIdRef.current !== candidateId) {
           return;
         }
+        // On error, always show fallback sentence instead of error message
+        // Error is logged in backend, user should not see error UI
         if (error instanceof Error && !error.message.includes('429')) {
           console.error('Failed to load affinity sentences:', error);
         }
-        setAffinitySentences([]);
-        setAffinitySentencesError(true);
+        setAffinitySentences(['Initial affinity is low—conversation will sharpen recommendations.']);
+        setAffinitySentencesError(false);
       } finally {
         if (!abortController.signal.aborted && currentCandidateIdRef.current === candidateId) {
           setIsLoadingSentences(false);
@@ -901,20 +905,6 @@ export default function FeedScreen() {
                 </Text>
               ))}
             </>
-          ) : affinitySentencesError ? (
-            <View style={styles.affinityError}>
-              <Text style={styles.affinityErrorText}>
-              Unable to load affinity insights
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  loadAffinitySentencesForCurrentUser();
-                }}
-                style={styles.retryButton}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
           ) : null}
         </View>
       </View>

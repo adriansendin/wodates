@@ -680,7 +680,10 @@ export class SupabaseMatchRepository implements MatchRepository {
       return success(undefined);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error updating last read timestamp', error)
+        new InternalError(
+          'Unexpected error updating last read timestamp',
+          error
+        )
       );
     }
   }
@@ -705,7 +708,9 @@ export class SupabaseMatchRepository implements MatchRepository {
         );
       }
 
-      const lastReadAt = data?.last_read_at ? new Date(data.last_read_at) : null;
+      const lastReadAt = data?.last_read_at
+        ? new Date(data.last_read_at)
+        : null;
       return success(lastReadAt);
     } catch (error) {
       return failure(

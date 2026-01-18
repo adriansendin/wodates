@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * Family Plan preferences
- * 
+ *
  * These enums represent fixed values that cannot be extended.
  * Any changes require database migration.
  */
@@ -14,6 +14,9 @@ export type WantsChildren = z.infer<typeof WantsChildrenSchema>;
 
 // Cares about partner having children
 export const CARES_ABOUT_PARTNER_CHILDREN_VALUES = ['yes', 'no'] as const;
-export const CaresAboutPartnerChildrenSchema = z.enum(CARES_ABOUT_PARTNER_CHILDREN_VALUES);
-export type CaresAboutPartnerChildren = z.infer<typeof CaresAboutPartnerChildrenSchema>;
-
+export const CaresAboutPartnerChildrenSchema = z.enum(
+  CARES_ABOUT_PARTNER_CHILDREN_VALUES
+);
+export type CaresAboutPartnerChildren = z.infer<
+  typeof CaresAboutPartnerChildrenSchema
+>;

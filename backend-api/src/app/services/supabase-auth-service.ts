@@ -109,32 +109,66 @@ export class SupabaseAuthService implements AuthService {
     try {
       // VALIDACIÓN ESTRICTA: Verificar que gender y lookingFor sean valores válidos (REQUERIDOS)
       // Validar que gender sea un string válido y no esté vacío
-      if (!registerRequest.gender || typeof registerRequest.gender !== 'string' || registerRequest.gender.trim() === '') {
-        console.error('[SupabaseAuthService] Invalid gender:', registerRequest.gender);
-        throw new InternalError('Gender is required and must be a valid non-empty string');
+      if (
+        !registerRequest.gender ||
+        typeof registerRequest.gender !== 'string' ||
+        registerRequest.gender.trim() === ''
+      ) {
+        console.error(
+          '[SupabaseAuthService] Invalid gender:',
+          registerRequest.gender
+        );
+        throw new InternalError(
+          'Gender is required and must be a valid non-empty string'
+        );
       }
 
       // Validar que lookingFor sea un string válido y no esté vacío
-      if (!registerRequest.lookingFor || typeof registerRequest.lookingFor !== 'string' || registerRequest.lookingFor.trim() === '') {
-        console.error('[SupabaseAuthService] Invalid lookingFor:', registerRequest.lookingFor);
-        throw new InternalError('LookingFor is required and must be a valid non-empty string');
+      if (
+        !registerRequest.lookingFor ||
+        typeof registerRequest.lookingFor !== 'string' ||
+        registerRequest.lookingFor.trim() === ''
+      ) {
+        console.error(
+          '[SupabaseAuthService] Invalid lookingFor:',
+          registerRequest.lookingFor
+        );
+        throw new InternalError(
+          'LookingFor is required and must be a valid non-empty string'
+        );
       }
 
       // Validar que location sea un string válido y no esté vacío
-      if (!registerRequest.location || typeof registerRequest.location !== 'string' || registerRequest.location.trim() === '') {
-        console.error('[SupabaseAuthService] Invalid location:', registerRequest.location);
-        throw new InternalError('Location is required and must be a valid non-empty string');
+      if (
+        !registerRequest.location ||
+        typeof registerRequest.location !== 'string' ||
+        registerRequest.location.trim() === ''
+      ) {
+        console.error(
+          '[SupabaseAuthService] Invalid location:',
+          registerRequest.location
+        );
+        throw new InternalError(
+          'Location is required and must be a valid non-empty string'
+        );
       }
 
       // Validar formato de birthDate
-      if (!registerRequest.birthDate || typeof registerRequest.birthDate !== 'string') {
-        throw new InternalError('birthDate is required and must be a valid ISO datetime string');
+      if (
+        !registerRequest.birthDate ||
+        typeof registerRequest.birthDate !== 'string'
+      ) {
+        throw new InternalError(
+          'birthDate is required and must be a valid ISO datetime string'
+        );
       }
-      
+
       // Validar que birthDate sea una fecha válida
       const birthDateObj = new Date(registerRequest.birthDate);
       if (isNaN(birthDateObj.getTime())) {
-        throw new InternalError('birthDate must be a valid ISO datetime string');
+        throw new InternalError(
+          'birthDate must be a valid ISO datetime string'
+        );
       }
 
       // Preparar valores validados (asegurar que son strings válidos)
@@ -144,13 +178,16 @@ export class SupabaseAuthService implements AuthService {
       const validatedBirthDate = registerRequest.birthDate;
 
       // Log para debugging
-      console.log('[SupabaseAuthService] Creating user profile with validated data:', {
-        userId,
-        birthDate: validatedBirthDate,
-        gender: validatedGender,
-        city: validatedCity,
-        looking_for: validatedLookingFor,
-      });
+      console.log(
+        '[SupabaseAuthService] Creating user profile with validated data:',
+        {
+          userId,
+          birthDate: validatedBirthDate,
+          gender: validatedGender,
+          city: validatedCity,
+          looking_for: validatedLookingFor,
+        }
+      );
 
       // Create profile in public.users without name and email (those are in auth.users)
       // Explicitly set show_bio_in_feed to true (boolean, not null)
@@ -171,45 +208,53 @@ export class SupabaseAuthService implements AuthService {
         .single();
 
       if (error) {
-        console.error(
-          '[SupabaseAuthService] Failed to create user profile',
-          {
-            error: error.message,
-            details: error.details,
-            hint: error.hint,
-            userId,
-            attemptedData: {
-              birthDate: validatedBirthDate,
-              gender: validatedGender,
-              city: validatedCity,
-              looking_for: validatedLookingFor,
-            }
-          }
-        );
+        console.error('[SupabaseAuthService] Failed to create user profile', {
+          error: error.message,
+          details: error.details,
+          hint: error.hint,
+          userId,
+          attemptedData: {
+            birthDate: validatedBirthDate,
+            gender: validatedGender,
+            city: validatedCity,
+            looking_for: validatedLookingFor,
+          },
+        });
         throw new InternalError('Failed to create user profile', error);
       }
 
       // Verificar que los datos se guardaron correctamente
       if (data) {
-        console.log('[SupabaseAuthService] User profile created successfully:', {
-          userId,
-          savedData: {
-            birthDate: data.birthDate,
-            gender: data.gender,
-            city: data.city,
-            looking_for: data.looking_for,
+        console.log(
+          '[SupabaseAuthService] User profile created successfully:',
+          {
+            userId,
+            savedData: {
+              birthDate: data.birthDate,
+              gender: data.gender,
+              city: data.city,
+              looking_for: data.looking_for,
+            },
           }
-        });
+        );
 
         // Verificar que los campos requeridos no sean NULL
-        if (!data.birthDate || !data.gender || !data.city || !data.looking_for) {
-          console.error('[SupabaseAuthService] WARNING: Some required fields are NULL after insert:', {
-            userId,
-            birthDate: data.birthDate,
-            gender: data.gender,
-            city: data.city,
-            looking_for: data.looking_for,
-          });
+        if (
+          !data.birthDate ||
+          !data.gender ||
+          !data.city ||
+          !data.looking_for
+        ) {
+          console.error(
+            '[SupabaseAuthService] WARNING: Some required fields are NULL after insert:',
+            {
+              userId,
+              birthDate: data.birthDate,
+              gender: data.gender,
+              city: data.city,
+              looking_for: data.looking_for,
+            }
+          );
         }
       }
 
@@ -252,6 +297,8 @@ export class SupabaseAuthService implements AuthService {
       const perPage = 1000;
 
       // Paginate through all users until we find the email or run out of users
+      // TODO: Replace with explicit condition when Supabase Admin API provides better pagination support
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         const { data, error } = await this.adminClient.auth.admin.listUsers({
           page,
@@ -289,7 +336,10 @@ export class SupabaseAuthService implements AuthService {
 
       return false;
     } catch (error) {
-      console.error('[SupabaseAuthService] Unexpected error checking email:', error);
+      console.error(
+        '[SupabaseAuthService] Unexpected error checking email:',
+        error
+      );
       // If we can't check, assume it doesn't exist to allow registration attempt
       return false;
     }

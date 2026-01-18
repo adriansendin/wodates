@@ -1,4 +1,7 @@
-import { WaitlistSignup, CreateWaitlistSignup } from '../entities/WaitlistSignup';
+import {
+  WaitlistSignup,
+  CreateWaitlistSignup,
+} from '../entities/WaitlistSignup';
 import { Result } from '../Result';
 import { DomainError } from '../errors/DomainError';
 
@@ -9,5 +12,7 @@ export interface WaitlistRepository {
    */
   createOrGet(
     signup: CreateWaitlistSignup
-  ): Promise<Result<{ signup: WaitlistSignup; alreadyExisted: boolean }, DomainError>>;
+  ): Promise<
+    Result<{ signup: WaitlistSignup; alreadyExisted: boolean }, DomainError>
+  >;
 }

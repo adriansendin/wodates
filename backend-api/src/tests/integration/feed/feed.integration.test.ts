@@ -1,4 +1,15 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../../data/repositories/SupabaseUserAIProfileRepository', () => {
+  return {
+    SupabaseUserAIProfileRepository: class SupabaseUserAIProfileRepositoryMock {
+      async findByUserId() {
+        return { success: true, data: null };
+      }
+    },
+  };
+});
+
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
 import {
@@ -78,6 +89,7 @@ const LikeResponseSchema = z.object({
       })
     ),
   isMatch: z.boolean(),
+  isPotentialMatch: z.boolean().optional(),
 });
 
 const PassResponseSchema = z.object({
@@ -127,7 +139,9 @@ describe('Feed routes', () => {
 
   afterEach(async () => {
     clearFeedServiceInstance();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   it('returns a filtered feed based on user preferences', async () => {
@@ -211,7 +225,7 @@ describe('Feed routes', () => {
     );
   });
 
-  it('creates a match when both users like each other', async () => {
+  it('returns isPotentialMatch when both users like each other', async () => {
     const viewer = await registerUserAndSeed({
       preferences: { genderFilter: ['female'] },
     });
@@ -227,19 +241,26 @@ describe('Feed routes', () => {
     const mutualLike = await likeUser(target.token, viewer.id);
     expect(mutualLike.statusCode).toBe(200);
     const payload = LikeResponseSchema.parse(mutualLike.json());
-    expect(payload.isMatch).toBe(true);
-    expect('userId1' in payload.result || 'userId2' in payload.result).toBe(
+    // Mutual like should return isMatch=false but isPotentialMatch=true
+    expect(payload.isMatch).toBe(false);
+    // Verify it's a Like (not a Match) with isPotentialMatch flag
+    expect('userId' in payload.result && 'targetUserId' in payload.result).toBe(
       true
     );
+    // Check for isPotentialMatch in the response (controller adds this field)
+    const fullPayload = mutualLike.json() as {
+      action: string;
+      result: unknown;
+      isMatch: boolean;
+      isPotentialMatch?: boolean;
+    };
+    expect(fullPayload.isPotentialMatch).toBe(true);
 
+    // Match should NOT be created yet (only after explicit confirmation)
     const matches = await matchRepository.findByUserId(viewer.id);
     expect(matches.success).toBe(true);
     if (matches.success) {
-      expect(matches.data).toHaveLength(1);
-      const match = matches.data[0];
-      expect([match.userId1, match.userId2]).toEqual(
-        expect.arrayContaining([viewer.id, target.id])
-      );
+      expect(matches.data).toHaveLength(0);
     }
   });
 

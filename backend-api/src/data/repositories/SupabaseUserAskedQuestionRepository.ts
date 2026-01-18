@@ -68,9 +68,7 @@ export class SupabaseUserAskedQuestionRepository
 
       if (!data) {
         return failure(
-          new InternalError(
-            'Supabase did not return user_asked_questions row'
-          )
+          new InternalError('Supabase did not return user_asked_questions row')
         );
       }
 
@@ -110,7 +108,10 @@ export class SupabaseUserAskedQuestionRepository
       return success(Boolean(data));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error checking if question was asked', error)
+        new InternalError(
+          'Unexpected error checking if question was asked',
+          error
+        )
       );
     }
   }
@@ -162,7 +163,10 @@ export class SupabaseUserAskedQuestionRepository
       return success((data ?? []).map((row) => this.mapUserAskedQuestion(row)));
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error fetching users asked question', error)
+        new InternalError(
+          'Unexpected error fetching users asked question',
+          error
+        )
       );
     }
   }
@@ -212,21 +216,20 @@ export class SupabaseUserAskedQuestionRepository
       }
 
       const allQuestionIds = (allQuestions ?? []).map((q) => q.id);
-      const unasked = allQuestionIds.filter(
-        (id) => !askedQuestionIds.has(id)
-      );
+      const unasked = allQuestionIds.filter((id) => !askedQuestionIds.has(id));
 
       return success(unasked);
     } catch (error) {
       return failure(
-        new InternalError('Unexpected error getting unasked question IDs', error)
+        new InternalError(
+          'Unexpected error getting unasked question IDs',
+          error
+        )
       );
     }
   }
 
-  private mapUserAskedQuestion(
-    row: UserAskedQuestionRow
-  ): UserAskedQuestion {
+  private mapUserAskedQuestion(row: UserAskedQuestionRow): UserAskedQuestion {
     return {
       userId: row.user_id,
       questionId: row.question_id,

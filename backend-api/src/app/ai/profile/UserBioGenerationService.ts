@@ -53,10 +53,7 @@ export class UserBioGenerationService {
   async generateBioFromSummary(userId: string): Promise<void> {
     try {
       if (this.logger) {
-        this.logger.debug(
-          { userId },
-          'Starting bio generation from summary'
-        );
+        this.logger.debug({ userId }, 'Starting bio generation from summary');
       }
 
       // Step 1: Get user AI profile from database
@@ -204,4 +201,3 @@ Ahora genera la bio basándote en este perfil.`;
     }
   }
 }
-

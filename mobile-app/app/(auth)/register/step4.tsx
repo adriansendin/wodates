@@ -28,10 +28,10 @@ export default function Step4Screen() {
 
   const handleNext = () => {
     // Validación estricta: ambos campos deben ser valores válidos (no cadenas vacías, no undefined)
-    if (!gender || gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption)) {
+    if (gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption)) {
       return;
     }
-    if (!lookingFor || lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) {
+    if (lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) {
       return;
     }
     
@@ -128,19 +128,19 @@ export default function Step4Screen() {
               testID="continuar-step4-button" 
               style={[
                 styles.button,
-                (!gender || gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
-                 !lookingFor || lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) && styles.buttonDisabled
+                (gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
+                 lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) && styles.buttonDisabled
               ]} 
               onPress={handleNext}
               disabled={
-                !gender || gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
-                !lookingFor || lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)
+                gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
+                lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)
               }
             >
               <Text style={[
                 styles.buttonText,
-                (!gender || gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
-                 !lookingFor || lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) && styles.buttonTextDisabled
+                (gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
+                 lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) && styles.buttonTextDisabled
               ]}>Continue</Text>
             </TouchableOpacity>
 

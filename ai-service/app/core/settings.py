@@ -91,6 +91,12 @@ class Settings(BaseSettings):
         description="Model for AFFINITY_SENTENCE task. Uses AI_MODEL_AFFINITY from .env if available."
     )
 
+    ollama_model_affinity_timeout: int = Field(
+        default=60000,  # milliseconds
+        validation_alias="AI_MODEL_AFFINITY_TIMEOUT",
+        description="Timeout for affinity sentence generation. Uses AI_MODEL_AFFINITY_TIMEOUT from .env if available."
+    )
+
     ollama_timeout: int = Field(
         default=60000,  # milliseconds
         validation_alias="OLLAMA_TIMEOUT",

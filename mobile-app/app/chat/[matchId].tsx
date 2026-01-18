@@ -49,27 +49,33 @@ const debugLog = (...args: unknown[]): void => { if (__DEV__) console.log(...arg
 
 // Two-part Spanish opener templates for blank human-human chats
 const OPENER_TEMPLATES = [
-  "I'll skip the usual 'hi' 😅 — would you rather start with a quick question or something more open?",
-  "First messages are always a bit awkward… fixing that now. — what sounds better: a calm chat here or getting straight to the point?",
-  "Better than an empty 'how are you?' — how do you like conversations to start so they feel comfortable?",
-  "Starting with an easy one to break the ice. — what made you smile today, even something small?",
-  "Not sure if you're into long chats, so I'll keep it simple. — do you prefer short-and-to-the-point or more free-flowing conversations?",
-  "First impression, no pressure. — what tires you most about dating apps, and what would you like to be different here?",
-  "Let's try a practical start. — do you prefer asking each other questions, or just talking and seeing where it goes?",
-  "So this doesn't stay blank: — what topic feels easiest to start with: plans, work, shows, life…?",
-  "Breaking the ice with a mini question. — are you more of a quick reply person, or do you like to think before answering?",
-  "I'll start so it's not awkward. — what's a small thing you enjoy that helps you relax?",
-  "Skipping the empty greeting — here's a curiosity. — what helps you connect with someone early on: humor, calm, chemistry, conversation…?",
-  "If you're up for it, let's keep this easy. — I ask a question, then you ask me one?",
-  "Keeping it simple, no fluff. — what are you looking for here, in one short sentence?",
-  "I like starting with intention, but without intensity. — what pace feels comfortable when getting to know someone?",
-  "I don't want this to turn into an endless 'hi'. — what would you like to know about me first?",
-  "You can choose how we start. — quick question, short voice note, or normal text?",
-  "So the conversation has some shape from minute one: — what's something you'd rather not have happen here (ghosting, ambiguity, etc.)?",
-  "Breaking the ice with a tiny game. — give me two words that describe you today and I'll share mine.",
-  "First message, simple version. — should we start light, or a bit more real?",
-  "Okay, new chat, zero context. — what works better for you right now: chatting a bit or picking this up later?"
+  // Warm / open (no question)
+  "Nice to meet you here 🙂 No rush — happy to start easy and see how it feels.",
+  "Good to see you here. I’m more into calm, genuine chats than forced small talk.",
+  "A pleasure to meet you 🙂 I’m {name}. Just saying hi properly — happy to keep this simple.",
+  "Glad we matched. If now’s hectic, no worries — when you get a moment, I’d love to hear what kind of chat you enjoy.",
+  "Hello 🙂 I like that we’re focusing on one conversation at a time — no pressure, just happy to say hi.",
+  "Hey! It’s been a good day — hope yours is going well too.",
+
+  // Options (choice, not a question-heavy “interview”)
+  "Pleasure meeting you. Want to start with something light, or something a bit more real?",
+  "Hi there 🙂 We can go slow and casual, or be a bit more direct — whatever feels best.",
+  "Good evening. Pick a lane: plans / work / interests / life — I’ll follow.",
+  "Nice to meet you 🙂 Would you rather do one question each, or just chat naturally?",
+  "Glad we crossed paths. We can keep it short-and-sweet, or do proper messages — whatever feels easiest.",
+  "Hello! We can keep it short-and-sweet, or do proper messages — your call.",
+  "Hey 🙂 Either we start super light, or we skip to something meaningful — both work for me.",
+
+  // Questions (gentle, not “a saco”)
+  "I’m {name} 🙂 What kind of pace feels comfortable for you when getting to know someone?",
+  "Not going to do the empty “how are you?” — what’s been the best part of your week so far?",
+  "Hi! What’s a topic you actually enjoy talking about, even with someone new?",
+  "Good to see you here 🙂 What’s a small thing that’s made you smile recently?",
+  "Honestly curious — what’s a green flag you appreciate early on?",
+  "No pressure at all: are you more of a quick replier, or more ‘when I can’?",
+  "Nice to meet you 🙂 If we start with one thing, what would you like to know about me first?"
 ];
+
 
 // Simple global flag to prevent any duplicate API calls during the entire chat session
 const activeChatSession = {

@@ -19,6 +19,11 @@ const resetStore = () => {
       minAge: 18,
       maxAge: 99,
       avatarUrl: null,
+      hasChildren: null,
+      wantsChildren: null,
+      caresAboutPartnerChildren: null,
+      smoking: null,
+      caresAboutPartnerSmoking: null,
     },
   });
 };

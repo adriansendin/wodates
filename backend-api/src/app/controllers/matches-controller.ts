@@ -68,10 +68,17 @@ export class MatchesController {
     const body = request.body as { readAt?: string } | undefined;
     const readAt = body?.readAt ? new Date(body.readAt) : undefined;
 
-    request.log.info({ userId, matchId, readAt }, 'PUT /matches/:matchId/read - Starting request');
+    request.log.info(
+      { userId, matchId, readAt },
+      'PUT /matches/:matchId/read - Starting request'
+    );
 
     try {
-      const result = await this.matchOverviewService.markAsRead(matchId, userId, readAt);
+      const result = await this.matchOverviewService.markAsRead(
+        matchId,
+        userId,
+        readAt
+      );
 
       if (!result.success) {
         request.log.error(
@@ -111,7 +118,10 @@ export class MatchesController {
     try {
       const { targetUserId } = ConfirmMatchSchema.parse(request.body);
 
-      const result = await this.confirmMatchUseCase.execute(userId, targetUserId);
+      const result = await this.confirmMatchUseCase.execute(
+        userId,
+        targetUserId
+      );
 
       if (!result.success) {
         request.log.error(
@@ -147,7 +157,10 @@ export class MatchesController {
           details: error.errors,
         });
       }
-      request.log.error({ userId, error }, 'POST /matches/confirm - Unexpected error');
+      request.log.error(
+        { userId, error },
+        'POST /matches/confirm - Unexpected error'
+      );
       return reply.status(500).send({
         error: 'INTERNAL_SERVER_ERROR',
         message: 'An unexpected error occurred',

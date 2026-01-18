@@ -72,7 +72,9 @@ export class SupabaseFeedService {
 
       let query = this.client
         .from('users')
-        .select('id, birthDate, gender, looking_for, bio, city, show_bio_in_feed') // Added 'show_bio_in_feed' to control bio visibility
+        .select(
+          'id, birthDate, gender, looking_for, bio, city, show_bio_in_feed'
+        ) // Added 'show_bio_in_feed' to control bio visibility
         .neq('id', userId)
         .lt('active_chats_count', 1) // Exclude users with any active chats (must be 0)
         .or('is_bot.is.null,is_bot.eq.false') // Exclude bots (system users)
@@ -251,6 +253,42 @@ export class SupabaseFeedService {
   private async fetchExcludedUserIds(userId: string): Promise<Set<string>> {
     const excluded = new Set<string>();
 
+    // Get all chat IDs where the current user is a participant
+    // This excludes users with confirmed matches from the discover feed
+    const { data: participantRows, error: participantError } = await this.client
+      .from('chat_participants')
+      .select('chat_id')
+      .eq('user_id', userId);
+
+    let matchedUserIds: string[] = [];
+    if (participantError) {
+      // Log error but don't fail - other exclusions will still work
+      console.warn(
+        `[SupabaseFeedService] Failed to fetch chat participants for user ${userId}:`,
+        this.formatSupabaseError(participantError)
+      );
+    } else if (participantRows && participantRows.length > 0) {
+      const chatIds = participantRows.map((row) => row.chat_id);
+
+      // Get all other participants from these chats (excluding the current user)
+      const { data: otherParticipants, error: otherParticipantsError } =
+        await this.client
+          .from('chat_participants')
+          .select('user_id')
+          .in('chat_id', chatIds)
+          .neq('user_id', userId);
+
+      if (otherParticipantsError) {
+        // Log error but don't fail - other exclusions will still work
+        console.warn(
+          `[SupabaseFeedService] Failed to fetch other participants for user ${userId}:`,
+          this.formatSupabaseError(otherParticipantsError)
+        );
+      } else if (otherParticipants) {
+        matchedUserIds = otherParticipants.map((p) => p.user_id);
+      }
+    }
+
     const [likes, passes, receivedPasses, blockedUsers] = (await Promise.all([
       // Users the current user has liked
       this.client
@@ -324,6 +362,11 @@ export class SupabaseFeedService {
       if (row?.blocked_id) {
         excluded.add(row.blocked_id);
       }
+    });
+
+    // Process users with confirmed matches (should never appear in discover again)
+    matchedUserIds.forEach((matchedUserId) => {
+      excluded.add(matchedUserId);
     });
 
     return excluded;

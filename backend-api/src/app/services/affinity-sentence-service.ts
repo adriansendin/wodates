@@ -7,7 +7,7 @@ import { AffinitySentenceGenerator } from '../../domain/services/AffinitySentenc
 
 /**
  * Service for generating affinity sentences for matches
- * 
+ *
  * Extracts shared logic from FeedController for reuse in match creation
  * and chat affinity endpoints.
  */
@@ -20,7 +20,7 @@ export class AffinitySentenceService implements AffinitySentenceGenerator {
 
   /**
    * Generates a single affinity sentence for two users
-   * 
+   *
    * @param userId1 - First user ID
    * @param userId2 - Second user ID
    * @returns Result containing the affinity sentence (or fallback if generation fails)
@@ -112,7 +112,10 @@ export class AffinitySentenceService implements AffinitySentenceGenerator {
 
       // Simplify: if first sentence is non-empty string, return it; else return fallback
       const firstSentence = sentences[0];
-      if (typeof firstSentence === 'string' && firstSentence.trim().length > 0) {
+      if (
+        typeof firstSentence === 'string' &&
+        firstSentence.trim().length > 0
+      ) {
         return success(firstSentence.trim());
       }
 
@@ -131,12 +134,15 @@ export class AffinitySentenceService implements AffinitySentenceGenerator {
       return success(AIConfig.affinitySentencesFallback[0]);
     } catch (error) {
       // If ai-service fails, return fallback sentence (non-blocking)
+      // Log error with full details for debugging
       if (this.logger) {
-        this.logger.warn(
+        this.logger.error(
           {
             userId1,
             userId2,
             error: error instanceof Error ? error.message : String(error),
+            errorType: error instanceof Error ? error.constructor.name : typeof error,
+            stack: error instanceof Error ? error.stack : undefined,
           },
           'Failed to generate affinity sentence, returning fallback sentence'
         );

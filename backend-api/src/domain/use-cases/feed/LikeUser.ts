@@ -5,7 +5,10 @@ import { DomainError, ConflictError } from '../../errors/DomainError';
 import { LikeRepository } from '../../repositories/LikeRepository';
 import { MatchRepository } from '../../repositories/MatchRepository';
 
-export type LikeResult = Like | Match | (Like & { isPotentialMatch: true; targetUserId: string });
+export type LikeResult =
+  | Like
+  | Match
+  | (Like & { isPotentialMatch: true; targetUserId: string });
 
 export class LikeUser {
   constructor(

@@ -11,28 +11,27 @@ const SELF_CLOSE_MESSAGES = [
   "Got it — that chat is now closed for both of you, for good. Discover is there whenever you're ready.",
   "Understood. That chat is closed for both of you, for good. You're back on Discover whenever you want.",
   "All set — that chat is now closed for both of you, for good. Discover is available when you're ready.",
-  "Okay — that chat is closed for both of you, for good. Come back to Discover whenever you feel like it.",
+  'Okay — that chat is closed for both of you, for good. Come back to Discover whenever you feel like it.',
   "Done. That chat is closed for both of you, for good. Discover is open again whenever you're ready.",
-  "Closed — that chat is over for both of you, for good. Back to Discover.",
-  "Done. That chat is closed for both of you, for good. Discover is back.",
-  "Confirmed: that chat has ended for both of you, for good. Discover is live again.",
+  'Closed — that chat is over for both of you, for good. Back to Discover.',
+  'Done. That chat is closed for both of you, for good. Discover is back.',
+  'Confirmed: that chat has ended for both of you, for good. Discover is live again.',
   "That chat is closed for both of you, for good. You're back on Discover.",
   "That's closed — for good. Back on Discover whenever you want.",
 ];
 
 const OTHER_CLOSE_MESSAGES = [
   "That chat has ended, for good. Discover is there whenever you're ready to return.",
-  "That chat is now closed for both of you, for good. Discover is available whenever you want.",
+  'That chat is now closed for both of you, for good. Discover is available whenever you want.',
   "That chat has ended, for good. You're back on Discover whenever you feel like it.",
   "That chat is closed for both of you, for good. Whenever you're ready, Discover is there for you.",
-  "That chat is closed now, for good. Take a moment — then head back to Discover when you want.",
-  "That chat ended — for good. Back on Discover.",
-  "Chat closed — for good. Discover is back.",
-  "That match chat is over — for good. Discover is live again.",
-  "That chat is closed for both — for good. Back to Discover.",
+  'That chat is closed now, for good. Take a moment — then head back to Discover when you want.',
+  'That chat ended — for good. Back on Discover.',
+  'Chat closed — for good. Discover is back.',
+  'That match chat is over — for good. Discover is live again.',
+  'That chat is closed for both — for good. Back to Discover.',
   "That's a wrap — for good. You're back on Discover.",
 ];
-
 
 /**
  * Service for sending Doc Love system messages when human chats are closed
@@ -47,7 +46,7 @@ export class ChatCloseMessageService {
 
   /**
    * Sends close messages to both users' Doc Love chats
-   * 
+   *
    * @param blockerId - User who closed the chat
    * @param blockedId - User who was blocked
    * @param closedMatchId - The match/chat that was closed
@@ -59,18 +58,10 @@ export class ChatCloseMessageService {
   ): Promise<void> {
     try {
       // Send SELF_CLOSE message to the blocker
-      await this.sendCloseMessage(
-        blockerId,
-        closedMatchId,
-        'SELF_CLOSE'
-      );
+      await this.sendCloseMessage(blockerId, closedMatchId, 'SELF_CLOSE');
 
       // Send OTHER_CLOSE message to the blocked user
-      await this.sendCloseMessage(
-        blockedId,
-        closedMatchId,
-        'OTHER_CLOSE'
-      );
+      await this.sendCloseMessage(blockedId, closedMatchId, 'OTHER_CLOSE');
     } catch (error) {
       // Log error but don't throw - this is a fire-and-forget operation
       if (this.logger) {
@@ -100,7 +91,10 @@ export class ChatCloseMessageService {
       const docLoveId = await this.docLoveHelper.getDocLoveUserId();
 
       // Get the user's Doc Love match
-      const docLoveMatchResult = await this.getDocLoveMatchForUser(userId, docLoveId);
+      const docLoveMatchResult = await this.getDocLoveMatchForUser(
+        userId,
+        docLoveId
+      );
       if (!docLoveMatchResult.success || !docLoveMatchResult.data) {
         if (this.logger) {
           this.logger.warn(
@@ -115,7 +109,9 @@ export class ChatCloseMessageService {
 
       // Select random message from appropriate pool
       const messagePool =
-        messageType === 'SELF_CLOSE' ? SELF_CLOSE_MESSAGES : OTHER_CLOSE_MESSAGES;
+        messageType === 'SELF_CLOSE'
+          ? SELF_CLOSE_MESSAGES
+          : OTHER_CLOSE_MESSAGES;
       const messageContent = this.selectRandomMessage(messagePool);
 
       // Send message from Doc Love to the user

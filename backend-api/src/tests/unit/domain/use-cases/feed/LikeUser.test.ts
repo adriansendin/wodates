@@ -43,18 +43,24 @@ describe('LikeUser use case', () => {
     }
   });
 
-  it('creates a match when both users like each other', async () => {
+  it('returns isPotentialMatch when both users like each other', async () => {
     await useCase.execute(USER_A, USER_B);
 
     const mutual = await useCase.execute(USER_B, USER_A);
 
     expect(mutual.success).toBe(true);
     if (mutual.success) {
-      expect('userId1' in mutual.data && 'userId2' in mutual.data).toBe(true);
-      if ('userId1' in mutual.data && 'userId2' in mutual.data) {
-        expect([mutual.data.userId1, mutual.data.userId2]).toEqual(
-          expect.arrayContaining([USER_A, USER_B])
-        );
+      expect('isPotentialMatch' in mutual.data).toBe(true);
+      if ('isPotentialMatch' in mutual.data) {
+        expect(mutual.data.isPotentialMatch).toBe(true);
+        expect(mutual.data.targetUserId).toBe(USER_A);
+        // Verify it's still a Like with correct fields
+        expect('userId' in mutual.data).toBe(true);
+        expect('targetUserId' in mutual.data).toBe(true);
+        if ('userId' in mutual.data && 'targetUserId' in mutual.data) {
+          expect(mutual.data.userId).toBe(USER_B);
+          expect(mutual.data.targetUserId).toBe(USER_A);
+        }
       }
     }
   });
@@ -71,15 +77,20 @@ describe('LikeUser use case', () => {
     }
   });
 
-  it('propagates errors when match creation fails after mutual likes', async () => {
+  it('does NOT call matchRepository.create on mutual like', async () => {
     await useCase.execute(USER_A, USER_B);
+    // Set error on match repository - if create is called, it would fail
     matchRepository.setCreateError(new InternalError('match creation failed'));
 
     const result = await useCase.execute(USER_B, USER_A);
 
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.message).toBe('match creation failed');
+    // Should succeed with isPotentialMatch, not fail with match creation error
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect('isPotentialMatch' in result.data).toBe(true);
+      if ('isPotentialMatch' in result.data) {
+        expect(result.data.isPotentialMatch).toBe(true);
+      }
     }
   });
 });

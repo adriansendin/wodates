@@ -40,7 +40,9 @@ export class AuthController {
       // Create welcome match with Doc Love (blocking to ensure proper onboarding)
       if (this.systemUserService) {
         try {
-          const matchResult = await this.systemUserService.createWelcomeMatch(user.id);
+          const matchResult = await this.systemUserService.createWelcomeMatch(
+            user.id
+          );
           if (matchResult.success) {
             request.log.info(
               { userId: user.id, matchId: matchResult.data.id },
@@ -131,7 +133,7 @@ export class AuthController {
   async checkEmail(request: FastifyRequest, reply: FastifyReply) {
     try {
       const { email } = request.body as { email: string };
-      
+
       if (!email || typeof email !== 'string') {
         return reply.status(400).send({
           error: 'VALIDATION_ERROR',
@@ -148,7 +150,7 @@ export class AuthController {
       }
 
       const exists = await this.authService.checkEmailExists(email);
-      
+
       return reply.send({
         exists,
         email,
@@ -161,7 +163,7 @@ export class AuthController {
   async joinWaitlist(request: FastifyRequest, reply: FastifyReply) {
     try {
       const { city, email } = request.body as { city?: string; email?: string };
-      
+
       if (!email || typeof email !== 'string') {
         return reply.status(400).send({
           error: 'VALIDATION_ERROR',
@@ -194,17 +196,18 @@ export class AuthController {
 
       // Try to save to waitlist table (create if doesn't exist)
       // Using a simple table structure: waitlist (city, email, created_at)
-      const { error } = await this.supabaseClient
-        .from('waitlist')
-        .insert({
-          city: city.trim(),
-          email: email.trim(),
-          created_at: new Date().toISOString(),
-        });
+      const { error } = await this.supabaseClient.from('waitlist').insert({
+        city: city.trim(),
+        email: email.trim(),
+        created_at: new Date().toISOString(),
+      });
 
       if (error) {
         // If table doesn't exist or other error, log but still return success
-        request.log.warn({ error }, 'Failed to save waitlist entry to database');
+        request.log.warn(
+          { error },
+          'Failed to save waitlist entry to database'
+        );
         // Still return success to user (graceful degradation)
       }
 
@@ -262,7 +265,13 @@ export class AuthController {
     });
   }
 
-  private buildResponseUser(user: { id: string; email: string; name: string; gender?: string; birthDate?: string }) {
+  private buildResponseUser(user: {
+    id: string;
+    email: string;
+    name: string;
+    gender?: string;
+    birthDate?: string;
+  }) {
     return {
       id: user.id,
       email: user.email,

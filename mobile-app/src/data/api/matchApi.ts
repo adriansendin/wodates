@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ApiClient } from './apiClient';
 import { Result } from '../../domain/Result';
 import { DomainError } from '../../domain/errors/DomainError';
-import { MatchSchema } from '../../domain/entities/Match';
+import { MatchSchema, Match } from '../../domain/entities/Match';
 import { MessageSchema } from '../../domain/entities/Message';
 import { ValidationError } from '../../domain/errors/DomainError';
 
