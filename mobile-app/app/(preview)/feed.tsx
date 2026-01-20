@@ -386,6 +386,12 @@ export default function PreviewFeedScreen() {
     router.push('/(auth)/register/step3');
   };
 
+  const handleSignIn = () => {
+    setShowRegistrationModal(false);
+    exitPreview();
+    router.push('/(auth)/login');
+  };
+
   if (isLoading || !previewUser) {
     return (
       <View style={styles.loadingContainer}>
@@ -487,6 +493,7 @@ export default function PreviewFeedScreen() {
         visible={showRegistrationModal}
         onClose={() => setShowRegistrationModal(false)}
         onRegister={handleRegister}
+        onSignIn={handleSignIn}
         source="discover"
       />
 

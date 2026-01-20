@@ -912,13 +912,10 @@ export default function FeedScreen() {
       {/* Info icon for bio - only show if:
           1. Candidate has bio
           2. Candidate has show_bio_in_feed === true (not false, not null)
-          3. Current user (viewer) has show_bio_in_feed === true (not false, not null)
-          Both users must have show_bio_in_feed === true to show the icon */}
+          The icon visibility depends only on the candidate's show_bio_in_feed setting */}
       {currentUser?.bio && 
        typeof (currentUser as any).show_bio_in_feed === 'boolean' &&
-       (currentUser as any).show_bio_in_feed === true &&
-       typeof currentUserProfile?.show_bio_in_feed === 'boolean' &&
-       currentUserProfile?.show_bio_in_feed === true && (
+       (currentUser as any).show_bio_in_feed === true && (
         <TouchableOpacity
           style={styles.infoIconContainer}
           onPress={() => setShowBioPopup(true)}

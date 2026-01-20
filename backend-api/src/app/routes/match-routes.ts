@@ -54,6 +54,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
                             },
                             gender: { type: ['string', 'null'] },
                             isBot: { type: 'boolean' },
+                            show_bio_in_feed: { type: ['boolean', 'null'] },
                           },
                           required: ['id', 'name'],
                         },

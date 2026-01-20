@@ -25,6 +25,7 @@ export default function AvatarViewScreen() {
     name?: string | string[];
     otherUserId?: string | string[];
     otherUserBio?: string | string[];
+    otherUserShowBioInFeed?: string | string[];
   }>();
   const router = useRouter();
   const { tokens } = useAuthStore();
@@ -33,6 +34,12 @@ export default function AvatarViewScreen() {
   const otherUserId = Array.isArray(params.otherUserId) ? params.otherUserId[0] : params.otherUserId;
   const name = Array.isArray(params.name) ? params.name[0] : params.name;
   const otherUserBio = Array.isArray(params.otherUserBio) ? params.otherUserBio[0] : params.otherUserBio;
+  const otherUserShowBioInFeedParam = Array.isArray(params.otherUserShowBioInFeed) 
+    ? params.otherUserShowBioInFeed[0] 
+    : params.otherUserShowBioInFeed;
+  const otherUserShowBioInFeed = otherUserShowBioInFeedParam === 'true' ? true 
+    : otherUserShowBioInFeedParam === 'false' ? false 
+    : null;
 
   const [userPhotos, setUserPhotos] = useState<Photo[]>([]);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
@@ -121,14 +128,13 @@ export default function AvatarViewScreen() {
   }, [tokens?.accessToken, profileApi]);
 
   // Load other user profile from params passed from chat screen
-  // In chat context, we assume show_bio_in_feed is true by default
   const loadOtherUserProfile = useCallback(async () => {
     setOtherUserProfile({
       id: otherUserId || '',
       bio: otherUserBio || null,
-      show_bio_in_feed: true, // Default to true in chat context
+      show_bio_in_feed: otherUserShowBioInFeed,
     } as UserProfile);
-  }, [otherUserId, otherUserBio]);
+  }, [otherUserId, otherUserBio, otherUserShowBioInFeed]);
 
   useEffect(() => {
     loadUserPhotos();
@@ -168,11 +174,11 @@ export default function AvatarViewScreen() {
           fallbackPhoto={fallbackPhoto}
         />
         
-        {/* Info icon for bio - show if user has bio and current user has show_bio_in_feed enabled */}
-        {/* In chat context, we show bio if available and current user allows it */}
+        {/* Info icon for bio - show if other user has bio and show_bio_in_feed enabled */}
+        {/* The icon visibility depends only on the other user's show_bio_in_feed setting */}
         {otherUserProfile?.bio && 
-         typeof currentUserProfile?.show_bio_in_feed === 'boolean' &&
-         currentUserProfile?.show_bio_in_feed === true && (
+         typeof otherUserProfile?.show_bio_in_feed === 'boolean' &&
+         otherUserProfile?.show_bio_in_feed === true && (
           <TouchableOpacity
             style={styles.infoIconContainer}
             onPress={() => setShowBioPopup(true)}

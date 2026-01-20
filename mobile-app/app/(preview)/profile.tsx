@@ -19,6 +19,11 @@ export default function PreviewProfileScreen() {
     router.push('/(auth)/register/step3');
   };
 
+  const handleSignIn = () => {
+    exitPreview();
+    router.push('/(auth)/login');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
@@ -37,6 +42,15 @@ export default function PreviewProfileScreen() {
         >
           <Text style={styles.registerButtonText}>
             Create free account
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.signInButton}
+          onPress={handleSignIn}
+        >
+          <Text style={styles.signInButtonText}>
+            Sign in
           </Text>
         </TouchableOpacity>
 
@@ -86,6 +100,22 @@ const styles = StyleSheet.create({
   },
   registerButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  signInButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    padding: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    minWidth: 280,
+    borderWidth: 1,
+    borderColor: '#F45C5C',
+    marginTop: 12,
+  },
+  signInButtonText: {
+    color: '#F45C5C',
     fontSize: 16,
     fontWeight: 'bold',
   },

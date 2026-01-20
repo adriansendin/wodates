@@ -21,6 +21,7 @@ type MatchOverview = Match & {
     birthDate?: string | null;
     gender?: string | null;
     isBot?: boolean;
+    show_bio_in_feed?: boolean | null;
   } | null;
   lastMessage?: Message;
   unreadCount: number;
@@ -32,6 +33,7 @@ type UserRow = {
   birthDate: string | null;
   gender: string | null;
   is_bot: boolean | null;
+  show_bio_in_feed: boolean | null;
 };
 
 type AuthUserRow = {
@@ -191,6 +193,7 @@ export class MatchOverviewService {
                 birthDate: otherUserRow.birthDate,
                 gender: otherUserRow.gender,
                 isBot: otherUserRow.is_bot ?? false,
+                show_bio_in_feed: otherUserRow.show_bio_in_feed,
               }
             : null,
         lastMessage: lastMessage ?? undefined,

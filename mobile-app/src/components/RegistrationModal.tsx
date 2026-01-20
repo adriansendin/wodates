@@ -14,6 +14,7 @@ interface RegistrationModalProps {
   onClose: () => void;
   onRegister: () => void;
   source: RegistrationSource;
+  onSignIn?: () => void;
 }
 
 const getModalContent = (source: RegistrationSource) => {
@@ -54,6 +55,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   onClose,
   onRegister,
   source,
+  onSignIn,
 }) => {
   const content = getModalContent(source);
 
@@ -76,6 +78,15 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
             >
               <Text style={styles.primaryButtonText}>{content.primaryButton}</Text>
             </TouchableOpacity>
+
+            {onSignIn && (
+              <TouchableOpacity
+                style={styles.signInButton}
+                onPress={onSignIn}
+              >
+                <Text style={styles.signInButtonText}>Sign in</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.secondaryButton}
@@ -132,6 +143,19 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  signInButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F45C5C',
+  },
+  signInButtonText: {
+    color: '#F45C5C',
     fontSize: 16,
     fontWeight: 'bold',
   },

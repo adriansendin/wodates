@@ -23,6 +23,7 @@ const MatchUserSchema = z
     birthDate: z.string().nullable().optional(),
     gender: z.string().nullable().optional(),
     isBot: z.boolean().optional(),
+    show_bio_in_feed: z.boolean().nullable().optional(),
   })
   .nullable();
 

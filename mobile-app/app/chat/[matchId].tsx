@@ -1269,9 +1269,10 @@ export default function ChatScreen() {
   }, [blockApi, matchId, otherUserId, router, tokens?.accessToken]);
 
   const handleAvatarPress = useCallback(() => {
-    // Get match to access otherUser bio
+    // Get match to access otherUser bio and show_bio_in_feed
     const currentMatch = matchId ? matches.find(m => m.id === matchId) : null;
     const otherUserBio = currentMatch?.otherUser?.bio;
+    const otherUserShowBioInFeed = currentMatch?.otherUser?.show_bio_in_feed;
 
     router.push({
       pathname: '/chat/avatar-view',
@@ -1280,6 +1281,9 @@ export default function ChatScreen() {
         name: otherUserName ?? 'User',
         otherUserId: otherUserId ?? '',
         otherUserBio: otherUserBio ?? '',
+        otherUserShowBioInFeed: otherUserShowBioInFeed !== undefined && otherUserShowBioInFeed !== null 
+          ? String(otherUserShowBioInFeed) 
+          : '',
       },
     });
   }, [photoUrl, otherUserName, otherUserId, matchId, matches, router]);
