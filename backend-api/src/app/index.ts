@@ -105,6 +105,21 @@ async function buildApp() {
 
   // Error handler for validation errors
   fastify.setErrorHandler((error, request, reply) => {
+    // Handle unsupported media type errors (415)
+    if (
+      error.statusCode === 415 ||
+      (error as { code?: string }).code === 'FST_ERR_CTP_INVALID_MEDIA_TYPE'
+    ) {
+      const contentType = request.headers['content-type'] || 'not provided';
+      request.log.error(
+        { err: error, contentType },
+        'Unsupported media type error'
+      );
+      return reply.status(415).send({
+        error: 'UNSUPPORTED_MEDIA_TYPE',
+        message: 'Use Content-Type: application/json',
+      });
+    }
     if (error.validation) {
       return reply.status(400).send({
         error: 'VALIDATION_ERROR',

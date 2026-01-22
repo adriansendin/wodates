@@ -322,8 +322,7 @@ export class UsersController {
   }
 
   async generateProfile(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      request.log.info({ userId: request.user?.id }, '[generate-profile] START');
+    try {      
       const authUser = request.user;
       if (!authUser) {
         throw new UnauthorizedError('Missing authenticated user');
