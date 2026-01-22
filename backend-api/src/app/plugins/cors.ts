@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 
 export async function registerCors(fastify: FastifyInstance) {
   const defaultOrigins = [
+    'https://wodates.com',
+    'https://www.wodates.com',
     'http://localhost:8080',
     'http://localhost:8081',
     'http://localhost:19006',
