@@ -25,9 +25,9 @@ class GenerateEmbeddingResponse(BaseModel):
 
     embedding: list[float] = Field(
         ...,
-        description="Vector embedding (768-dimensional for multilingual-e5-base)",
+        description="Vector embedding (1536-dimensional for OpenAI text-embedding-3-small, 768 for multilingual-e5-base)",
     )
     dimension: int = Field(
-        default=768,
-        description="Embedding dimension (fixed at 768 for multilingual-e5-base)",
+        default=1536,
+        description="Embedding dimension (1536 for OpenAI text-embedding-3-small, 768 for multilingual-e5-base)",
     )

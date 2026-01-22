@@ -6,7 +6,7 @@ Handles generation of human-readable explanations for user affinity.
 
 from app.core.settings import settings
 from app.llm.llm_client import LLMClient
-from app.llm.ollama_client import OllamaClient
+from app.llm.llm_factory import create_llm_client
 from app.schemas.explanations import (
     GenerateExplanationRequest,
     GenerateExplanationResponse,
@@ -50,9 +50,9 @@ class ExplanationService:
         Initialize the explanation service.
 
         Args:
-            llm_client: LLM client implementation (defaults to OllamaClient)
+            llm_client: LLM client implementation (defaults to factory-created client)
         """
-        self.llm_client: LLMClient = llm_client or OllamaClient()
+        self.llm_client: LLMClient = llm_client or create_llm_client()
 
     async def generate_explanation(
         self, request: GenerateExplanationRequest
@@ -76,11 +76,21 @@ class ExplanationService:
             prompt += f"\n\nNota: El score de afinidad calculado es {request.affinity_score:.2f}."
 
         # Generate explanation using LLM (using protocol-compliant parameters)
+        # Provider-aware: use appropriate settings based on LLM_PROVIDER
+        is_gemini = settings.llm_provider.lower() == "gemini"
         explanation_text = await self.llm_client.chat(
             messages=[{"role": "user", "content": prompt}],
-            temperature=settings.ollama_temperature,
-            max_tokens=settings.ollama_num_predict,  # Protocol uses max_tokens
-            top_p=settings.ollama_top_p,
+            temperature=(
+                settings.gemini_temperature
+                if is_gemini
+                else settings.ollama_temperature
+            ),
+            max_tokens=(
+                settings.gemini_max_output_tokens
+                if is_gemini
+                else settings.ollama_num_predict
+            ),
+            top_p=settings.ollama_top_p,  # Gemini ignores this, but harmless to pass
         )
 
         # Extract key points (simple extraction - can be enhanced)

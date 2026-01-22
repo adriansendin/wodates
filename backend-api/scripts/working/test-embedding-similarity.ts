@@ -13,6 +13,7 @@ import * as dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { normalizeEmbedding } from '../../src/utils/embedding-utils';
 
 // Load .env from backend-api directory
 const __filename = fileURLToPath(import.meta.url);
@@ -27,7 +28,7 @@ type SupabaseConfig = {
 
 const USER_A_ID = '1806d6c0-9fd3-401d-b602-e0b474694cbe';
 const USER_B_ID = '27322fa5-a727-4b86-a136-83fc71c6e47c';
-const EXPECTED_DIMENSION = 768;
+const EXPECTED_DIMENSION = 1536;
 const NORMALIZATION_THRESHOLD = 0.01; // Consider normalized if ||v|| is within 1.0 ± 0.01
 
 function getSupabaseConfig(): SupabaseConfig {
@@ -44,27 +45,11 @@ function getSupabaseConfig(): SupabaseConfig {
 }
 
 function parseEmbedding(embedding: unknown): number[] {
-  if (!embedding) {
-    throw new Error('Embedding is null or undefined');
+  const normalized = normalizeEmbedding(embedding);
+  if (!normalized) {
+    throw new Error('Embedding is null, undefined, or could not be normalized');
   }
-
-  if (Array.isArray(embedding)) {
-    return embedding;
-  }
-
-  if (typeof embedding === 'string') {
-    try {
-      const parsed = JSON.parse(embedding);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-      throw new Error('Embedding string is not a valid JSON array');
-    } catch (error) {
-      throw new Error(`Failed to parse embedding string: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
-  throw new Error(`Embedding has unexpected type: ${typeof embedding}`);
+  return normalized;
 }
 
 function calculateMagnitude(vector: number[]): number {

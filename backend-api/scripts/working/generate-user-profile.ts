@@ -11,6 +11,7 @@
  *   npx tsx scripts/working/generate-user-profile.ts 8e1139a4-e3ec-4e4c-964b-a98ad5417f71
  */
 
+/// <reference types="node" />
 import 'dotenv/config';
 import { DocLoveHelper } from '../../src/app/services/doc-love-helper';
 import { SupabaseMatchRepository } from '../../src/data/repositories/SupabaseMatchRepository';
@@ -20,7 +21,6 @@ import { SupabaseUserAIProfileRepository } from '../../src/data/repositories/Sup
 import { GetAllUserChats } from '../../src/domain/use-cases/chat/GetAllUserChats';
 import { GetUnprocessedMessages } from '../../src/domain/use-cases/chat/GetUnprocessedMessages';
 import { GenerateUserProfileFromChats } from '../../src/domain/use-cases/chat/GenerateUserProfileFromChats';
-import { createSummarizerModel } from '../../src/app/ai/core/config';
 
 type SupabaseConfig = {
   url: string;
@@ -106,36 +106,17 @@ async function main() {
       logger
     );
 
-    // Initialize SummarizerModel
-    console.log('🤖 Initializing AI models...');
-    
-    // Debug: Show environment variables
-    if (process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME) {
-      console.log(`   📝 AI_MODEL_PROFILE_CHATS_TO_RESUME: ${process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME}`);
-    } else {
-      console.log(`   ⚠️  AI_MODEL_PROFILE_CHATS_TO_RESUME not set, using fallback`);
-    }
-    if (process.env.AI_MODEL_PROFILE_MERGE_RESUMES) {
-      console.log(`   📝 AI_MODEL_PROFILE_MERGE_RESUMES: ${process.env.AI_MODEL_PROFILE_MERGE_RESUMES}`);
-    } else {
-      console.log(`   ⚠️  AI_MODEL_PROFILE_MERGE_RESUMES not set, using fallback`);
-    }
-    if (process.env.AI_MODEL_DOC_LOVE) {
-      console.log(`   📝 AI_MODEL_DOC_LOVE: ${process.env.AI_MODEL_DOC_LOVE}`);
-    } else {
-      console.log(`   ⚠️  AI_MODEL_DOC_LOVE not set, using default`);
-    }
-    
-    const summarizerModel = createSummarizerModel(logger);
-    console.log(`✅ Using model for chats to resume: ${summarizerModel.name} (${summarizerModel.model})\n`);
+    // Note: AI models are now handled internally via ai-service
+    // No need to initialize models manually - GenerateUserProfileFromChats uses AiServiceProfileClient
+    console.log('🤖 Using ai-service for profile generation...');
+    console.log('   All AI operations are handled by ai-service HTTP API\n');
 
     // Initialize GenerateUserProfileFromChats use case
+    // Constructor accepts: getAllUserChats, userAIProfileRepository, userRepository, logger
     const generateUserProfile = new GenerateUserProfileFromChats(
       getAllUserChats,
       userAIProfileRepository,
       userRepository,
-      summarizerModel,
-      docLoveHelper,
       logger
     );
 
@@ -160,7 +141,8 @@ async function main() {
       process.exit(1);
     }
 
-    const summary = result.data;
+    // TypeScript type guard: after checking success, we know result is Success<string>
+    const summary = result.success ? result.data : '';
 
     if (summary === 'No unprocessed chats to analyze') {
       console.log('ℹ️  No unprocessed chats found for this user.');

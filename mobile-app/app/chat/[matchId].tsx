@@ -355,6 +355,8 @@ export default function ChatScreen() {
   const lastLoadTimeRef = useRef<number>(0);
   const loadMessagesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const matchHeartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const markAsReadIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastMarkAsReadTimeRef = useRef<number>(0);
   
   // Latency instrumentation: track message send time and receive time
   const messageSendTimesRef = useRef<Map<string, number>>(new Map()); // messageId -> sendTimestamp
@@ -390,6 +392,7 @@ export default function ChatScreen() {
     oldestMessageCursorRef.current = null;
     hasMarkedAsReadRef.current = false;
     isLoadingMessagesRef.current = false;
+    lastMarkAsReadTimeRef.current = 0; // Reset mark-as-read timer for new chat
     setHasMoreMessages(true);
     setIsLoadingOlder(false);
     userClearedInputRef.current = false; // Reset clear flag for new chat
@@ -691,15 +694,26 @@ export default function ChatScreen() {
         }
       }
 
-      // Mark messages as read when opening the chat (only once on initial load)
-      if (isInitialLoad.current && currentToken && activeChatSession.canMarkAsRead()) {
+      // Mark messages as read:
+      // 1. When opening the chat (initial load)
+      // 2. When new messages arrive while user is viewing the chat
+      // Note: Periodic marking is handled by a separate interval
+      const shouldMarkAsRead = 
+        (isInitialLoad.current || hasNewMessage) && 
+        currentToken && 
+        activeChatSession.canMarkAsRead();
+      
+      if (shouldMarkAsRead) {
         activeChatSession.markAsReadDone();
         hasMarkedAsReadRef.current = true;
+        lastMarkAsReadTimeRef.current = Date.now();
         // Mark as read with current timestamp to ensure server has the exact read time
         const readAt = new Date();
         matchApiRef.current.markAsRead(currentMatchId, currentToken, readAt).catch((error) => {
           console.error('[ChatScreen] Failed to mark messages as read:', error);
-          // Log error but don't block UI
+          // Reset flag on error so we can retry
+          activeChatSession.markedAsRead = false;
+          hasMarkedAsReadRef.current = false;
         });
       }
     } catch (error) {
@@ -880,6 +894,39 @@ export default function ChatScreen() {
       }
     }, pollInterval);
     
+    // Periodically mark messages as read while user is viewing the chat
+    // This ensures that messages are marked as read even if user doesn't interact
+    // Mark every 10 seconds while chat is active
+    const markAsReadInterval = setInterval(() => {
+      const currentToken = tokensRef.current;
+      const currentMatchId = matchIdRef.current;
+      const now = Date.now();
+      
+      // Only mark if:
+      // 1. Chat is active and not in initial load
+      // 2. At least 5 seconds have passed since last mark (to avoid too frequent calls)
+      // 3. User is viewing the chat (session is active)
+      // Note: We don't check canMarkAsRead() here because we want to mark periodically
+      // even if we've already marked before (to update the timestamp)
+      if (
+        currentToken && 
+        currentMatchId && 
+        !isInitialLoad.current && 
+        activeChatSession.isActive &&
+        activeChatSession.matchId === currentMatchId &&
+        (now - lastMarkAsReadTimeRef.current) >= 5000
+      ) {
+        debugLog(`[ChatScreen] Periodically marking messages as read for matchId: ${currentMatchId}`);
+        lastMarkAsReadTimeRef.current = now;
+        const readAt = new Date();
+        matchApiRef.current.markAsRead(currentMatchId, currentToken, readAt).catch((error) => {
+          console.error('[ChatScreen] Failed to periodically mark messages as read:', error);
+        });
+      }
+    }, 10000); // Check every 10 seconds
+    
+    markAsReadIntervalRef.current = markAsReadInterval;
+    
     // Mark as read when component unmounts (user leaves chat)
     return () => {
       const componentId = `ChatScreen-${componentInstanceId.current}`;
@@ -890,18 +937,32 @@ export default function ChatScreen() {
         clearTimeout(loadMessagesTimeoutRef.current);
         loadMessagesTimeoutRef.current = null;
       }
-      // Clear heartbeat interval
+      // Clear intervals
       if (matchHeartbeatIntervalRef.current) {
         clearInterval(matchHeartbeatIntervalRef.current);
         matchHeartbeatIntervalRef.current = null;
       }
+      if (interval) {
+        clearInterval(interval);
+      }
+      if (markAsReadIntervalRef.current) {
+        clearInterval(markAsReadIntervalRef.current);
+        markAsReadIntervalRef.current = null;
+      }
       // End chat session on unmount
       activeChatSession.endSession();
-      // Mark messages as read when leaving the chat (only if not already marked)
+      // Clear mark-as-read interval
+      if (markAsReadIntervalRef.current) {
+        clearInterval(markAsReadIntervalRef.current);
+        markAsReadIntervalRef.current = null;
+      }
+      
+      // Always mark messages as read when leaving the chat (to ensure last viewed messages are marked)
       const currentToken = tokensRef.current;
       const currentMatchId = matchIdRef.current;
-      if (currentToken && currentMatchId && !hasMarkedAsReadRef.current && activeChatSession.canMarkAsRead()) {
-        activeChatSession.markAsReadDone();
+      if (currentToken && currentMatchId) {
+        // Reset the flag to allow marking as read
+        activeChatSession.markedAsRead = false;
         // Mark as read with current timestamp
         const readAt = new Date();
         matchApiRef.current.markAsRead(currentMatchId, currentToken, readAt).catch((error) => {

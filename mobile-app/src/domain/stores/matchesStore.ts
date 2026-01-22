@@ -4,8 +4,9 @@ import { User } from '../entities/User';
 import { Message } from '../entities/Message';
 
 export type MatchUser = Pick<User, 'id' | 'name'> &
-  Partial<User> & {
+  Partial<Omit<User, 'id' | 'name'>> & {
     isBot?: boolean;
+    show_bio_in_feed?: boolean | null;
   };
 
 export interface MatchWithUser extends Match {

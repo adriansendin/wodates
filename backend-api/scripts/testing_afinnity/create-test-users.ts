@@ -35,6 +35,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import { normalizeEmbedding } from '../../src/utils/embedding-utils';
 import { SupabaseAuthService } from '../../src/app/services/supabase-auth-service';
 import { RegisterRequest } from '../../src/domain/entities/Auth';
 import { AIConfig } from '../../src/app/ai/ai-settings';
@@ -265,32 +266,6 @@ async function getTopAffinityUsers(
   cosine_similarity: number;
   affinity_pct: number;
 }>> {
-  /**
-   * Parses embedding from various formats (array, JSON string, or pgvector format)
-   */
-  const parseEmbedding = (embedding: any): number[] | null => {
-    if (!embedding) return null;
-    
-    // If already an array of numbers
-    if (Array.isArray(embedding)) {
-      return embedding;
-    }
-    
-    // If it's a string, try to parse as JSON
-    if (typeof embedding === 'string') {
-      try {
-        const parsed = JSON.parse(embedding);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      } catch {
-        // Not valid JSON
-      }
-    }
-    
-    return null;
-  };
-
   // Get target user's embedding
   const { data: profileData, error: profileError } = await adminClient
     .from('user_ai_profiles')
@@ -303,7 +278,7 @@ async function getTopAffinityUsers(
     throw new Error(`Target user ${targetUserId} not found or has no embedding: ${profileError.message}`);
   }
 
-  const targetEmbeddingArray = parseEmbedding(profileData?.summary_embedding);
+  const targetEmbeddingArray = normalizeEmbedding(profileData?.summary_embedding);
   if (!targetEmbeddingArray) {
     console.error(`   [DEBUG] Target user ${targetUserId} has no embedding or could not parse it`);
     throw new Error(`Target user ${targetUserId} not found or has no embedding`);
@@ -358,7 +333,7 @@ async function getTopAffinityUsers(
   }> = [];
 
   for (const r of (allProfiles || [])) {
-    const embedding = parseEmbedding(r.summary_embedding);
+    const embedding = normalizeEmbedding(r.summary_embedding);
     if (!embedding) {
       console.warn(`   [DEBUG] Skipping user ${r.user_id}: embedding could not be parsed (type: ${typeof r.summary_embedding})`);
       continue;

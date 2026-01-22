@@ -41,3 +41,6 @@ node_modules/
 
 # OS
 Thumbs.db
+
+# Metro workaround - icon file copied to root for development
+icon-192.png

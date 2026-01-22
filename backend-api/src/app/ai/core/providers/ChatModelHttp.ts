@@ -22,6 +22,11 @@ export class ChatModelHttp implements ChatModel {
   }
 
   async generateChat(request: ChatRequest): Promise<ChatResponse> {
+    // Global kill-switch: abort immediately if AI is disabled
+    if (!AIConfig.enabled) {
+      throw new Error('AI functionality is disabled (AI_ENABLED=false)');
+    }
+
     try {
       if (this.logger) {
         this.logger.debug(
@@ -79,7 +84,7 @@ export class ChatModelHttp implements ChatModel {
     const userContext = request.userContext || {};
     const activeMatches = request.activeMatches || [];
 
-    let systemPrompt = `${AIConfig.prompt.systemInstructions}\n\n`;
+    let systemPrompt = `${AIConfig.prompt.systemInstructions()}\n\n`;
 
     if (userContext.name) {
       systemPrompt += `El usuario se llama ${userContext.name}.\n`;

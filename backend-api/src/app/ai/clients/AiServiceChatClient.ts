@@ -41,11 +41,16 @@ export class AiServiceChatClient {
    *
    * @param request - Chat request with messages and optional system prompt
    * @returns Generated chat response
-   * @throws Error if the HTTP request fails
+   * @throws Error if the HTTP request fails or AI is disabled
    */
   async generateChat(
     request: AiServiceChatRequest
   ): Promise<AiServiceChatResponse> {
+    // Global kill-switch: abort immediately if AI is disabled
+    if (!AIConfig.enabled) {
+      throw new Error('AI functionality is disabled (AI_ENABLED=false)');
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 

@@ -9,7 +9,7 @@ import { AiServiceEmbeddingClient } from '../clients/AiServiceEmbeddingClient';
  *
  * Architecture:
  * - Reads summary (text column containing plain text) from user_ai_profiles table
- * - Generates 768-dimensional embedding using ai-service HTTP API
+ * - Generates embedding using ai-service HTTP API (dimension matches AIModelConstants.EMBEDDING.DIMENSION)
  * - Updates summary_embedding and summary_updated_at columns
  * - Handles errors gracefully (logs to console, preserves existing state)
  */

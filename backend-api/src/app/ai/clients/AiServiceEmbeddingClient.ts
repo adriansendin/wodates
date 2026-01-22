@@ -1,4 +1,4 @@
-import { AIConfig } from '../ai-settings';
+import { AIConfig, AIModelConstants } from '../ai-settings';
 
 /**
  * AiServiceEmbeddingClient - HTTP client for ai-service embedding operations
@@ -35,12 +35,17 @@ export class AiServiceEmbeddingClient {
    * Generates a vector embedding from text
    *
    * @param request - Embedding generation request with text
-   * @returns Generated embedding vector (768-dimensional)
-   * @throws Error if the HTTP request fails
+   * @returns Generated embedding vector (dimension matches AIModelConstants.EMBEDDING.DIMENSION)
+   * @throws Error if the HTTP request fails or AI is disabled
    */
   async generateEmbedding(
     request: AiServiceGenerateEmbeddingRequest
   ): Promise<AiServiceGenerateEmbeddingResponse> {
+    // Global kill-switch: abort immediately if AI is disabled
+    if (!AIConfig.enabled) {
+      throw new Error('AI functionality is disabled (AI_ENABLED=false)');
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
@@ -83,8 +88,8 @@ export class AiServiceEmbeddingClient {
         );
       }
 
-      // Validate embedding dimension (should be 768 for multilingual-e5-base)
-      const expectedDimension = 768;
+      // Validate embedding dimension (uses AIModelConstants.EMBEDDING.DIMENSION)
+      const expectedDimension = AIModelConstants.EMBEDDING.DIMENSION;
       if (data.embedding.length !== expectedDimension) {
         throw new Error(
           `ai-service /embeddings/generate returned embedding with dimension ${data.embedding.length}, but expected ${expectedDimension}`

@@ -5,7 +5,8 @@ Handles generation and merging of user profiles from conversations.
 """
 
 from app.core.settings import settings
-from app.llm.ollama_client import OllamaClient
+from app.llm.llm_client import LLMClient
+from app.llm.llm_factory import create_llm_client
 from app.schemas.profile import (
     GenerateProfileRequest,
     GenerateProfileResponse,
@@ -105,8 +106,14 @@ Ahora genera SOLO el perfil final fusionado siguiendo todas estas reglas.
 class ProfileService:
     """Service for profile operations."""
 
-    def __init__(self, llm_client: OllamaClient | None = None):
-        self.llm_client = llm_client or OllamaClient()
+    def __init__(self, llm_client: LLMClient | None = None):
+        """
+        Initialize the profile service.
+
+        Args:
+            llm_client: LLM client implementation (defaults to factory-created client)
+        """
+        self.llm_client: LLMClient = llm_client or create_llm_client()
 
     async def generate_profile(
         self, request: GenerateProfileRequest
@@ -131,13 +138,20 @@ class ProfileService:
         # Build the full prompt
         full_prompt = f"{CREATE_PROFILE_PROMPT}\n\nConversaciones:\n{conversation_text}"
 
-        # Generate profile using LLM with summarization parameters
+        # Generate profile using LLM with PROFILE_RESUME-specific parameters
+        # Provider-aware: use appropriate timeout based on LLM_PROVIDER
+        is_gemini = settings.llm_provider.lower() == "gemini"
         profile_text = await self.llm_client.chat(
             messages=[{"role": "user", "content": full_prompt}],
-            model=settings.ollama_model,  # Can be overridden with profile-specific model
-            temperature=settings.ollama_summarizer_temperature,
-            max_tokens=settings.ollama_summarizer_num_predict,  # num_predict mapped to max_tokens
-            timeout=settings.ollama_timeout / 1000,
+            model=None,  # Use client default model
+            temperature=settings.profile_resume_temperature,
+            max_tokens=settings.profile_resume_max_output_tokens,
+            top_p=settings.profile_resume_top_p,
+            timeout=(
+                settings.gemini_timeout
+                if is_gemini
+                else settings.ollama_timeout
+            ) / 1000,
         )
 
         return GenerateProfileResponse(profile=profile_text.strip())
@@ -159,13 +173,20 @@ class ProfileService:
             "{PROFILE_1}", request.consolidated_profile
         ).replace("{PROFILE_2}", request.incremental_profile)
 
-        # Generate merged profile using LLM with merge-specific parameters
+        # Generate merged profile using LLM with PROFILE_MERGE-specific parameters
+        # Provider-aware: use appropriate timeout based on LLM_PROVIDER
+        is_gemini = settings.llm_provider.lower() == "gemini"
         merged_profile = await self.llm_client.chat(
             messages=[{"role": "user", "content": merge_prompt}],
-            model=settings.ollama_model,  # Can be overridden with merge-specific model
-            temperature=settings.ollama_merge_temperature,
-            max_tokens=settings.ollama_merge_num_predict,  # num_predict mapped to max_tokens
-            timeout=settings.ollama_merge_timeout / 1000,  # Use merge-specific timeout (convert ms to seconds)
+            model=None,  # Use client default model
+            temperature=settings.profile_merge_temperature,
+            max_tokens=settings.profile_merge_max_output_tokens,
+            top_p=settings.profile_merge_top_p,
+            timeout=(
+                settings.gemini_timeout
+                if is_gemini
+                else settings.ollama_merge_timeout
+            ) / 1000,  # Use merge-specific timeout (convert ms to seconds)
         )
 
         return MergeProfilesResponse(merged_profile=merged_profile.strip())

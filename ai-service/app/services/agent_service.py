@@ -6,7 +6,7 @@ Handles generation of next questions in conversations.
 
 from app.core.settings import settings
 from app.llm.llm_client import LLMClient
-from app.llm.ollama_client import OllamaClient
+from app.llm.llm_factory import create_llm_client
 from app.schemas.agent import NextQuestionRequest, NextQuestionResponse
 
 # System prompt for Doc Love agent (from backend configuration)
@@ -51,9 +51,9 @@ class AgentService:
         Initialize the agent service.
 
         Args:
-            llm_client: LLM client implementation (defaults to OllamaClient)
+            llm_client: LLM client implementation (defaults to factory-created client)
         """
-        self.llm_client: LLMClient = llm_client or OllamaClient()
+        self.llm_client: LLMClient = llm_client or create_llm_client()
 
     async def generate_next_question(
         self, request: NextQuestionRequest
@@ -82,12 +82,13 @@ class AgentService:
                 system_prompt += "\n\nContexto del usuario:\n" + "\n".join(context_parts)
 
         # Generate response using LLM (using protocol-compliant parameters)
+        # Use DOC_LOVE specific configuration
         response_text = await self.llm_client.chat(
             messages=messages,
             system=system_prompt,
-            temperature=settings.ollama_temperature,
-            max_tokens=settings.ollama_num_predict,  # Protocol uses max_tokens
-            top_p=settings.ollama_top_p,
+            temperature=settings.doclove_temperature,
+            max_tokens=settings.doclove_max_output_tokens,
+            top_p=settings.doclove_top_p,
         )
 
         # Extract question (in a real implementation, this might parse the response)

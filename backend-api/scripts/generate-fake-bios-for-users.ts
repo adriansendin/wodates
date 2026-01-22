@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 /**
  * Script to generate fake biographies for users with null summary
  * 
@@ -17,11 +19,10 @@
  */
 
 import 'dotenv/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { DocLoveHelper } from '../src/app/services/doc-love-helper';
 import { SupabaseMatchRepository } from '../src/data/repositories/SupabaseMatchRepository';
 import { SupabaseMessageRepository } from '../src/data/repositories/SupabaseMessageRepository';
-import { AIConfig } from '../src/app/ai/ai-settings';
 
 type SupabaseConfig = {
   url: string;
@@ -33,8 +34,7 @@ type SupabaseConfig = {
  */
 async function generateFakeBiography(
   baseUrl: string,
-  model: string,
-  userId: string
+  model: string
 ): Promise<string> {
   // Generate random age between 25 and 45
   const age = Math.floor(Math.random() * 21) + 25;
@@ -236,6 +236,10 @@ async function getOrCreateDocLoveMatch(
     );
   }
 
+  if (!matchResult.data || !matchResult.data.id) {
+    throw new Error('Match created but missing ID');
+  }
+
   return matchResult.data.id;
 }
 
@@ -277,6 +281,10 @@ async function saveBiographyAsChat(
   for (let i = 0; i < sentences.length; i++) {
     const sentence = sentences[i];
     
+    if (!sentence) {
+      continue;
+    }
+    
     if (currentMessage.length + sentence.length < 200 && i < sentences.length - 1) {
       // Add sentence to current message
       currentMessage += (currentMessage ? ' ' : '') + sentence + '.';
@@ -296,10 +304,15 @@ async function saveBiographyAsChat(
 
   // If we only have one message, save it directly
   if (messages.length === 1) {
+    const firstMessage = messages[0];
+    if (!firstMessage) {
+      throw new Error('No messages to save');
+    }
+    
     const result = await messageRepository.create({
       matchId: chatId,
       senderId: userId,
-      content: messages[0],
+      content: firstMessage,
     });
 
     if (!result.success) {
@@ -310,10 +323,15 @@ async function saveBiographyAsChat(
 
   // Save multiple messages with small delays to simulate conversation
   for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+    if (!message) {
+      continue;
+    }
+    
     const result = await messageRepository.create({
       matchId: chatId,
       senderId: userId,
-      content: messages[i],
+      content: message,
     });
 
     if (!result.success) {
@@ -342,13 +360,11 @@ function getSupabaseConfig(): SupabaseConfig {
 
 function getLLMConfig(): { baseUrl: string; model: string } {
   const baseUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
-  const model =
-    process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME ||
-    AIConfig.ollama.profileChatsToResumeModel;
+  const model = process.env.AI_MODEL_PROFILE_CHATS_TO_RESUME;
 
   if (!model) {
     throw new Error(
-      'AI_MODEL_PROFILE_CHATS_TO_RESUME is not set and no fallback model found'
+      'AI_MODEL_PROFILE_CHATS_TO_RESUME environment variable is required'
     );
   }
 
@@ -413,7 +429,13 @@ async function main() {
     let errorCount = 0;
 
     for (let i = 0; i < users.length; i++) {
-      const userId = users[i].user_id;
+      const user = users[i];
+      if (!user || !user.user_id) {
+        console.warn(`   ⚠️  Skipping user at index ${i}: missing user_id`);
+        continue;
+      }
+      
+      const userId = user.user_id;
       console.log(
         `\n[${i + 1}/${users.length}] Processing user: ${userId}`
       );
@@ -423,8 +445,7 @@ async function main() {
         console.log('   🤖 Generating fake biography...');
         const biography = await generateFakeBiography(
           llmConfig.baseUrl,
-          llmConfig.model,
-          userId
+          llmConfig.model
         );
         console.log(`   ✅ Biography generated (${biography.length} chars)`);
 

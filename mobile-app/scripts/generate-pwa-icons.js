@@ -55,9 +55,10 @@ async function main() {
 
   try {
     // Generate standard icons (any purpose)
+    const icon192Path = path.join(PUBLIC_ASSETS_DIR, 'icon-192.png');
     await generateIcon(
       iconPath,
-      path.join(PUBLIC_ASSETS_DIR, 'icon-192.png'),
+      icon192Path,
       192
     );
     await generateIcon(
@@ -77,6 +78,12 @@ async function main() {
       path.join(PUBLIC_ASSETS_DIR, 'icon-maskable-512.png'),
       512
     );
+
+    // Workaround: Copy icon-192.png to root for Metro bundler during development
+    // Metro tries to resolve this asset from the root directory
+    const rootIcon192Path = path.join(__dirname, '..', 'icon-192.png');
+    fs.copyFileSync(icon192Path, rootIcon192Path);
+    console.log(`✓ Copied icon-192.png to root (Metro workaround)`);
 
     console.log('\n✓ All PWA icons generated successfully!');
     console.log(`  Output directory: ${PUBLIC_ASSETS_DIR}`);

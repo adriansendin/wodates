@@ -11,6 +11,7 @@ import {
   NotFoundError,
 } from '../../domain/errors/DomainError';
 import { UserAIProfileRepository } from '../../domain/repositories/UserAIProfileRepository';
+import { normalizeEmbedding } from '../../utils/embedding-utils';
 
 type SupabaseConfig = {
   url: string;
@@ -48,7 +49,7 @@ export class SupabaseUserAIProfileRepository
         user_id: string;
         summary?: string | null;
         summary_incremental?: string | null;
-        summary_embedding?: string | null;
+        summary_embedding?: number[] | null;
       } = {
         user_id: profile.userId,
       };
@@ -62,9 +63,8 @@ export class SupabaseUserAIProfileRepository
       }
 
       if (profile.summaryEmbedding !== undefined) {
-        insertData.summary_embedding = profile.summaryEmbedding
-          ? JSON.stringify(profile.summaryEmbedding)
-          : null;
+        // Store as array directly for pgvector (Supabase converts to vector type)
+        insertData.summary_embedding = profile.summaryEmbedding || null;
       }
 
       const { data, error } = await this.client
@@ -139,7 +139,7 @@ export class SupabaseUserAIProfileRepository
       const updateData: {
         summary?: string | null;
         summary_incremental?: string | null;
-        summary_embedding?: string | null;
+        summary_embedding?: number[] | null;
         summary_updated_at?: string;
       } = {
         summary_updated_at: new Date().toISOString(),
@@ -154,9 +154,8 @@ export class SupabaseUserAIProfileRepository
       }
 
       if (update.summaryEmbedding !== undefined) {
-        updateData.summary_embedding = update.summaryEmbedding
-          ? JSON.stringify(update.summaryEmbedding)
-          : null;
+        // Store as array directly for pgvector (Supabase converts to vector type)
+        updateData.summary_embedding = update.summaryEmbedding || null;
       }
 
       const { data, error } = await this.client
@@ -217,19 +216,8 @@ export class SupabaseUserAIProfileRepository
   }
 
   private mapRowToProfile(row: UserAIProfileRow): UserAIProfile {
-    // Handle embedding - can be array or JSON string
-    let embedding: number[] | null = null;
-    if (row.summary_embedding !== null && row.summary_embedding !== undefined) {
-      if (typeof row.summary_embedding === 'string') {
-        try {
-          embedding = JSON.parse(row.summary_embedding);
-        } catch {
-          embedding = null;
-        }
-      } else {
-        embedding = row.summary_embedding;
-      }
-    }
+    // Handle embedding - normalize from various formats (array, JSON string, Postgres array)
+    const embedding = normalizeEmbedding(row.summary_embedding);
 
     // Summary fields are plain text, no parsing needed
     const summary =

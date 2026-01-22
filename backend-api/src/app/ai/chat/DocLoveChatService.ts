@@ -231,13 +231,13 @@ export class DocLoveChatService {
 
       // Log system prompt to verify it's being built correctly
       if (this.logger) {
+        const systemInstructions = AIConfig.prompt.systemInstructions();
         this.logger.info(
           {
             systemPromptLength: systemPrompt.length,
             systemPromptPreview: systemPrompt.substring(0, 200),
-            hasSystemInstructions: !!AIConfig.prompt.systemInstructions,
-            systemInstructionsLength:
-              AIConfig.prompt.systemInstructions?.length || 0,
+            hasSystemInstructions: !!systemInstructions,
+            systemInstructionsLength: systemInstructions?.length || 0,
             messagesCount: messages.length,
           },
           'Doc Love: System prompt built and ready to send to ai-service'
@@ -465,9 +465,10 @@ export class DocLoveChatService {
     }>
   ): string {
     // Verify systemInstructions exists and is not empty
+    const systemInstructions = AIConfig.prompt.systemInstructions();
     if (
-      !AIConfig.prompt.systemInstructions ||
-      AIConfig.prompt.systemInstructions.trim().length === 0
+      !systemInstructions ||
+      systemInstructions.trim().length === 0
     ) {
       if (this.logger) {
         this.logger.error(
@@ -477,7 +478,7 @@ export class DocLoveChatService {
       throw new Error('System instructions are missing or empty');
     }
 
-    let systemPrompt = `${AIConfig.prompt.systemInstructions}\n\n`;
+    let systemPrompt = `${systemInstructions}\n\n`;
 
     if (userContext?.name) {
       systemPrompt += `El usuario se llama ${userContext.name}.\n`;

@@ -6,7 +6,7 @@ Handles generation of chat responses from conversation messages.
 
 from app.core.settings import settings
 from app.llm.llm_client import LLMClient
-from app.llm.ollama_client import OllamaClient
+from app.llm.llm_factory import create_llm_client
 from app.schemas.chat import GenerateChatRequest, GenerateChatResponse
 
 
@@ -18,9 +18,9 @@ class ChatService:
         Initialize the chat service.
 
         Args:
-            llm_client: LLM client implementation (defaults to OllamaClient)
+            llm_client: LLM client implementation (defaults to factory-created client)
         """
-        self.llm_client: LLMClient = llm_client or OllamaClient()
+        self.llm_client: LLMClient = llm_client or create_llm_client()
 
     async def generate_chat(
         self, request: GenerateChatRequest
@@ -45,24 +45,36 @@ class ChatService:
 
         # Task-based routing: if task is provided, ai-service owns model selection
         # Backward compatibility: if no task, use existing behavior (request.model or default)
+        # Provider-aware: use appropriate model based on LLM_PROVIDER
+        is_gemini = settings.llm_provider.lower() == "gemini"
+        
         if request.task == "AFFINITY_SENTENCE":
             # Task-based: ai-service selects model and parameters internally
             # Ignore any client-sent model when task is present
-            model = settings.ollama_model_affinity
-            model_source = "AI_MODEL_AFFINITY (task: AFFINITY_SENTENCE)"
-            # Fast, low-risk parameters for affinity sentences
-            temperature = 0.3
-            max_tokens = 150
-            top_p = 0.7
-            timeout = settings.ollama_model_affinity_timeout / 1000  # Convert ms to seconds
+            # Use provider-appropriate default model (client will use its default if None)
+            model = None  # Let client use its default model
+            model_source = f"{settings.llm_provider} default (task: AFFINITY_SENTENCE)"
+            # Use AFFINITY-specific configuration
+            temperature = settings.affinity_temperature
+            max_tokens = settings.affinity_max_output_tokens
+            top_p = settings.affinity_top_p
+            timeout_ms = (
+                settings.gemini_timeout
+                if is_gemini
+                else settings.ollama_model_affinity_timeout
+            )
+            timeout = timeout_ms / 1000  # Convert ms to seconds
         else:
-            # Backward compatibility: use existing behavior
-            model = request.model or settings.ollama_model
-            model_source = "request" if request.model else "AI_MODEL_DOC_LOVE (default)"
-            temperature = settings.ollama_temperature
-            max_tokens = settings.ollama_num_predict
-            top_p = settings.ollama_top_p
-            timeout = settings.ollama_timeout / 1000  # Convert ms to seconds
+            # DOC_LOVE task (chat corto) - use DOC_LOVE specific configuration
+            model = request.model  # None means use client default
+            model_source = "request" if request.model else f"{settings.llm_provider} default"
+            temperature = settings.doclove_temperature
+            max_tokens = settings.doclove_max_output_tokens
+            top_p = settings.doclove_top_p
+            timeout_ms = (
+                settings.gemini_timeout if is_gemini else settings.ollama_timeout
+            )
+            timeout = timeout_ms / 1000  # Convert ms to seconds
 
         # Generate response using LLM
         try:

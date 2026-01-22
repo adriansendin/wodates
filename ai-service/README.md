@@ -84,6 +84,13 @@ ai-service/
 El servicio se configura mediante variables de entorno (con valores por defecto razonables):
 
 ```bash
+# LLM Provider (for chat/text generation)
+LLM_PROVIDER=gemini  # Options: 'ollama', 'gemini', 'openai'
+
+# Embeddings Provider (can be different from LLM provider)
+EMBEDDINGS_PROVIDER=openai  # Options: 'ollama', 'gemini', 'openai'
+# If not set, defaults to LLM_PROVIDER for backward compatibility
+
 # Ollama Configuration
 OLLAMA_URL=http://localhost:11434
 AI_MODEL_DOC_LOVE=llama3.2:1b
@@ -93,11 +100,28 @@ OLLAMA_TIMEOUT=60000
 # Embeddings
 OLLAMA_EMBEDDING_MODEL=yxchia/multilingual-e5-base
 OLLAMA_EMBEDDING_TIMEOUT=30000
-EMBEDDING_DIMENSION=768
+EMBEDDING_DIMENSION=1536  # 1536 for OpenAI text-embedding-3-small, 768 for multilingual-e5-base
+
+# OpenAI Configuration (for embeddings)
+OPENAI_API_KEY=sk-...
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_TIMEOUT=60000
+
+# Gemini Configuration (for chat/text)
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.0-flash-lite
+GEMINI_TIMEOUT=60000
 
 # CORS
 CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 ```
+
+### Provider Selection
+
+- **LLM_PROVIDER**: Controls chat/text generation (DOC_LOVE, PROFILE_CHATS_TO_RESUME, PROFILE_MERGE_RESUMES, AFFINITY_SENTENCE)
+- **EMBEDDINGS_PROVIDER**: Controls embedding generation (independent from LLM_PROVIDER)
+  - If not set, defaults to `LLM_PROVIDER` for backward compatibility
+  - Allows mixing providers (e.g., Gemini for chat, OpenAI for embeddings)
 
 Crea un archivo `.env` en la raíz del servicio para personalizar la configuración.
 

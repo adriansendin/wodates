@@ -25,13 +25,12 @@ export const AIModelConstants = {
    *
    * WARNING: Changing DEFAULT_MODEL or DIMENSION requires:
    * - Regenerating all existing embeddings in user_ai_profiles.summary_embedding
-   * - Updating database schema if dimension changes (vector(768) -> vector(NEW_DIM))
-   * - Updating all code that references the dimension (768)
+   * - Updating database schema if dimension changes (vector(1536) -> vector(NEW_DIM))
+   * - Updating all code that references the dimension (1536)
    */
-  // TODO: yxchia es un TRM, no un LLM. habría que cambiarlo por Alibaba GTE-multilingual-base
   EMBEDDING: {
-    DEFAULT_MODEL: 'yxchia/multilingual-e5-base',
-    DIMENSION: 768, // Fixed dimension for multilingual-e5-base
+    DEFAULT_MODEL: 'text-embedding-3-small',
+    DIMENSION: 1536, // Fixed dimension for OpenAI text-embedding-3-small
   },
 } as const;
 
@@ -39,6 +38,13 @@ export const AIModelConstants = {
  * AI Configuration - Single Source of Truth
  */
 export const AIConfig = {
+  /**
+   * Global AI kill-switch
+   * When false, all AI functionality is completely disabled
+   * No LLM calls, embeddings, or AI jobs will be executed
+   */
+  enabled: process.env.AI_ENABLED !== 'false', // Default to true if not set
+
   /**
    * Context configuration (used by DocLoveService)
    * Controls what context is included when generating AI responses
@@ -115,18 +121,17 @@ export const AIConfig = {
        * Base prompt template for affinity sentences
        * The backend will inject the user profiles into this template
        */
-      basePrompt: `Write EXACTLY 1 sentence (max 12 words) explaining why they might align.
+      basePrompt: `Write EXACTLY 1 sentence (max 20 words) explaining why they might align.
 
 RULE #1: Do NOT invent anything. Use ONLY information supported by BOTH profiles.
 
 Other rules:
+- NEVER mention shared location, city, neighborhood, or geographic proximity, even if both profiles clearly match on it.
 - A shared point may be the same theme expressed differently ONLY if clearly supported by BOTH.
 - Avoid names, companies, exact places, or sensitive details.
 - If fewer than 2 clear shared points, output exactly:
 Initial affinity is low—conversation will sharpen recommendations.
-- Output ONLY the sentence. No extra text. Do not explain reasoning.
-
-        `,
+- Output ONLY the sentence. No extra text. Do not explain reasoning.`,
 
       /**
        * Builds the complete prompt with user profiles
@@ -156,47 +161,176 @@ Now generate the sentence based strictly on these profiles.`;
      * System instructions for Doc Love
      * This is the core personality and behavior definition
      */
-    systemInstructions: `You are **Doc Love**, a tool designed to understand the user and help them find a compatible, serious long-term relationship.
-You are not a person and you do not have personal experiences, emotions, or a life of your own.
+    systemInstructions: (): string => {
+      const seedTopics = [
+        // Culture & curiosity
+        'books, series, films, podcasts, or content you enjoy lately',
+        'the last thing that really grabbed your attention (topic, book, series, channel)',
+        'a cultural plan you genuinely enjoy (concerts, museums, cinema, live shows)',
+        'a “different” plan you’d like to do soon, outside your usual routine',
+        'a niche interest you could talk about for hours',
+        'how curious you are day to day: learning vs comfort',
+        'your relationship with trying new things vs sticking to favourites',
+      
+        // Current life context
+        'what season of life you’re in right now (calm, intense, changing things)',
+        'what’s been taking most of your headspace lately (in a good way)',
+        'what gives your days meaning these months',
+        'what a normal week looks like for you right now',
+        'what you’d want someone to understand about your current pace',
+        'what kind of relationship pace realistically fits your life right now',
+        'what you want to change in your day-to-day over the next year',
+      
+        // Work & life direction
+        'what role work plays in your life (medium vs major)',
+        'what you enjoy most about your work or daily tasks',
+        'how you like to balance ambition and personal life',
+        'whether you prefer stability or change in life',
+        'what “good progress” looks like for you in the next year',
+        'what kind of life you picture in 2–3 years (pace, home, priorities)',
+        'how you handle busy periods vs quieter periods',
+      
+        // Friends & real social life
+        'your typical plan with friends (home, bar, activity, something different)',
+        'your social rhythm (often vs less often but meaningful)',
+        'how wide vs deep your circle is (inner circle vs many acquaintances)',
+        'what you value most in friendships (loyalty, humour, honesty, support)',
+        'your “role” in groups (organiser vs joiner vs glue)',
+        'how you feel after social plans (energised vs need to recharge)',
+      
+        // Family & close bonds
+        'who you feel closest to in your family',
+        'what family meals feel like (calm, intense, funny, quiet)',
+        'how your family handles closeness (talk it out vs each to their own)',
+        'a family tradition you’d want to keep long-term',
+        'how often you like seeing family (often vs sometimes but quality time)',
+        'what you learned from your family dynamics about relationships',
+      
+        // Home & living together
+        'your ideal home vibe (calm refuge vs lively and social)',
+        'your natural level of tidiness (tidy, organised chaos, depends)',
+        'your non-negotiables at home (quiet, cleanliness, cooking, music, routines)',
+        'your “cosy corner” at home and how you unwind',
+        'what would slowly annoy you when sharing a space',
+        'how you feel about living together (exciting vs big step)',
+        'how you like to share space (together but independent vs very blended)',
+      
+        // Everyday habits at home
+        'your night routine (screens, reading, sleep habits)',
+        'your minimum standard of order/cleanliness to feel comfortable',
+        'small daily rituals that make you feel settled',
+        'how you like mornings and evenings to feel',
+        'how you recharge after a long day',
+        'how you handle chores and responsibilities day to day',
+      
+        // Health & self-care
+        'a habit you’d like to improve this year',
+        'what self-care looks like for you (realistic, not ideal)',
+        'how you handle stress in practice (what actually helps)',
+        'your natural energy style (active vs slower pace)',
+        'whether you’re more of an early riser or night owl',
+        'what helps you feel grounded when life is chaotic',
+        'how you relate to health routines (easy vs effortful)',
+      
+        // Humour & how you enjoy life
+        'what reliably makes you laugh even when tired',
+        'your humour style (absurd, sarcastic, dark, silly, smart)',
+        'whether you warm up slowly or joke around quickly',
+        'playful teasing: enjoyable or annoying for you',
+        'a plan you always enjoy, no matter what',
+        'how you like to have fun without it feeling forced',
+      
+        // Communication
+        'your ideal messaging rhythm (daily vs more space)',
+        'what annoys you in chats (slow replies, one-word answers, too many messages)',
+        'your preference for texts vs voice notes vs calls',
+        'how you feel about small rituals like “good morning” texts',
+        'your pace preference: meet soon vs chat for a while first',
+        'how you like to resolve misunderstandings (fast vs need time)',
+        'what good communication feels like to you day to day',
+      
+        // Conflict & repair
+        'how you prefer to handle tension (talk now vs cool off first)',
+        'your “hard no’s” in conflict (raised voices, silence, sarcasm, blame)',
+        'what helps you feel safe during disagreements',
+        'how you repair after a bad moment (apology, space, action)',
+        'what you need from someone when you’re stressed or upset',
+      
+        // Boundaries & deal-breakers
+        'two behaviours that feel disrespectful to you in a relationship',
+        'what you need day to day to feel at ease (clarity, space, plans, messages)',
+        'a dynamic you never want to repeat from the past',
+        'what turns you off quickly when getting to know someone',
+        'a habit in someone else that would be hard to live with',
+        'your personal boundaries around time, space, and independence',
+      
+        // Commitment & long-term
+        'what “being serious” means to you after a few months',
+        'how you imagine building a life together (shared home vs separate homes)',
+        'your comfort with closeness vs independence long-term',
+        'what commitment looks like in practice for you (time, priorities, consistency)',
+      
+        // Dates & first impressions
+        'your ideal first date vibe (coffee, walk, dinner, something fun)',
+        'quick vibe-check vs longer first date: what suits you',
+        'whether you go deep early or keep it light at first',
+        'what you like to happen after a great first date',
+        'small signals that make you think “there’s something here”',
+      
+        // Nights out & downtime
+        'your default relaxed plan (quiet, outdoors, drinks, staying in)',
+        'going out dancing vs quiet conversation: what you prefer',
+        'your relationship with alcohol in social life (a lot vs almost none)',
+        'how you like to spend downtime when you’re low-energy',
+        'what a good weekend feels like for you (recharge vs plans)',
+      
+        // Money & spending style
+        'your spending style (saver, experiences, balanced)',
+        'how you like to plan spending (structured vs spontaneous)',
+        'simple plans vs treating yourself often: what feels natural',
+        'what you happily spend on without guilt',
+        'what you’d do with extra money tomorrow (save vs turn it into a plan)',
+      
+        // Pets & animals
+        'pets in your life (have, want, not for you)',
+        'dog person vs cat person vs neither',
+        'how you feel about living in a home with pets (plus vs hassle)',
+        'a funny or sweet animal story (if you have one)',
+        'whether someone being very into pets is a plus for you',
+      
+        // Relationship logistics & pace
+        'your ideal closeness rhythm (how many days a week you’d like to see a partner)',
+        'how local vs city-wide you like to live your life (neighbourhood vs whole city)',
+        'weekday plans vs mostly keeping plans for weekends',
+        'what travel time feels reasonable for meeting up',
+        'how you like to balance independence with togetherness',
+      ];
+      
 
-Language:
+      const getDocLoveSeedTopic = (): string => {
+        const randomIndex = Math.floor(Math.random() * seedTopics.length);
+        return seedTopics[randomIndex]!;
+      };
+
+      const seedTopic = getDocLoveSeedTopic();
+
+      return `You are Doc Love, a tool that helps understand the user to find a compatible, serious long-term relationship.
+You are not a person and you do not have personal experiences.
+
+For this turn, if the user message contains a clear topic, stay on that topic and ask one deeper follow-up question.
+If the user message is just a greeting, very short, or asks to change the question, start a new topic inspired by: ${seedTopic}.
+
+Rules:
 - Reply in the same language as the user.
+- Keep replies short: 1–3 sentences.
+- Ask exactly ONE clear question.
+- Do NOT introduce yourself unless explicitly asked.
+- If the user dislikes a question, do not repeat it; switch topic and ask a different question.
+- If the user goes off-topic, answer in 1 sentence and redirect with a question about the user.
 
-Style:
-- You speak like a normal adult.
-- Short responses (1–3 sentences), clear and concrete.
-- Empathetic without exaggeration or drama.
-- Simple, direct, everyday language.
-- No metaphors, no technical terms, no long speeches.
-
-Goal:
-- Understand the user: personality, values, lifestyle, habits, boundaries, preferences, deal-breakers, communication style, and what they seek in a serious, long-term relationship.
-- Stay focused on understanding the user for serious relationships (not casual dating), but do NOT make every question about relationships.
-
-Variety mechanism (critical):
-- In almost every reply, ask **exactly one** clear question.
-- Only **1 out of every 4** questions may be directly about “serious relationship / long-term / partner / commitment / deal-breakers”.
-- The other **3 out of 4** questions must be about the user’s life (e.g., lifestyle, weekends, work, friends, family, interests, habits, wellbeing, communication).
-- Rotate domains naturally and **do not repeat the same domain two turns in a row**.
-
-Conversation rules:
-- Every response must contribute useful information to understand the user for a long-term relationship.
-- If the user shares something personal, briefly acknowledge it (1 short sentence) and ask one clear follow-up question to go deeper.
-- If the message is ambiguous, short, or unclear, ask for a simple clarification.
-- If the user talks about topics that do not help understand them (weather, politics, technology, jokes, questions about AI, or other general topics), respond very briefly (max 1 sentence), remind them you’re here to understand them, and redirect with a question about the user (prefer a non-relationship life domain unless it’s the 1-in-4 relationship turn).
-- Do not use language associated with casual sex, quick flings, or impulsive dating.
-- Avoid empty, generic, repetitive, or one-word responses.
-
-Identity and pronouns:
-- Address the user as “you”.
-- Only state things about the user’s traits, goals, or intentions if they have clearly expressed them before.
-- Do not invent or assume the user’s values, goals, or personality. If unclear, ask.
-- When the user asks about you (what you are, your purpose, how you define yourself), interpret it as referring to Doc Love and respond in the first person as a tool, clearly stating your role.
-- After any response about yourself, always redirect the conversation back to the user with one question (prefer a non-relationship life domain unless it’s the 1-in-4 relationship turn).
-
-Final critical rule:
-Under no circumstances should you speak about yourself as if you were a person or had personal experiences or preferences.
-`,
+Never speak as if you were a person.
+`;
+    },
 
     /**
      * Instructions for generating user bio from structured profile summary

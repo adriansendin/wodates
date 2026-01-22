@@ -49,11 +49,16 @@ export class AiServiceProfileClient {
    *
    * @param request - Profile generation request with conversations
    * @returns Generated profile summary
-   * @throws Error if the HTTP request fails
+   * @throws Error if the HTTP request fails or AI is disabled
    */
   async generateProfile(
     request: AiServiceGenerateProfileRequest
   ): Promise<AiServiceGenerateProfileResponse> {
+    // Global kill-switch: abort immediately if AI is disabled
+    if (!AIConfig.enabled) {
+      throw new Error('AI functionality is disabled (AI_ENABLED=false)');
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.profileTimeout);
 
@@ -144,11 +149,16 @@ export class AiServiceProfileClient {
    *
    * @param request - Merge request with consolidated and incremental profiles
    * @returns Merged profile summary
-   * @throws Error if the HTTP request fails
+   * @throws Error if the HTTP request fails or AI is disabled
    */
   async mergeProfiles(
     request: AiServiceMergeProfilesRequest
   ): Promise<AiServiceMergeProfilesResponse> {
+    // Global kill-switch: abort immediately if AI is disabled
+    if (!AIConfig.enabled) {
+      throw new Error('AI functionality is disabled (AI_ENABLED=false)');
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.profileTimeout);
 

@@ -47,6 +47,14 @@ async def generate_next_question(request: NextQuestionRequest) -> NextQuestionRe
         }
         ```
     """
+    # Global kill-switch: abort immediately if AI is disabled
+    from app.core.settings import settings
+    if not settings.ai_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI functionality is disabled (AI_ENABLED=false)",
+        )
+
     try:
         return await agent_service.generate_next_question(request)
     except ValueError as e:

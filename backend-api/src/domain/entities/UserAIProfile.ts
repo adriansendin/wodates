@@ -6,9 +6,12 @@ import { z } from 'zod';
  * Represents a consolidated AI profile for a user with personality summary
  * and vector embedding for matching by affinity. 1:1 relationship with users.
  *
- * Note: The embedding dimension (768) matches AIModelConstants.EMBEDDING.DIMENSION
- * from ai-settings.ts. This must match the database schema (vector(768)) and
- * the embedding model configuration.
+ * Note: The embedding dimension in Zod schemas (.length(1536)) must match 
+ * AIModelConstants.EMBEDDING.DIMENSION from ai-settings.ts. This must also match 
+ * the database schema (vector(1536)) and the embedding model configuration.
+ * 
+ * WARNING: If you change AIModelConstants.EMBEDDING.DIMENSION, you must also update
+ * all .length(1536) references in the Zod schemas below (Zod requires literal numbers).
  *
  * Summary fields are stored as plain text in the database:
  * - summary: text column containing plain text summary (source of truth)
@@ -23,20 +26,20 @@ export const UserAIProfileSchema = z.object({
   summary: z.string().nullable(), // Plain text summary
   summaryIncremental: z.string().nullable(), // Plain text incremental summary
   summaryUpdatedAt: z.string().datetime(),
-  summaryEmbedding: z.array(z.number()).length(768).nullable(), // Must match AIModelConstants.EMBEDDING.DIMENSION
+  summaryEmbedding: z.array(z.number()).length(1536).nullable(), // Must match AIModelConstants.EMBEDDING.DIMENSION
 });
 
 export const CreateUserAIProfileSchema = z.object({
   userId: z.string().uuid(),
   summary: z.string().nullable().optional(), // Plain text summary
   summaryIncremental: z.string().nullable().optional(), // Plain text incremental summary
-  summaryEmbedding: z.array(z.number()).length(768).nullable().optional(), // Must match AIModelConstants.EMBEDDING.DIMENSION
+  summaryEmbedding: z.array(z.number()).length(1536).nullable().optional(), // Must match AIModelConstants.EMBEDDING.DIMENSION
 });
 
 export const UpdateUserAIProfileSchema = z.object({
   summary: z.string().nullable().optional(), // Plain text summary
   summaryIncremental: z.string().nullable().optional(), // Plain text incremental summary
-  summaryEmbedding: z.array(z.number()).length(768).nullable().optional(), // Must match AIModelConstants.EMBEDDING.DIMENSION
+  summaryEmbedding: z.array(z.number()).length(1536).nullable().optional(), // Must match AIModelConstants.EMBEDDING.DIMENSION
 });
 
 export type UserAIProfile = z.infer<typeof UserAIProfileSchema>;

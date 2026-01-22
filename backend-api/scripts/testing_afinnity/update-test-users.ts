@@ -46,6 +46,7 @@ import { DocLoveHelper } from '../../src/app/services/doc-love-helper';
 import { SupabaseMatchRepository } from '../../src/data/repositories/SupabaseMatchRepository';
 import { SupabaseMessageRepository } from '../../src/data/repositories/SupabaseMessageRepository';
 import { SupabaseUserRepository } from '../../src/data/repositories/SupabaseUserRepository';
+import { normalizeEmbedding } from '../../src/utils/embedding-utils';
 import { SupabaseUserAIProfileRepository } from '../../src/data/repositories/SupabaseUserAIProfileRepository';
 import { GetAllUserChats } from '../../src/domain/use-cases/chat/GetAllUserChats';
 import { GetUnprocessedMessages } from '../../src/domain/use-cases/chat/GetUnprocessedMessages';
@@ -274,32 +275,6 @@ async function getTopAffinityUsers(
   cosine_similarity: number;
   affinity_pct: number;
 }>> {
-  /**
-   * Parses embedding from various formats (array, JSON string, or pgvector format)
-   */
-  const parseEmbedding = (embedding: any): number[] | null => {
-    if (!embedding) return null;
-    
-    // If already an array of numbers
-    if (Array.isArray(embedding)) {
-      return embedding;
-    }
-    
-    // If it's a string, try to parse as JSON
-    if (typeof embedding === 'string') {
-      try {
-        const parsed = JSON.parse(embedding);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      } catch {
-        // Not valid JSON
-      }
-    }
-    
-    return null;
-  };
-
   // Get target user's embedding
   const { data: profileData, error: profileError } = await adminClient
     .from('user_ai_profiles')
@@ -312,7 +287,7 @@ async function getTopAffinityUsers(
     throw new Error(`Target user ${targetUserId} not found or has no embedding: ${profileError.message}`);
   }
 
-  const targetEmbeddingArray = parseEmbedding(profileData?.summary_embedding);
+  const targetEmbeddingArray = normalizeEmbedding(profileData?.summary_embedding);
   if (!targetEmbeddingArray) {
     console.error(`   [DEBUG] Target user ${targetUserId} has no embedding or could not parse it`);
     throw new Error(`Target user ${targetUserId} not found or has no embedding`);
@@ -367,7 +342,7 @@ async function getTopAffinityUsers(
   }> = [];
 
   for (const r of (allProfiles || [])) {
-    const embedding = parseEmbedding(r.summary_embedding);
+    const embedding = normalizeEmbedding(r.summary_embedding);
     if (!embedding) {
       console.warn(`   [DEBUG] Skipping user ${r.user_id}: embedding could not be parsed (type: ${typeof r.summary_embedding})`);
       continue;
@@ -985,19 +960,7 @@ async function updateTestUsers() {
         .single();
 
       if (targetProfileData?.summary_embedding) {
-        const parseEmbedding = (embedding: any): number[] | null => {
-          if (!embedding) return null;
-          if (Array.isArray(embedding)) return embedding;
-          if (typeof embedding === 'string') {
-            try {
-              const parsed = JSON.parse(embedding);
-              if (Array.isArray(parsed)) return parsed;
-            } catch {}
-          }
-          return null;
-        };
-
-        const targetEmbedding = parseEmbedding(targetProfileData.summary_embedding);
+        const targetEmbedding = normalizeEmbedding(targetProfileData.summary_embedding);
         
         if (targetEmbedding) {
           for (const updatedUser of successfulUsers) {
@@ -1010,7 +973,7 @@ async function updateTestUsers() {
               .eq('user_id', updatedUser.userId)
               .single();
 
-            const userEmbedding = parseEmbedding(userProfileData?.summary_embedding);
+            const userEmbedding = normalizeEmbedding(userProfileData?.summary_embedding);
             if (userEmbedding && targetEmbedding.length === userEmbedding.length) {
               // Calculate cosine distance
               let dotProduct = 0;

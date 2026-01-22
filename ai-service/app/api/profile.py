@@ -33,6 +33,14 @@ async def merge_profiles(request: MergeProfilesRequest) -> MergeProfilesResponse
     Raises:
         HTTPException: If the merge operation fails
     """
+    # Global kill-switch: abort immediately if AI is disabled
+    from app.core.settings import settings
+    if not settings.ai_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI functionality is disabled (AI_ENABLED=false)",
+        )
+
     try:
         return await profile_service.merge_profiles(request)
     except Exception as e:
@@ -58,6 +66,14 @@ async def generate_profile(
     Raises:
         HTTPException: If the profile generation fails
     """
+    # Global kill-switch: abort immediately if AI is disabled
+    from app.core.settings import settings
+    if not settings.ai_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI functionality is disabled (AI_ENABLED=false)",
+        )
+
     try:
         return await profile_service.generate_profile(request)
     except Exception as e:

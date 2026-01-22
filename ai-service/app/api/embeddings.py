@@ -33,6 +33,14 @@ async def generate_embedding(
     Raises:
         HTTPException: If the embedding generation fails
     """
+    # Global kill-switch: abort immediately if AI is disabled
+    from app.core.settings import settings
+    if not settings.ai_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI functionality is disabled (AI_ENABLED=false)",
+        )
+
     try:
         return await embedding_service.generate_embedding(request)
     except ValueError as e:
