@@ -53,7 +53,7 @@ describe('registrationStore', () => {
       nextStep();
     }
     let state = useRegistrationStore.getState();
-    expect(state.currentStep).toBe(7);
+    expect(state.currentStep).toBe(5);
 
     for (let i = 0; i < 10; i += 1) {
       previousStep();

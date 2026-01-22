@@ -88,7 +88,7 @@ class GeminiClient:
         Raises:
             httpx.HTTPStatusError: If request fails after retries
         """
-        last_exception = None
+        last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
                 response = await client.request(method, url, **kwargs)
@@ -131,9 +131,7 @@ class GeminiClient:
         # If we get here, all retries failed
         if last_exception:
             raise last_exception
-        raise httpx.HTTPStatusError(
-            "Request failed after retries", request=None, response=None
-        )
+        raise RuntimeError("Request failed after retries")
 
     async def chat(
         self,
