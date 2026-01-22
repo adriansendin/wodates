@@ -105,6 +105,10 @@ async function buildApp() {
 
   // Error handler for validation errors
   fastify.setErrorHandler((error, request, reply) => {
+    if (reply.sent) {
+      request.log.error({ err: error }, 'Error after reply already sent');
+      return;
+    }
     // Handle unsupported media type errors (415)
     if (
       error.statusCode === 415 ||
@@ -115,7 +119,7 @@ async function buildApp() {
         { err: error, contentType },
         'Unsupported media type error'
       );
-      return reply.status(415).send({
+      return reply.code(415).send({
         error: 'UNSUPPORTED_MEDIA_TYPE',
         message: 'Use Content-Type: application/json',
       });
@@ -128,7 +132,13 @@ async function buildApp() {
       });
     }
     request.log.error(error);
-    return reply.status(500).send({ error: 'INTERNAL_SERVER_ERROR' });
+    const statusCode =
+      typeof (error as { statusCode?: number }).statusCode === 'number' &&
+      (error as { statusCode: number }).statusCode >= 400 &&
+      (error as { statusCode: number }).statusCode < 600
+        ? (error as { statusCode: number }).statusCode
+        : 500;
+    return reply.code(statusCode).send({ error: 'INTERNAL_SERVER_ERROR' });
   });
 
   // Register middleware
