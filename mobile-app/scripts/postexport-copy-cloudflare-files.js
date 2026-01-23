@@ -61,6 +61,61 @@ function main() {
     console.error(`[Cloudflare] ✗ Completed with ${errorCount} error(s)`);
     process.exit(1);
   }
+
+  // Copy Ionicons fonts to assets path
+  const fontsSource = path.join(
+    DIST_DIR,
+    'node_modules',
+    '@expo',
+    'vector-icons',
+    'build',
+    'vendor',
+    'react-native-vector-icons',
+    'Fonts'
+  );
+  const fontsDest = path.join(
+    DIST_DIR,
+    'assets',
+    'node_modules',
+    '@expo',
+    'vector-icons',
+    'build',
+    'vendor',
+    'react-native-vector-icons',
+    'Fonts'
+  );
+
+  if (!fs.existsSync(fontsSource)) {
+    console.warn(`[Cloudflare] WARNING: Ionicons fonts source not found at ${fontsSource}`);
+  } else {
+    try {
+      // Remove destination if exists
+      if (fs.existsSync(fontsDest)) {
+        fs.rmSync(fontsDest, { recursive: true, force: true });
+      }
+      // Create parent directories recursively
+      fs.mkdirSync(path.dirname(fontsDest), { recursive: true });
+      // Copy directory recursively
+      copyDirRecursive(fontsSource, fontsDest);
+      console.log(`[Cloudflare] ✓ Copied Ionicons fonts to assets path`);
+    } catch (error) {
+      console.error(`[Cloudflare] ERROR: Failed to copy fonts:`, error.message);
+    }
+  }
+}
+
+function copyDirRecursive(src, dest) {
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
 }
 
 main();
