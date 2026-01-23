@@ -5,6 +5,8 @@ import { Text, View, Platform } from 'react-native';
 import { useAuthStore } from '../src/domain/stores/authStore';
 import { useEffect } from 'react';
 import { registerServiceWorker } from '../src/utils/pwa';
+import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 
 // Component to initialize auth state
 function AuthInitializer() {
@@ -30,6 +32,11 @@ function PWAInitializer() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts(Ionicons.font);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <SafeAreaProvider>
