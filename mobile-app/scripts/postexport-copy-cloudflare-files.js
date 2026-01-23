@@ -62,60 +62,48 @@ function main() {
     process.exit(1);
   }
 
-  // Copy Ionicons fonts to assets path
-  const fontsSource = path.join(
-    DIST_DIR,
-    'node_modules',
-    '@expo',
-    'vector-icons',
-    'build',
-    'vendor',
-    'react-native-vector-icons',
-    'Fonts'
-  );
-  const fontsDest = path.join(
-    DIST_DIR,
-    'assets',
-    'node_modules',
-    '@expo',
-    'vector-icons',
-    'build',
-    'vendor',
-    'react-native-vector-icons',
-    'Fonts'
-  );
+  // Copy vector-icons fonts into dist/assets/fonts
+  const fontsDestDir = path.join(DIST_DIR, 'assets', 'fonts');
+  fs.mkdirSync(fontsDestDir, { recursive: true });
 
-  if (!fs.existsSync(fontsSource)) {
-    console.warn(`[Cloudflare] WARNING: Ionicons fonts source not found at ${fontsSource}`);
-  } else {
+  const vectorIconTtfFiles = findVectorIconFonts(DIST_DIR);
+  for (const fontPath of vectorIconTtfFiles) {
+    const destPath = path.join(fontsDestDir, path.basename(fontPath));
     try {
-      // Remove destination if exists
-      if (fs.existsSync(fontsDest)) {
-        fs.rmSync(fontsDest, { recursive: true, force: true });
-      }
-      // Create parent directories recursively
-      fs.mkdirSync(path.dirname(fontsDest), { recursive: true });
-      // Copy directory recursively
-      copyDirRecursive(fontsSource, fontsDest);
-      console.log(`[Cloudflare] ✓ Copied Ionicons fonts to assets path`);
+      fs.copyFileSync(fontPath, destPath);
     } catch (error) {
-      console.error(`[Cloudflare] ERROR: Failed to copy fonts:`, error.message);
+      console.error(`[Cloudflare] ERROR: Failed to copy font ${fontPath}:`, error.message);
     }
   }
+  console.log(
+    `[Cloudflare] ✓ Copied ${vectorIconTtfFiles.length} vector-icon font files to dist/assets/fonts/`
+  );
 }
 
-function copyDirRecursive(src, dest) {
-  const entries = fs.readdirSync(src, { withFileTypes: true });
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
+function findVectorIconFonts(rootDir) {
+  const results = [];
+  const stack = [rootDir];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    let entries;
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch (error) {
+      continue;
+    }
+    for (const entry of entries) {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.ttf')) {
+        const normalizedPath = entryPath.replace(/\\/g, '/');
+        if (normalizedPath.includes('react-native-vector-icons/Fonts')) {
+          results.push(entryPath);
+        }
+      }
     }
   }
+  return results;
 }
 
 main();
