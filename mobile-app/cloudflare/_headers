@@ -1,0 +1,12 @@
+/assets/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.ttf
+  Content-Type: font/ttf
+
+/assets/*.woff
+  Content-Type: font/woff
+
+/assets/*.woff2
+  Content-Type: font/woff2
