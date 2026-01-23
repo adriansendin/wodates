@@ -140,6 +140,21 @@ npm run type-check
 npm run build
 ```
 
+### Cloudflare Pages Deployment
+
+**Important**: For SPA routing to work correctly on Cloudflare Pages:
+
+1. **Enable SPA Fallback in Dashboard**: 
+   - Go to Cloudflare Pages dashboard → Your project → Settings → Builds & deployments
+   - Enable "Single Page Application" / "SPA fallback" toggle
+   - This is required because Cloudflare flags `/* /index.html 200` in `_redirects` as an infinite loop and ignores it
+
+2. **Asset Routing**:
+   - The `_redirects` file handles asset path rewrites:
+     - `/assets/node_modules/*` → `/node_modules/:splat` (for fonts)
+     - `/assets/*` → `/assets/:splat` (for other assets)
+   - SPA fallback is handled by the dashboard setting, not `_redirects`
+
 ## Testing
 
 The app includes comprehensive tests for:
