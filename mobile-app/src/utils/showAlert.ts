@@ -15,14 +15,8 @@ export const showAlert = (...args: AlertParams): void => {
 
   // If buttons are provided, use notifyWithButtons
   if (buttons && buttons.length > 0) {
-    // Filter out buttons without text to match notifyWithButtons signature
-    const validButtons = buttons.filter((btn): btn is { text: string; onPress?: () => void } => 
-      typeof btn === 'object' && btn !== null && 'text' in btn && typeof btn.text === 'string'
-    );
-    if (validButtons.length > 0) {
-      notifyWithButtons(title, message, validButtons, options);
-      return;
-    }
+    notifyWithButtons(title, message, buttons, options);
+    return;
   }
 
   // Otherwise, treat as error notification
