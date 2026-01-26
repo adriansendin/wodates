@@ -113,7 +113,6 @@ export default function LoginScreen() {
             {/* Tagline */}
             <View style={styles.sloganBlock}>
             <Text style={styles.tagline}>Dating by affinity</Text>
-            <Text style={styles.tagline}>One connection at a time</Text>
             </View>
 
 

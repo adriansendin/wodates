@@ -1330,10 +1330,24 @@ export default function ChatScreen() {
   }, [blockApi, matchId, otherUserId, router, tokens?.accessToken]);
 
   const handleAvatarPress = useCallback(() => {
+    // If it's Doc Love (bot), only show the photo
+    if (isBot) {
+      router.push({
+        pathname: '/chat/avatar-view',
+        params: {
+          photoUrl: photoUrl ?? '',
+          isBot: 'true',
+        },
+      });
+      return;
+    }
+
     // Get match to access otherUser bio and show_bio_in_feed
     const currentMatch = matchId ? matches.find(m => m.id === matchId) : null;
     const otherUserBio = currentMatch?.otherUser?.bio;
     const otherUserShowBioInFeed = currentMatch?.otherUser?.show_bio_in_feed;
+    const otherUserBirthDate = currentMatch?.otherUser?.birthDate;
+    const otherUserGender = (currentMatch?.otherUser as any)?.gender;
 
     router.push({
       pathname: '/chat/avatar-view',
@@ -1345,9 +1359,12 @@ export default function ChatScreen() {
         otherUserShowBioInFeed: otherUserShowBioInFeed !== undefined && otherUserShowBioInFeed !== null 
           ? String(otherUserShowBioInFeed) 
           : '',
+        matchId: matchId ?? '',
+        birthDate: otherUserBirthDate ?? '',
+        gender: otherUserGender ?? '',
       },
     });
-  }, [photoUrl, otherUserName, otherUserId, matchId, matches, router]);
+  }, [photoUrl, otherUserName, otherUserId, matchId, matches, router, isBot]);
 
   const handleAttachZip = useCallback(async () => {
     console.log('[ChatScreen] handleAttachZip called', { userId: user?.id, isUploadingZip, isBlocked });
@@ -1775,12 +1792,22 @@ export default function ChatScreen() {
                   style={styles.menuItem}
                   onPress={() => {
                     setShowMenu(false);
+                    handleAvatarPress();
+                  }}
+                >
+                  <Text style={styles.menuItemText}>View profile</Text>
+                </TouchableOpacity>
+                <View style={styles.menuDivider} />
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setShowMenu(false);
                     setShowAffinityModal(true);
                   }}
                 >
-                  <Ionicons name="heart" size={20} color="#e91e63" />
                   <Text style={styles.menuItemText}>Affinity</Text>
                 </TouchableOpacity>
+                <View style={styles.menuDivider} />
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => {
@@ -1788,8 +1815,7 @@ export default function ChatScreen() {
                     setShowBlockModal(true);
                   }}
                 >
-                  <Ionicons name="ban" size={20} color="#e91e63" />
-                  <Text style={styles.menuItemText}>End conversation</Text>
+                  <Text style={styles.menuItemDestructiveText}>End conversation</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -2179,6 +2205,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#e91e63',
     fontWeight: '500',
+  },
+  menuItemDestructiveText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    fontWeight: '500',
+  },
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    marginHorizontal: 0,
   },
   modalOverlay: {
     flex: 1,
