@@ -27,7 +27,7 @@ import { BioPopupModal } from '../../src/components/BioPopupModal';
 import { AffinityModal } from '../../src/components/AffinityModal';
 import { PhotoCarousel, Photo } from '../../src/components/PhotoCarousel';
 import { UserPhotoApi } from '../../src/data/api/userPhotoApi';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, Lock } from 'lucide-react-native';
 // import DiscoverActionButtons from '../../src/components/DiscoverActionButtons';
 
 // Componente temporal inline mientras se resuelve el problema del linter
@@ -174,6 +174,7 @@ export default function FeedScreen() {
   const addMatch = useMatchesStore((state) => state.addMatch);
   const activeChatsCount = useMatchesStore((state) => state.activeChatsCount);
   const setActiveChatsCount = useMatchesStore((state) => state.setActiveChatsCount);
+  const matches = useMatchesStore((state) => state.matches);
   const [isLiking, setIsLiking] = useState(false);
   const [isPassing, setIsPassing] = useState(false);
   const [affinitySentences, setAffinitySentences] = useState<string[]>([]);
@@ -877,24 +878,87 @@ export default function FeedScreen() {
 
   // Show blocked message if user has any active chats
   if (activeChatsCount >= 1) {
+    // Get the first active human chat (exclude bots)
+    const activeChat = matches.find(
+      (match) => !match.otherUser?.isBot
+    );
+
     return (
-      <View style={styles.emptyContainer}>
-        <View style={styles.emptyIconContainer}>
-          <Text style={styles.emptyIcon}>💬</Text>
+      <View style={styles.lockedContainer}>
+        <View style={styles.lockedContent}>
+          {/* Exclusive mode badge */}
+          <View style={styles.exclusiveBadge}>
+            <Lock size={10} color="#999" />
+            <Text style={styles.exclusiveBadgeText}>Exclusive</Text>
+          </View>
+          {/* Title */}
+          <Text style={styles.lockedTitle}>Discover is paused</Text>
+
+          {/* Subtitle */}
+          <Text style={styles.lockedSubtitle}>
+            {activeChat
+              ? `You're getting to know ${activeChat.otherUser?.name ?? 'someone'}.`
+              : "You're getting to know someone."}
+          </Text>
+
+          {/* Active chat card */}
+          {activeChat && (
+            <View style={styles.activeChatCard}>
+              <View style={styles.activeChatAvatarContainer}>
+                <Image
+                  source={
+                    activeChat.otherUser?.photoUrl
+                      ? { uri: activeChat.otherUser.photoUrl }
+                      : require('../../assets/placeholder.png')
+                  }
+                  style={styles.activeChatAvatar}
+                />
+              </View>
+              <View style={styles.activeChatInfo}>
+                <View style={styles.activeChatNameContainer}>
+                  <Text style={styles.activeChatName}>
+                    {activeChat.otherUser?.name ?? 'Unknown user'}
+                  </Text>
+                  <View style={styles.activeChatTag}>
+                    <Text style={styles.activeChatTagText}>Active chat</Text>
+                  </View>
+                </View>
+                {activeChat.lastMessage?.content && (
+                  <Text style={styles.activeChatSnippet} numberOfLines={1}>
+                    {activeChat.lastMessage.content}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+          {/* Primary CTA */}
+          {activeChat && (
+            <TouchableOpacity
+              style={styles.goToChatButton}
+              onPress={() => {
+                router.push({
+                  pathname: '/chat/[matchId]',
+                  params: {
+                    matchId: activeChat.id,
+                    name: activeChat.otherUser?.name ?? 'Chat',
+                    photoUrl: activeChat.otherUser?.photoUrl ?? '',
+                    otherUserId: activeChat.otherUser?.id ?? '',
+                    isBot: 'false',
+                  },
+                });
+              }}
+            >
+              <Text style={styles.goToChatButtonText}>
+                Continue conversation
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Footnote */}
+          <Text style={styles.lockedFootnote}>
+            Discover resumes when you close your active chat.
+          </Text>
         </View>
-        <Text style={styles.emptyTitle}>Exclusive mode is on</Text>
-        <Text style={styles.emptySubtext}>
-        You’re getting to know one person.
-        </Text>
-        <Text style={styles.emptySubtext}>
-        To unlock Discover, you’ll need to close this chat.
-        </Text>
-        <TouchableOpacity 
-          style={styles.discoverButton}
-          onPress={() => router.push('/(app)/matches')}
-        >
-          <Text style={styles.discoverButtonText}>Go to chats</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -1074,6 +1138,127 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     paddingHorizontal: 20,
+  },
+  // Locked/Exclusive mode styles
+  lockedContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingTop: 60,
+  },
+  lockedContent: {
+    paddingHorizontal: 20,
+  },
+  exclusiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    marginBottom: 16,
+    gap: 5,
+  },
+  exclusiveBadgeText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#999',
+  },
+  lockedTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  lockedValueLine: {
+    fontSize: 13,
+    color: '#999',
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  lockedSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  activeChatCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  activeChatAvatarContainer: {
+    marginRight: 16,
+  },
+  activeChatAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+  },
+  activeChatInfo: {
+    flex: 1,
+  },
+  activeChatNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  activeChatName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  activeChatTag: {
+    backgroundColor: '#e8f5e9',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  activeChatTagText: {
+    color: '#66bb6a',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  activeChatSnippet: {
+    fontSize: 12,
+    color: '#aaa',
+    lineHeight: 18,
+  },
+  goToChatButton: {
+    backgroundColor: '#e91e63',
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#e91e63',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  goToChatButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  lockedFootnote: {
+    fontSize: 11,
+    color: '#bbb',
+    textAlign: 'center',
   },
   emptyIconContainer: {
     width: 80,
