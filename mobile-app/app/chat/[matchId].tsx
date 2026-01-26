@@ -250,6 +250,7 @@ export default function ChatScreen() {
     photoUrl?: string | string[];
     otherUserId?: string | string[];
     isBot?: string | string[];
+    fromDiscover?: string | string[];
   }>();
 
   const matchId = useMemo(() => {
@@ -270,6 +271,12 @@ export default function ChatScreen() {
     if (!params.name) return undefined;
     return Array.isArray(params.name) ? params.name[0] : params.name;
   }, [params.name]);
+
+  const fromDiscover = useMemo(() => {
+    if (!params.fromDiscover) return false;
+    const value = Array.isArray(params.fromDiscover) ? params.fromDiscover[0] : params.fromDiscover;
+    return value === 'true';
+  }, [params.fromDiscover]);
 
   const otherUserId = useMemo(() => {
     if (!params.otherUserId) return undefined;
@@ -1478,7 +1485,13 @@ export default function ChatScreen() {
           headerShown: true,
           headerLeft: () => (
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => {
+                if (fromDiscover) {
+                  router.push('/(app)/matches');
+                } else {
+                  router.back();
+                }
+              }}
               style={{ marginLeft: 16, padding: 8 }}
             >
               <Ionicons name="arrow-back" size={24} color="#000000" />

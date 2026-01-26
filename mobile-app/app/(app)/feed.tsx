@@ -944,6 +944,7 @@ export default function FeedScreen() {
                     photoUrl: activeChat.otherUser?.photoUrl ?? '',
                     otherUserId: activeChat.otherUser?.id ?? '',
                     isBot: 'false',
+                    fromDiscover: 'true',
                   },
                 });
               }}
