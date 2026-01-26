@@ -1795,6 +1795,12 @@ export default function ChatScreen() {
                     handleAvatarPress();
                   }}
                 >
+                  <Ionicons 
+                    name={Platform.OS === 'ios' ? 'person-circle' : 'person'} 
+                    size={20} 
+                    color="#666666" 
+                    style={styles.menuItemIcon}
+                  />
                   <Text style={styles.menuItemText}>View profile</Text>
                 </TouchableOpacity>
                 <View style={styles.menuDivider} />
@@ -1805,6 +1811,12 @@ export default function ChatScreen() {
                     setShowAffinityModal(true);
                   }}
                 >
+                  <Ionicons 
+                    name={Platform.OS === 'ios' ? 'star' : 'stats-chart-outline'} 
+                    size={20} 
+                    color="#666666" 
+                    style={styles.menuItemIcon}
+                  />
                   <Text style={styles.menuItemText}>Affinity</Text>
                 </TouchableOpacity>
                 <View style={styles.menuDivider} />
@@ -1815,6 +1827,12 @@ export default function ChatScreen() {
                     setShowBlockModal(true);
                   }}
                 >
+                  <Ionicons 
+                    name={Platform.OS === 'ios' ? 'close-circle' : 'ban'} 
+                    size={20} 
+                    color="#d32f2f" 
+                    style={styles.menuItemIcon}
+                  />
                   <Text style={styles.menuItemDestructiveText}>End conversation</Text>
                 </TouchableOpacity>
               </>
@@ -2201,9 +2219,12 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
+  menuItemIcon: {
+    marginRight: 0,
+  },
   menuItemText: {
     fontSize: 16,
-    color: '#e91e63',
+    color: '#000000',
     fontWeight: '500',
   },
   menuItemDestructiveText: {
