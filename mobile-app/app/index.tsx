@@ -47,8 +47,8 @@ export default function Home() {
 
         {/* Tagline */}
         <View style={styles.sloganBlock}>
-                <Text style={styles.tagline}>Serious relationships</Text>
-                <Text style={styles.tagline}>Less swiping. More connection.</Text>
+                <Text style={styles.tagline}>Dating by affinity</Text>
+                <Text style={styles.tagline}>One connection at a time</Text>
         </View>
 
         {/* Botones principales */}

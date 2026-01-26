@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  ScrollView,
+  PanResponder,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -14,7 +17,6 @@ import { useAuthStore } from '../../src/domain/stores/authStore';
 import { FeedApi } from '../../src/data/api/feedApi';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { useMatchesStore } from '../../src/domain/stores/matchesStore';
-import { MatchSchema } from '../../src/domain/entities/Match';
 import { showAlert } from '../../src/utils/showAlert';
 import { MatchApi } from '../../src/data/api/matchApi';
 import { ProfileApi } from '../../src/data/api/profileApi';
@@ -22,9 +24,10 @@ import { UserProfile } from '../../src/domain/entities/UserProfile';
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { MatchConfirmationModal } from '../../src/components/MatchConfirmationModal';
 import { BioPopupModal } from '../../src/components/BioPopupModal';
+import { AffinityModal } from '../../src/components/AffinityModal';
 import { PhotoCarousel, Photo } from '../../src/components/PhotoCarousel';
 import { UserPhotoApi } from '../../src/data/api/userPhotoApi';
-import { X, Check, Info } from 'lucide-react-native';
+import { X, Check } from 'lucide-react-native';
 // import DiscoverActionButtons from '../../src/components/DiscoverActionButtons';
 
 // Componente temporal inline mientras se resuelve el problema del linter
@@ -186,9 +189,11 @@ export default function FeedScreen() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isDislikeInitiallyDisabled, setIsDislikeInitiallyDisabled] = useState(true);
   const [showBioPopup, setShowBioPopup] = useState(false);
+  const [showAffinityModal, setShowAffinityModal] = useState(false);
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
   const [currentUserPhotos, setCurrentUserPhotos] = useState<Photo[]>([]);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
+  const swipeMethodsRef = useRef<{ goToNext: () => void; goToPrevious: () => void; goToIndex: (index: number) => void } | null>(null);
 
   // Memoize API clients to prevent useEffect loops
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -491,6 +496,7 @@ export default function FeedScreen() {
     loadAffinitySentencesForCurrentUser();
   }, [currentIndex, users, tokens?.accessToken, user?.id, loadAffinitySentencesForCurrentUser]);
 
+
   // Enable dislike button after 1.5 seconds when user changes
   useEffect(() => {
     const currentUser = users[currentIndex];
@@ -514,6 +520,106 @@ export default function FeedScreen() {
       clearTimeout(timer);
     };
   }, [currentIndex, users]);
+
+  // PanResponder for horizontal swipe on entire screen (mobile)
+  const panResponder = useMemo(() => {
+    if (Platform.OS === 'web') {
+      return null; // Web uses mouse events handled by PhotoCarousel
+    }
+
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Only respond to horizontal swipes (more horizontal than vertical)
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 10;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (!swipeMethodsRef.current) return;
+        
+        const threshold = 50; // Minimum swipe distance
+        if (Math.abs(gestureState.dx) > threshold) {
+          if (gestureState.dx > 0) {
+            // Swiped right - go to previous photo
+            swipeMethodsRef.current.goToPrevious();
+          } else {
+            // Swiped left - go to next photo
+            swipeMethodsRef.current.goToNext();
+          }
+        }
+      },
+    });
+  }, []);
+
+  // Web: Add mouse/touch event listeners to entire screen
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    let startX = 0;
+    let isDragging = false;
+    let startY = 0;
+
+    const handleStart = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      startX = clientX;
+      startY = clientY;
+      isDragging = true;
+    };
+
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging) return;
+      // Only prevent default if it's a horizontal gesture
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const deltaX = Math.abs(startX - clientX);
+      const deltaY = Math.abs(startY - clientY);
+      
+      // Only prevent default for horizontal swipes
+      if (deltaX > deltaY && deltaX > 10) {
+        e.preventDefault();
+      }
+    };
+
+    const handleEnd = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging || !swipeMethodsRef.current) {
+        isDragging = false;
+        return;
+      }
+      
+      const endX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
+      const endY = 'changedTouches' in e ? e.changedTouches[0].clientY : e.clientY;
+      const deltaX = startX - endX;
+      const deltaY = Math.abs(startY - endY);
+      const threshold = 50;
+
+      // Only trigger if horizontal swipe is dominant
+      if (Math.abs(deltaX) > threshold && Math.abs(deltaX) > deltaY) {
+        if (deltaX > 0) {
+          swipeMethodsRef.current.goToNext();
+        } else {
+          swipeMethodsRef.current.goToPrevious();
+        }
+      }
+
+      isDragging = false;
+    };
+
+    window.addEventListener('mousedown', handleStart);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchstart', handleStart);
+    window.addEventListener('touchmove', handleMove);
+    window.addEventListener('touchend', handleEnd);
+
+    return () => {
+      window.removeEventListener('mousedown', handleStart);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchstart', handleStart);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
+    };
+  }, []);
 
   // Cleanup timeouts and abort controllers on unmount
   useEffect(() => {
@@ -579,44 +685,8 @@ export default function FeedScreen() {
         return;
       }
 
-      // Check if it's an already created match (legacy behavior, should not happen with new flow)
-      if (result.data.isMatch) {
-        const validation = MatchSchema.safeParse(result.data.result);
-        if (validation.success) {
-          const match = validation.data;
-          addMatch({
-            ...match,
-            otherUser: {
-              id: currentUser.id,
-              name: currentUser.name,
-              photoUrl: currentUser.photoUrl ?? undefined,
-              bio: currentUser.bio ?? undefined,
-              gender: currentUser.gender ?? undefined,
-              birthDate: currentUser.birthDate ?? undefined,
-            },
-            unreadCount: 0,
-          });
-
-          // Mostrar alerta y navegar al chat
-          showAlert("It's a Match!", 'You and this person liked each other!');
-
-          // Navegar al chat con el nuevo match
-          router.push({
-            pathname: '/chat/[matchId]',
-            params: {
-              matchId: match.id,
-              name: currentUser.name,
-              photoUrl: currentUser.photoUrl ?? '',
-              otherUserId: currentUser.id,
-              isBot: 'false', // Users from feed are never bots
-            },
-          });
-        } else {
-          console.warn('Invalid match payload received', validation.error);
-        }
-      }
       // Check if it's a potential match (mutual like but not confirmed)
-      else if (result.data.isPotentialMatch) {
+      if (result.data.isPotentialMatch) {
         // Show confirmation modal instead of creating match immediately
         setPotentialMatch({
           userId: currentUser.id,
@@ -863,71 +933,89 @@ export default function FeedScreen() {
       : [];
 
   return (
-    <View style={styles.container}>
+    <View 
+      style={styles.container}
+      {...(panResponder?.panHandlers || {})}
+    >
       {/* Photo carousel */}
       <PhotoCarousel
         photos={photosForCarousel}
         fallbackPhoto={photoSource}
+        onSwipeRef={(methods) => {
+          swipeMethodsRef.current = methods;
+        }}
       />
       
-      {/* Gradiente inferior para mejor legibilidad */}
+      {/* Subtle gradient for text readability - no black bar */}
       <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-        locations={[0, 0.5, 1]}
+        colors={['transparent', 'transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.6)']}
+        locations={[0, 0.6, 0.85, 1]}
         style={styles.gradientOverlay}
+        pointerEvents="none"
       />
       
-      {/* Overlay con información */}
-      <View style={styles.infoOverlay}>
-        <Text style={styles.name}>
-          {currentUser.name}
-          {typeof age === 'number' ? `, ${age}` : null}
-        </Text>
+      {/* Content overlay - allows swipe through */}
+      <View style={styles.contentOverlay} pointerEvents="box-none">
+        {/* Name and age pill with Affinity button */}
+        <View style={styles.namePillContainer}>
+          <View style={styles.namePill}>
+            <Text style={styles.namePillText}>
+              {currentUser.name}
+              {typeof age === 'number' ? `, ${age}` : null}
+            </Text>
+          </View>
+          
+          {/* Affinity chip - next to name */}
+          {isLoadingSentences ? (
+            <TouchableOpacity
+              style={[styles.affinityChip, styles.affinityChipLoading]}
+              disabled
+              accessibilityRole="button"
+              accessibilityLabel="Loading affinity"
+            >
+              <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.affinityChipText}>Finding highlights...</Text>
+            </TouchableOpacity>
+          ) : affinitySentences.length > 0 ? (
+            <TouchableOpacity
+              style={styles.affinityChip}
+              onPress={() => setShowAffinityModal(true)}
+              accessibilityRole="button"
+              accessibilityLabel="View affinity"
+              accessibilityHint="Opens detailed affinity information"
+              activeOpacity={0.8}
+            >
+              <Text style={styles.affinityChipText}>Affinity</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {/* Location (small, if exists) */}
         {(currentUser as any).location?.city ? (
           <Text style={styles.location} numberOfLines={1}>
             {`📍 ${(currentUser as any).location.city}`}
           </Text>
         ) : null}
         
-        {/* Affinity sentences */}
-        <View style={styles.affinityContainer}>
-          {isLoadingSentences ? (
-            <View style={styles.affinityPlaceholder}>
-              <ActivityIndicator size="small" color="#fff" />
-              <Text style={styles.affinityLoadingText}>Finding shared highlights...</Text>
-            </View>
-          ) : affinitySentences.length > 0 ? (
-            <>
-              <Text style={styles.affinityLabel}>Doc Love</Text>
-              {affinitySentences.map((sentence, index) => (
-                <Text key={index} style={styles.affinitySentence}>
-                  {sentence}
-                </Text>
-              ))}
-            </>
-          ) : null}
-        </View>
+        {/* Bio text - where affinity was (main content) - scrollable */}
+        {currentUser?.bio && 
+         typeof (currentUser as any).show_bio_in_feed === 'boolean' &&
+         (currentUser as any).show_bio_in_feed === true ? (
+          <View style={styles.bioContainer}>
+            <ScrollView 
+              style={styles.bioScrollView}
+              nestedScrollEnabled={true}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.bioText}>
+                {currentUser.bio}
+              </Text>
+            </ScrollView>
+            <Text style={styles.bioMicrotext}>Based on conversations</Text>
+          </View>
+        ) : null}
       </View>
 
-      {/* Info icon for bio - only show if:
-          1. Candidate has bio
-          2. Candidate has show_bio_in_feed === true (not false, not null)
-          The icon visibility depends only on the candidate's show_bio_in_feed setting */}
-      {currentUser?.bio && 
-       typeof (currentUser as any).show_bio_in_feed === 'boolean' &&
-       (currentUser as any).show_bio_in_feed === true && (
-        <TouchableOpacity
-          style={styles.infoIconContainer}
-          onPress={() => setShowBioPopup(true)}
-          accessibilityRole="button"
-          accessibilityLabel="View bio"
-          accessibilityHint="View the user's bio"
-        >
-          <View style={styles.infoIconCircle}>
-            <Info size={20} color="#fff" />
-          </View>
-        </TouchableOpacity>
-      )}
 
       {/* Botones de acción */}
       <DiscoverActionButtons
@@ -952,6 +1040,13 @@ export default function FeedScreen() {
         visible={showBioPopup}
         bio={currentUser?.bio}
         onClose={() => setShowBioPopup(false)}
+      />
+
+      {/* Affinity Modal */}
+      <AffinityModal
+        visible={showAffinityModal}
+        affinitySentences={affinitySentences}
+        onClose={() => setShowAffinityModal(false)}
       />
     </View>
   );
@@ -1055,124 +1150,103 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   
-  // Gradiente suave
+  // Subtle gradient - no black bar
   gradientOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 200,
+    height: 300,
   },
-  
-  // Overlay con información
-  infoOverlay: {
+  // Content overlay - allows swipe through (pointerEvents="box-none")
+  contentOverlay: {
     position: 'absolute',
     bottom: 120,
     left: 0,
     right: 0,
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingBottom: 8,
   },
-  name: {
-    fontSize: 28,
+  namePillContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 8,
+  },
+  namePill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+  },
+  namePillText: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
   },
-  
   location: {
-    fontSize: 14,
-    color: '#fff',
-    lineHeight: 18,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-    opacity: 0.9,
-    marginBottom: 8,
-  },
-  affinityContainer: {
-    marginTop: 8,
-  },
-  affinityLabel: {
-    fontSize: 12,
-    color: '#fff',
-    opacity: 0.8,
-    marginBottom: 6,
-    fontWeight: '500',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  affinityPlaceholder: {
-    paddingVertical: 4,
-    alignItems: 'center',
-  },
-  affinityLoadingText: {
-    fontSize: 12,
-    color: '#fff',
-    marginTop: 4,
-    opacity: 0.8,
-  },
-  affinitySentence: {
     fontSize: 13,
     color: '#fff',
-    lineHeight: 18,
-    textShadowColor: 'rgba(0,0,0,0.8)',
+    lineHeight: 16,
+    opacity: 0.9,
+    marginBottom: 10,
+    marginTop: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-    opacity: 0.85,
-    marginBottom: 4,
+    textShadowRadius: 2,
   },
-  affinityError: {
-    alignItems: 'center',
-    paddingVertical: 8,
+  bioContainer: {
+    marginTop: 4,
   },
-  affinityErrorText: {
-    fontSize: 12,
+  bioScrollView: {
+    maxHeight: 66, // Approximately 3 lines (22 lineHeight * 3)
+  },
+  bioText: {
+    fontSize: 15,
     color: '#fff',
-    textAlign: 'center',
-    opacity: 0.8,
-    marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.8)',
+    lineHeight: 22,
+    opacity: 0.95,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
-  retryButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
+  bioMicrotext: {
+    fontSize: 11,
+    color: '#fff',
+    opacity: 0.7,
+    fontStyle: 'italic',
+    marginTop: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  // Affinity chip - next to name
+  affinityChip: {
+    backgroundColor: 'rgba(233, 30, 99, 0.75)',
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  retryButtonText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '500',
-  },
-  infoIconContainer: {
-    position: 'absolute',
-    bottom: 110,
-    right: 20,
-    zIndex: 10,
-  },
-  infoIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
+  },
+  affinityChipLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  affinityChipText: {
+    fontSize: 13,
+    color: '#fff',
+    fontWeight: '600',
   },
   welcomeContainer: {
     paddingHorizontal: 20,

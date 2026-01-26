@@ -10,20 +10,17 @@ import {
 } from 'react-native';
 import { X } from 'lucide-react-native';
 
-interface BioPopupModalProps {
+interface AffinityModalProps {
   visible: boolean;
-  bio: string | null | undefined;
+  affinitySentences: string[];
   onClose: () => void;
 }
 
-export const BioPopupModal: React.FC<BioPopupModalProps> = ({
+export const AffinityModal: React.FC<AffinityModalProps> = ({
   visible,
-  bio,
+  affinitySentences,
   onClose,
 }) => {
-  // Truncate bio to 280 chars for display if needed
-  const displayBio = bio && bio.length > 280 ? bio.substring(0, 280) + '...' : bio;
-
   return (
     <Modal
       visible={visible}
@@ -36,7 +33,7 @@ export const BioPopupModal: React.FC<BioPopupModalProps> = ({
           <TouchableWithoutFeedback>
             <View style={styles.modalContainer}>
               <View style={styles.header}>
-                <Text style={styles.title}>Bio</Text>
+                <Text style={styles.title}>Affinity</Text>
                 <TouchableOpacity
                   onPress={onClose}
                   style={styles.closeButton}
@@ -50,13 +47,17 @@ export const BioPopupModal: React.FC<BioPopupModalProps> = ({
                 style={styles.content}
                 contentContainerStyle={styles.contentContainer}
               >
-                {displayBio ? (
+                {affinitySentences.length > 0 ? (
                   <>
-                    <Text style={styles.bioText}>{displayBio}</Text>
-                    <Text style={styles.aiGeneratedLabel}>Based on conversations</Text>
+                    {affinitySentences.map((sentence, index) => (
+                      <Text key={index} style={styles.affinityText}>
+                        {sentence}
+                      </Text>
+                    ))}
+                    <Text style={styles.basedOnLabel}>Based on conversations</Text>
                   </>
                 ) : (
-                  <Text style={styles.emptyText}>No bio available</Text>
+                  <Text style={styles.emptyText}>No affinity information available</Text>
                 )}
               </ScrollView>
             </View>
@@ -111,12 +112,13 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 20,
   },
-  bioText: {
+  affinityText: {
     fontSize: 16,
     lineHeight: 24,
     color: '#333',
+    marginBottom: 12,
   },
-  aiGeneratedLabel: {
+  basedOnLabel: {
     fontSize: 12,
     color: '#999',
     marginTop: 8,
@@ -129,4 +131,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

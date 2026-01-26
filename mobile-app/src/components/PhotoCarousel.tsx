@@ -22,12 +22,14 @@ interface PhotoCarouselProps {
   photos: Photo[];
   fallbackPhoto?: { uri: string } | number;
   onPhotoChange?: (index: number) => void;
+  onSwipeRef?: (methods: { goToNext: () => void; goToPrevious: () => void; goToIndex: (index: number) => void }) => void;
 }
 
 export function PhotoCarousel({
   photos,
   fallbackPhoto,
   onPhotoChange,
+  onSwipeRef,
 }: PhotoCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -76,6 +78,29 @@ export function PhotoCarousel({
       onPhotoChange(currentIndex);
     }
   }, [currentIndex, onPhotoChange]);
+
+  // Expose swipe methods to parent
+  useEffect(() => {
+    if (onSwipeRef) {
+      onSwipeRef({
+        goToNext: () => {
+          if (flatListRef.current && currentIndex < sortedPhotos.length - 1) {
+            flatListRef.current.scrollToIndex({ index: currentIndex + 1, animated: true });
+          }
+        },
+        goToPrevious: () => {
+          if (flatListRef.current && currentIndex > 0) {
+            flatListRef.current.scrollToIndex({ index: currentIndex - 1, animated: true });
+          }
+        },
+        goToIndex: (index: number) => {
+          if (flatListRef.current && index >= 0 && index < sortedPhotos.length) {
+            flatListRef.current.scrollToIndex({ index, animated: true });
+          }
+        },
+      });
+    }
+  }, [onSwipeRef, currentIndex, sortedPhotos.length]);
 
   // Mouse drag handlers for web using native DOM events
   useEffect(() => {
