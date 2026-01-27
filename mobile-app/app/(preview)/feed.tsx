@@ -30,7 +30,7 @@ const PREVIEW_USER_DATA: FeedCandidate = {
   id: 'preview-female-user-id',
   name: 'Alex',
   bio: 'Works in tech but trades the screen for a quiet kitchen and slow cooking every night. She picks mountain hikes and road trips over any resort. Often found in local bookstores or home with her cat. Seeks a calm, one-on-one connection.',
-  age: 28,
+  age: 31,
   gender: 'female',
   photoUrl: null, // Will use placeholder
   birthDate: null,
