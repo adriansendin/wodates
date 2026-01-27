@@ -32,9 +32,7 @@ export function DeletePhotoModal({
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.content}>
           <Text style={styles.title}>Delete photo?</Text>
-          <Text style={styles.message}>
-            This photo will be deleted.
-          </Text>
+          <Text style={styles.message}>This photo will be deleted.</Text>
           <View style={styles.buttons}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}

@@ -21,7 +21,7 @@ interface AuthActions {
   restoreAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
+export const useAuthStore = create<AuthState & AuthActions>((set) => ({
   // State
   user: null,
   tokens: null,

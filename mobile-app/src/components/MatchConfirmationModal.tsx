@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import FALLBACK_PHOTO from '../../assets/placeholder.png';
 
 interface MatchConfirmationModalProps {
   visible: boolean;
@@ -18,8 +19,6 @@ interface MatchConfirmationModalProps {
   onCancel: () => void;
   isConfirming?: boolean;
 }
-
-const FALLBACK_PHOTO = require('../../assets/placeholder.png');
 
 export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
   visible,
@@ -63,10 +62,12 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
               {/* Explanation text */}
               <View style={styles.explanationContainer}>
                 <Text style={styles.explanationText}>
-                Do you want to start an exclusive conversation with {otherUserName}?
+                  Do you want to start an exclusive conversation with{' '}
+                  {otherUserName}?
                 </Text>
                 <Text style={styles.explanationSubtext}>
-                If you continue, Discover will pause so you can focus on this exclusive conversation.
+                  If you continue, Discover will pause so you can focus on this
+                  exclusive conversation.
                 </Text>
               </View>
 
@@ -77,9 +78,7 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
                   onPress={onCancel}
                   disabled={isConfirming}
                 >
-                  <Text style={styles.cancelButtonText}>
-                    Not now
-                  </Text>
+                  <Text style={styles.cancelButtonText}>Not now</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity

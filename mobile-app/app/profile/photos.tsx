@@ -19,6 +19,7 @@ import {
 } from '../../src/data/api/imageService';
 import { ArrowLeft } from 'lucide-react-native';
 import { TouchableOpacity } from 'react-native';
+import { notifySystem } from '../../src/utils/notificationService';
 
 export default function PhotosScreen() {
   const router = useRouter();
@@ -61,7 +62,8 @@ export default function PhotosScreen() {
         const result = await pickImageFromGallery();
         console.log('[PhotosScreen] Pick result:', result);
         if (!result.success) {
-          Alert.alert('Error', result.error.message || 'Failed to pick image');
+          // Image picker errors are system errors
+          notifySystem('Something went wrong', 'Try again', result.error);
           return;
         }
 
@@ -70,7 +72,8 @@ export default function PhotosScreen() {
           const uploadResult = await uploadPhoto(result.data);
           console.log('[PhotosScreen] Upload result:', uploadResult);
           if (!uploadResult.success) {
-            Alert.alert('Error', uploadResult.error.message || 'Failed to upload photo');
+            // Upload errors are system errors
+            notifySystem('Something went wrong', 'Try again', uploadResult.error);
           } else {
             console.log('[PhotosScreen] Photo uploaded successfully');
           }
@@ -79,7 +82,8 @@ export default function PhotosScreen() {
         }
       } catch (error) {
         console.error('[PhotosScreen] Error in pickFromGallery:', error);
-        Alert.alert('Error', 'Failed to pick image from gallery');
+        // Network errors are system errors
+        notifySystem('Something went wrong', 'Try again', error);
       }
     };
 
@@ -89,7 +93,8 @@ export default function PhotosScreen() {
         const result = await takePictureWithCamera();
         console.log('[PhotosScreen] Camera result:', result);
         if (!result.success) {
-          Alert.alert('Error', result.error.message || 'Failed to take picture');
+          // Camera errors are system errors
+          notifySystem('Something went wrong', 'Try again', result.error);
           return;
         }
 
@@ -98,7 +103,8 @@ export default function PhotosScreen() {
           const uploadResult = await uploadPhoto(result.data);
           console.log('[PhotosScreen] Upload result:', uploadResult);
           if (!uploadResult.success) {
-            Alert.alert('Error', uploadResult.error.message || 'Failed to upload photo');
+            // Upload errors are system errors
+            notifySystem('Something went wrong', 'Try again', uploadResult.error);
           } else {
             console.log('[PhotosScreen] Photo uploaded successfully');
           }
@@ -107,7 +113,8 @@ export default function PhotosScreen() {
         }
       } catch (error) {
         console.error('[PhotosScreen] Error in takePhoto:', error);
-        Alert.alert('Error', 'Failed to take picture');
+        // Network errors are system errors
+        notifySystem('Something went wrong', 'Try again', error);
       }
     };
 
@@ -151,7 +158,8 @@ export default function PhotosScreen() {
     if (result.success) {
       Alert.alert('Success', 'The photo has been set as your main photo');
     } else {
-      Alert.alert('Error', result.error.message || "Couldn't set the photo as your main photo");
+      // API errors setting main photo are system errors
+      notifySystem('Something went wrong', 'Try again', result.error, () => handleSetMain(photoId));
     }
   };
 
@@ -168,7 +176,8 @@ export default function PhotosScreen() {
     setPhotoToDelete(null);
 
     if (!result.success) {
-      Alert.alert('Error', result.error.message || 'Failed to delete photo');
+      // API errors deleting photo are system errors
+      notifySystem('Something went wrong', 'Try again', result.error, handleDeleteConfirm);
     }
   };
 

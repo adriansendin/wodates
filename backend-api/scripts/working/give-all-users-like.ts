@@ -10,17 +10,12 @@
 
 import 'dotenv/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
 // ============================================================================
 // CONFIGURACIÓN: Cambia este email por el del usuario que quieres que reciba likes
 // ============================================================================
-const TARGET_USER_EMAIL = 'koko31@example.com'; // ⬅️ CAMBIA ESTE EMAIL
+const TARGET_USER_EMAIL = 'test2@example.com'; // ⬅️ CAMBIA ESTE EMAIL
 // ============================================================================
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 interface SupabaseConfig {
   url: string;
@@ -332,6 +327,10 @@ async function main() {
 
     for (let i = 0; i < allUserIds.length; i++) {
       const fromUserId = allUserIds[i];
+      if (!fromUserId) {
+        console.warn(`⚠️ Usuario en índice ${i} tiene ID inválido, omitiendo...`);
+        continue;
+      }
       const progress = `[${i + 1}/${allUserIds.length}]`;
 
       const result = await createLike(client, fromUserId, targetUser.id);
@@ -354,12 +353,13 @@ async function main() {
         }
       } else {
         errorCount++;
+        const errorMessage = result.error || 'Unknown error';
         errors.push({
           userId: fromUserId,
-          error: result.error || 'Unknown error',
+          error: errorMessage,
         });
         console.error(
-          `${progress} ❌ Error creando like de ${fromUserId}: ${result.error}`
+          `${progress} ❌ Error creando like de ${fromUserId}: ${errorMessage}`
         );
       }
     }

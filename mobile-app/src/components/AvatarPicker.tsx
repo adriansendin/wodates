@@ -74,11 +74,15 @@ export function AvatarPicker({
       return;
     }
 
-    Alert.alert('Select photo', 'Where would you like to get your photo from?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Take photo', onPress: takePhoto },
-      { text: 'Choose from gallery', onPress: pickFromGallery },
-    ]);
+    Alert.alert(
+      'Select photo',
+      'Where would you like to get your photo from?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Take photo', onPress: takePhoto },
+        { text: 'Choose from gallery', onPress: pickFromGallery },
+      ]
+    );
   };
 
   return (

@@ -11,7 +11,6 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
   Modal,
   Keyboard,
@@ -41,6 +40,8 @@ const DisplayMessageSchema = MessageSchema.extend({
 });
 
 import { getApiUrl } from '../../src/utils/apiConfig';
+import { notifySystem, notifyActionable } from '../../src/utils/notificationService';
+import { Alert } from 'react-native';
 
 const API_URL = getApiUrl();
 
@@ -586,7 +587,8 @@ export default function ChatScreen() {
         } else {
           setError(messageText);
           if (isInitialLoad.current) {
-            Alert.alert('Error', messageText);
+            // API errors loading messages are system errors
+            notifySystem('Something went wrong', 'Try again', result.error, loadMessages);
           }
         }
         return;
@@ -597,7 +599,8 @@ export default function ChatScreen() {
         setError('Invalid messages received from server.');
         console.warn('Invalid messages payload', validation.error);
         if (isInitialLoad.current) {
-          Alert.alert('Error', 'Received invalid messages data.');
+          // Validation errors from server are system errors (server bug)
+          notifySystem('Something went wrong', 'Try again', validation.error, loadMessages);
         }
         return;
       }
@@ -727,7 +730,8 @@ export default function ChatScreen() {
       console.error('Failed to load chat messages', error);
       setError('Network error. Please try again.');
       if (isInitialLoad.current) {
-        Alert.alert('Error', 'Network error. Please try again.');
+        // Network errors are system errors with retry
+        notifySystem('Something went wrong', 'Try again', error, loadMessages);
       }
     } finally {
       isLoadingMessagesRef.current = false;
@@ -1087,6 +1091,8 @@ export default function ChatScreen() {
   // Redirect if blocked
   useEffect(() => {
     if (isBlocked) {
+      // Chat blocked is an informational state - use Alert for navigation action
+      // This is not an error, it's a state change notification
       Alert.alert(
         'Chat unavailable',
         'This chat is no longer available.',
@@ -1177,7 +1183,8 @@ export default function ChatScreen() {
         // Other errors - show error and restore message
         const messageText = result.error.message || 'Could not send your message.';
         setError(messageText);
-        Alert.alert('Error', messageText);
+        // API errors sending message are system errors
+        notifySystem('Something went wrong', 'Try again', result.error);
         // Restore message on error so user can retry
         setMessage(messageContent);
         return;
@@ -1186,7 +1193,8 @@ export default function ChatScreen() {
       const validation = MessageSchema.safeParse(result.data.message);
       if (!validation.success) {
         console.warn('[ChatScreen] Validation failed:', validation.error);
-        Alert.alert('Error', 'Received invalid message data.');
+        // Validation errors from server are system errors (server bug)
+        notifySystem('Something went wrong', 'Try again', validation.error);
         console.warn('Invalid message payload received from server', validation.error);
         return;
       }
@@ -1322,7 +1330,8 @@ export default function ChatScreen() {
       );
 
       if (!result.success) {
-        Alert.alert('Error', result.error.message || 'Could not block user.');
+        // API errors blocking user are system errors
+        notifySystem('Something went wrong', 'Try again', result.error, handleBlockUser);
         return;
       }
 
@@ -1330,7 +1339,8 @@ export default function ChatScreen() {
       router.replace('/(app)/matches');
     } catch (error) {
       console.error('Failed to block user', error);
-      Alert.alert('Error', 'Network error. Please try again.');
+      // Network errors are system errors with retry
+      notifySystem('Something went wrong', 'Try again', error, handleBlockUser);
     } finally {
       setIsBlocking(false);
     }

@@ -40,7 +40,12 @@ export class AuthApi {
   async joinWaitlist(
     city: string,
     email: string
-  ): Promise<Result<{ ok: boolean; alreadyExisted: boolean; id: string; createdAt: string }, DomainError>> {
+  ): Promise<
+    Result<
+      { ok: boolean; alreadyExisted: boolean; id: string; createdAt: string },
+      DomainError
+    >
+  > {
     return this.apiClient.post('/waitlist/signup', { city, email });
   }
 }

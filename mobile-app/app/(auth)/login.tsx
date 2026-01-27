@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/domain/stores/authStore';
@@ -8,6 +8,7 @@ import { AuthApi } from '../../src/data/api/authApi';
 import { AuthTokens } from '../../src/domain/entities/Auth';
 import { User, Gender } from '../../src/domain/entities/User';
 import { getApiUrl } from '../../src/utils/apiConfig';
+import { notifyActionable, notifySystem } from '../../src/utils/notificationService';
 
 const API_URL = getApiUrl();
 
@@ -61,7 +62,8 @@ export default function LoginScreen() {
       if (!result.success) {
         const message = result.error.message ?? "Couldn't sign in. Please check your credentials.";
         setError(message);
-        Alert.alert('Login error', message);
+        // Credential errors are actionable - user can fix them
+        notifyActionable("Couldn't sign in", message, result.error);
         return;
       }
 
@@ -79,7 +81,8 @@ export default function LoginScreen() {
       console.error('Login error', err);
       const message = 'Network error. Please try again.';
       setError(message);
-      Alert.alert('Error', message);
+      // Network errors are system errors - user can only retry
+      notifySystem('Something went wrong', 'Try again', err, handleLogin);
     } finally {
       setLoading(false);
     }

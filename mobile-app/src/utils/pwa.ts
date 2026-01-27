@@ -1,6 +1,6 @@
 /**
  * PWA Utilities
- * 
+ *
  * Handles PWA installation prompts and service worker registration.
  * This is a minimal implementation for Phase 1 (installability only).
  */

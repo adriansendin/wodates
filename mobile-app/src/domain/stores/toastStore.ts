@@ -26,7 +26,7 @@ export const useToastStore = create<ToastState>((set) => ({
       duration: toast.duration ?? 4000,
     };
     set((state) => ({ toasts: [...state.toasts, newToast] }));
-    
+
     // Auto-hide after duration
     setTimeout(() => {
       set((state) => ({

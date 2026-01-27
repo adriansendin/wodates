@@ -22,7 +22,8 @@ export const BioPopupModal: React.FC<BioPopupModalProps> = ({
   onClose,
 }) => {
   // Truncate bio to 280 chars for display if needed
-  const displayBio = bio && bio.length > 280 ? bio.substring(0, 280) + '...' : bio;
+  const displayBio =
+    bio && bio.length > 280 ? bio.substring(0, 280) + '...' : bio;
 
   return (
     <Modal
@@ -53,7 +54,9 @@ export const BioPopupModal: React.FC<BioPopupModalProps> = ({
                 {displayBio ? (
                   <>
                     <Text style={styles.bioText}>{displayBio}</Text>
-                    <Text style={styles.aiGeneratedLabel}>Based on conversations</Text>
+                    <Text style={styles.aiGeneratedLabel}>
+                      Based on conversations
+                    </Text>
                   </>
                 ) : (
                   <Text style={styles.emptyText}>No bio available</Text>
@@ -129,4 +132,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

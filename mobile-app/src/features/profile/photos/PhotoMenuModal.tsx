@@ -33,7 +33,9 @@ export function PhotoMenuModal({
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.content} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.title}>Photo options</Text>
-          <Text style={styles.message}>What would you like to do with this photo?</Text>
+          <Text style={styles.message}>
+            What would you like to do with this photo?
+          </Text>
 
           <View style={styles.options}>
             {!isMain && (

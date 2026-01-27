@@ -89,9 +89,7 @@ const ToastItem: React.FC<{ toast: ToastType }> = ({ toast }) => {
         <View style={styles.iconContainer}>{getIcon()}</View>
         <View style={styles.textContainer}>
           <Text style={styles.title}>{toast.title}</Text>
-          {toast.message && (
-            <Text style={styles.message}>{toast.message}</Text>
-          )}
+          {toast.message && <Text style={styles.message}>{toast.message}</Text>}
         </View>
         <TouchableOpacity
           style={styles.dismissButton}

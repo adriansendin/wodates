@@ -51,7 +51,7 @@ export function PhotoGrid({
           <Text style={styles.counterText}>{photos.length} / 5 photos</Text>
           {photos.length >= 5 && (
             <Text style={styles.counterWarning}>
-              You've reached the maximum limit
+              You&apos;ve reached the maximum limit
             </Text>
           )}
         </View>

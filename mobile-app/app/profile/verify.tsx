@@ -18,6 +18,7 @@ import {
 import { ApiClient } from '../../src/data/api/apiClient';
 import { ProfileApi } from '../../src/data/api/profileApi';
 import { getApiUrl } from '../../src/utils/apiConfig';
+import { notifySystem } from '../../src/utils/notificationService';
 
 export default function VerifyProfileScreen() {
   const router = useRouter();
@@ -71,10 +72,8 @@ export default function VerifyProfileScreen() {
       }
 
       if (!pickResult.success) {
-        Alert.alert(
-          'Error',
-          pickResult.error?.message || "We couldn't open your photo library."
-        );
+        // Image picker errors are system errors
+        notifySystem('Something went wrong', 'Try again', pickResult.error);
         return;
       }
 
@@ -84,10 +83,8 @@ export default function VerifyProfileScreen() {
 
       const uploadResult = await uploadVerificationSelfie(pickResult.data);
       if (!uploadResult.success) {
-        Alert.alert(
-          'Error',
-          uploadResult.error?.message || "We couldn't upload your selfie."
-        );
+        // Upload errors are system errors
+        notifySystem('Something went wrong', 'Try again', uploadResult.error);
         return;
       }
 
@@ -99,10 +96,8 @@ export default function VerifyProfileScreen() {
       router.replace('/profile');
     } catch (error) {
       console.error('[VerifyProfile] Error in handleSubmit:', error);
-      Alert.alert(
-        'Error',
-        'An unexpected error occurred. Please try again.'
-      );
+      // Network/unexpected errors are system errors
+      notifySystem('Something went wrong', 'Try again', error, handleSubmit);
     }
   };
 

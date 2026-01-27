@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 
 type RegistrationSource = 'discover' | 'chats' | 'profile';
 
@@ -72,27 +66,22 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
           <Text style={styles.text}>{content.body}</Text>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={onRegister}
-            >
-              <Text style={styles.primaryButtonText}>{content.primaryButton}</Text>
+            <TouchableOpacity style={styles.primaryButton} onPress={onRegister}>
+              <Text style={styles.primaryButtonText}>
+                {content.primaryButton}
+              </Text>
             </TouchableOpacity>
 
             {onSignIn && (
-              <TouchableOpacity
-                style={styles.signInButton}
-                onPress={onSignIn}
-              >
+              <TouchableOpacity style={styles.signInButton} onPress={onSignIn}>
                 <Text style={styles.signInButtonText}>Sign in</Text>
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={onClose}
-            >
-              <Text style={styles.secondaryButtonText}>{content.secondaryButton}</Text>
+            <TouchableOpacity style={styles.secondaryButton} onPress={onClose}>
+              <Text style={styles.secondaryButtonText}>
+                {content.secondaryButton}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

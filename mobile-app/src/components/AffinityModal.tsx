@@ -54,10 +54,14 @@ export const AffinityModal: React.FC<AffinityModalProps> = ({
                         {sentence}
                       </Text>
                     ))}
-                    <Text style={styles.basedOnLabel}>Based on conversations</Text>
+                    <Text style={styles.basedOnLabel}>
+                      Based on conversations
+                    </Text>
                   </>
                 ) : (
-                  <Text style={styles.emptyText}>No affinity information available</Text>
+                  <Text style={styles.emptyText}>
+                    No affinity information available
+                  </Text>
                 )}
               </ScrollView>
             </View>

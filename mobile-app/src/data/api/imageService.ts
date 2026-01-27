@@ -485,9 +485,7 @@ export async function pickImageFromGallery(): Promise<
 
     if (!hasPermission) {
       return failure(
-        new PermissionDeniedError(
-          'Photo library permission is required.'
-        )
+        new PermissionDeniedError('Photo library permission is required.')
       );
     }
 
@@ -578,9 +576,7 @@ export async function takePictureWithCamera(): Promise<
 
     if (!hasPermission) {
       return failure(
-        new PermissionDeniedError(
-          'Camera permission is required.'
-        )
+        new PermissionDeniedError('Camera permission is required.')
       );
     }
 
@@ -683,7 +679,8 @@ export async function uploadAvatarToBackend(
     // Handle axios error format
     if (axios.isAxiosError(error) && error.response) {
       const message =
-        error.response.data?.message || 'An error occurred while uploading the image.';
+        error.response.data?.message ||
+        'An error occurred while uploading the image.';
       return failure(new UploadError(message, error));
     }
 

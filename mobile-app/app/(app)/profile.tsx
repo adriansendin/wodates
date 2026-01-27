@@ -44,6 +44,7 @@ import {
 } from '../../src/data/api/imageService';
 import { getSupabaseClient } from '../../src/data/api/supabaseClient';
 import { getApiUrl } from '../../src/utils/apiConfig';
+import { notifySystem } from '../../src/utils/notificationService';
 
 const API_URL = getApiUrl();
 const AVATAR_PLACEHOLDER = require('../../assets/placeholder.png');
@@ -649,7 +650,8 @@ export default function ProfileScreen() {
       if (!result.success) {
         const message =
           result.error.message ?? 'Could not deactivate your account.';
-        Alert.alert('Error', message);
+        // API errors deactivating account are system errors
+        notifySystem('Something went wrong', 'Try again', result.error, handleDeleteConfirm);
         setFeedback({
           type: 'error',
           message,
@@ -675,7 +677,8 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('[Profile] handleDeleteConfirm error', error);
       const message = 'Could not deactivate account. Please try again.';
-      Alert.alert('Error', message);
+      // Network errors are system errors with retry
+      notifySystem('Something went wrong', 'Try again', error, handleDeleteConfirm);
       setFeedback({
         type: 'error',
         message,

@@ -96,11 +96,11 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
     if (age < MIN_AGE) {
       return `You must be at least ${MIN_AGE} years old to sign up`;
     }
-  
+
     if (age > MAX_AGE) {
       return `The maximum allowed age is ${MAX_AGE} years`;
     }
-  
+
     if (date > new Date()) {
       return 'You can’t select a future date';
     }

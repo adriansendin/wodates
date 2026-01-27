@@ -16,6 +16,7 @@ import { ApiClient } from '../../src/data/api/apiClient';
 import { MatchApi } from '../../src/data/api/matchApi';
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { MatchNotificationBanner } from '../../src/components/MatchNotificationBanner';
+import { notifySystem } from '../../src/utils/notificationService';
 
 const API_URL = getApiUrl();
 
@@ -79,7 +80,8 @@ export default function MatchesScreen() {
         console.error('[MatchesScreen] API returned error:', result.error);
         setError(result.error.message);
         if (shouldShowLoader) {
-          Alert.alert('Error', result.error.message);
+          // API errors loading matches are system errors
+          notifySystem('Something went wrong', 'Try again', result.error, loadMatches);
         }
         // Don't return here - let finally block execute
         return;
@@ -163,7 +165,8 @@ export default function MatchesScreen() {
       const message = 'Network error. Please try again.';
       setError(message);
       if (shouldShowLoader) {
-        Alert.alert('Error', message);
+        // Network errors are system errors with retry
+        notifySystem('Something went wrong', 'Try again', error, loadMatches);
       }
     } finally {
       console.log('[MatchesScreen] Finally block executing, resetting loading state');

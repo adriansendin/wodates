@@ -17,7 +17,7 @@ import { useAuthStore } from '../../src/domain/stores/authStore';
 import { FeedApi } from '../../src/data/api/feedApi';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { useMatchesStore } from '../../src/domain/stores/matchesStore';
-import { showAlert } from '../../src/utils/showAlert';
+import { notifySystem } from '../../src/utils/notificationService';
 import { MatchApi } from '../../src/data/api/matchApi';
 import { ProfileApi } from '../../src/data/api/profileApi';
 import { UserProfile } from '../../src/domain/entities/UserProfile';
@@ -382,11 +382,13 @@ export default function FeedScreen() {
         }
       } else {
         setError(result.error.message);
-        showAlert('Error', result.error.message);
+        // API errors loading feed are system errors
+        notifySystem('Something went wrong', 'Try again', result.error, () => loadFeed(offset, append));
       }
     } catch (error) {
       setError('Network error');
-      showAlert('Error', 'Network error. Please try again.');
+      // Network errors are system errors with retry
+      notifySystem('Something went wrong', 'Try again', error, () => loadFeed(offset, append));
     } finally {
       setLoading(false);
       // Mark initial load as complete when first load finishes (success or failure)
@@ -681,8 +683,8 @@ export default function FeedScreen() {
           loadMoreIfNeeded();
           return;
         }
-        // For other errors, show alert
-        showAlert('Error', result.error.message);
+        // For other errors, show system error
+        notifySystem('Something went wrong', 'Try again', result.error);
         return;
       }
 
@@ -707,7 +709,7 @@ export default function FeedScreen() {
     } catch (error) {
       // Only show error if request wasn't aborted
       if (!abortControllerRef.current?.signal.aborted) {
-        showAlert('Error', 'Network error. Please try again.');
+        notifySystem('Something went wrong', 'Try again', error, handleLike);
       }
     } finally {
       // Debounce: keep button disabled for 300ms to prevent rapid clicking
@@ -730,7 +732,8 @@ export default function FeedScreen() {
       );
 
       if (!result.success) {
-        showAlert('Error', result.error.message);
+        // API errors confirming match are system errors
+        notifySystem('Something went wrong', 'Try again', result.error);
         setShowMatchModal(false);
         setPotentialMatch(null);
         nextUser();
@@ -779,7 +782,8 @@ export default function FeedScreen() {
         });
       }, 100);
     } catch (error) {
-      showAlert('Error', 'Network error. Please try again.');
+      // Network errors are system errors
+      notifySystem('Something went wrong', 'Try again', error);
       setShowMatchModal(false);
       setPotentialMatch(null);
       nextUser();
@@ -842,8 +846,8 @@ export default function FeedScreen() {
           loadMoreIfNeeded();
           return;
         }
-        // For other errors, show alert
-        showAlert('Error', result.error.message);
+        // For other errors, show system error
+        notifySystem('Something went wrong', 'Try again', result.error);
         return;
       }
 
@@ -855,7 +859,7 @@ export default function FeedScreen() {
     } catch (error) {
       // Only show error if request wasn't aborted
       if (!abortControllerRef.current?.signal.aborted) {
-        showAlert('Error', 'Network error. Please try again.');
+        notifySystem('Something went wrong', 'Try again', error, handlePass);
       }
     } finally {
       // Debounce: keep button disabled for 300ms to prevent rapid clicking

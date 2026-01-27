@@ -87,10 +87,7 @@ export async function pickZipFile(): Promise<
   } catch (error) {
     console.error('[ZipUploadService] Error picking ZIP file:', error);
     return failure(
-      new UploadError(
-        "Couldn't select the file. Please try again.",
-        error
-      )
+      new UploadError("Couldn't select the file. Please try again.", error)
     );
   }
 }
@@ -224,7 +221,8 @@ async function uploadZipToBackend(
 
       if (error.response) {
         const message =
-          error.response.data?.message || 'An error occurred while uploading the file.';
+          error.response.data?.message ||
+          'An error occurred while uploading the file.';
         return failure(new UploadError(message, error));
       }
     }
