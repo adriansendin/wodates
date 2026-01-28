@@ -25,6 +25,7 @@ import { AuthTokens } from '../../../src/domain/entities/Auth';
 import { User, Gender } from '../../../src/domain/entities/User';
 import { getApiUrl } from '../../../src/utils/apiConfig';
 import { GENDER_OPTIONS, GenderOption } from '../../../src/domain/entities/Gender';
+import { trackSignupComplete, trackLoginSuccess } from '../../../src/analytics/ga4';
 
 const API_URL = getApiUrl();
 
@@ -254,6 +255,10 @@ export default function Step1Screen() {
 
       // Guardar usuario en el store
       login(normalizedUser, tokens);
+
+      // Track GA4 events: signup completed and automatic login
+      trackSignupComplete('email');
+      trackLoginSuccess('email');
 
       // Manually trigger profile fetch to satisfy test
       // This is a workaround because in the Cypress environment,

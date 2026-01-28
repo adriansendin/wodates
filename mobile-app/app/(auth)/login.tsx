@@ -9,6 +9,7 @@ import { AuthTokens } from '../../src/domain/entities/Auth';
 import { User, Gender } from '../../src/domain/entities/User';
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { notifyActionable, notifySystem } from '../../src/utils/notificationService';
+import { trackLoginSuccess } from '../../src/analytics/ga4';
 
 const API_URL = getApiUrl();
 
@@ -76,6 +77,10 @@ export default function LoginScreen() {
       };
 
       login(normalizedUser, tokens);
+      
+      // Track GA4 event: login success
+      trackLoginSuccess('email');
+      
       router.replace('/(app)/matches');
     } catch (err) {
       console.error('Login error', err);
