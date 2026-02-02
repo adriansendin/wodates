@@ -88,19 +88,40 @@ export class UserBioGenerationService {
       }
 
       // Step 3: Generate bio from summary using ai-service
+      // Step 3: Generate bio from summary using ai-service
       let bio: string;
       try {
         const summaryText = profile.summary;
 
-        // Build the prompt with the summary
+        // --- NEW: fetch user gender for pronouns (A)
+        let pronounLine = 'Use third person pronouns: they/them.';
+        try {
+          const userResult = await this.userRepository.findById(userId);
+          if (userResult.success && userResult.data?.gender) {
+            const g = userResult.data.gender;
+            if (g === 'male') pronounLine = 'Use third person pronouns: he/him.';
+            else if (g === 'female') pronounLine = 'Use third person pronouns: she/her.';
+            else pronounLine = 'Use third person pronouns: they/them.';
+          }
+        } catch {
+          // ignore: keep default they/them
+        }
+
+        // Build the prompt with the summary (+ pronouns + format rules)
         const prompt = `${AIConfig.prompt.bioGeneration}
 
-PERFIL ESTRUCTURADO:
+RULES:
+- ${pronounLine}
+- Do NOT include any speaker labels.
+- Do NOT write "Doc Love:" (or any variant like "DocLove:", "DOC LOVE -", etc.).
+- Output only the bio text.
+
+STRUCTURED PROFILE:
 """
 ${summaryText}
 """
 
-Ahora genera la bio basándote en este perfil.`;
+Now generate the bio based on this profile.`;
 
         const aiServiceResponse = await this.aiServiceChatClient.generateChat({
           messages: [
@@ -113,8 +134,16 @@ Ahora genera la bio basándote en este perfil.`;
 
         bio = aiServiceResponse.content.trim();
 
-        // Validate bio length (max 240 chars)
-        if (bio.length > 240) {
+        // --- NEW: normalize/strip "Doc Love:" prefix (B)
+        bio = bio
+          .replace(/^\s*doc\s*love\s*[:\-]\s*/i, '') // "Doc Love:" or "Doc Love -"
+          .replace(/^\s*doc\s*love\s*/i, '')         // fallback if model writes "Doc Love" without punctuation
+          .trim();
+
+        bio = bio.trim();
+        bio = bio.replace(/(.)\1{9,}/g, '').trim();
+        const MAX = 340;
+        if (bio.length > MAX) {
           if (this.logger) {
             this.logger.warn(
               {
@@ -122,17 +151,12 @@ Ahora genera la bio basándote en este perfil.`;
                 bioLength: bio.length,
                 bioPreview: bio.substring(0, 50),
               },
-              'Generated bio exceeds 240 chars, truncating'
+              'Bio exceeds 340 chars; truncating with ellipsis'
             );
           }
-          // Truncate to 240 chars, ensuring we don't cut in the middle of a word
-          bio = bio.substring(0, 240);
-          const lastSpace = bio.lastIndexOf(' ');
-          if (lastSpace > 200) {
-            // Only truncate at word boundary if it's reasonable
-            bio = bio.substring(0, lastSpace);
-          }
+          bio = bio.slice(0, MAX - 1).trimEnd() + '…';
         }
+        if (bio.length > MAX) bio = bio.slice(0, MAX);
 
         if (this.logger) {
           this.logger.debug(
@@ -156,6 +180,7 @@ Ahora genera la bio basándote en este perfil.`;
         // Preserve existing bio state - don't update database
         return;
       }
+
 
       // Step 4: Update database with new bio
       const updateResult = await this.userRepository.update(userId, {

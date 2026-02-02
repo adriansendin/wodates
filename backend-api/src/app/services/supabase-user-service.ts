@@ -344,6 +344,8 @@ export class SupabaseUserService {
           cares_about_partner_children: data?.cares_about_partner_children,
           smoking: data?.smoking,
           cares_about_partner_smoking: data?.cares_about_partner_smoking,
+          bioLength: data?.bio?.length ?? 0,
+          bioPreview: data?.bio ? data.bio.slice(0, 80) : null,
         });
       }
 

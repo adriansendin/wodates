@@ -1,6 +1,14 @@
 /**
+ * DO NOT EXECUTE – This script is not intended to be run.
+ * Use scripts/working/create-user.ts instead, then run the nightly job
+ * (process-user-profiles-job.ts) to generate profile summaries and embeddings;
+ * affinity will then be available for those users.
+ *
+ * @deprecated Do not run. Superseded by create-user.ts + nightly job.
+ * -------------------------------------------------------------------------
+ *
  * Script to create test users in Supabase
- * 
+ *
  * This script creates users in both auth.users and public.users tables.
  * All users are 25 years old, live in Barcelona, and have age range 18-35.
  * 
@@ -38,7 +46,6 @@ import { createClient } from '@supabase/supabase-js';
 import { normalizeEmbedding } from '../../src/utils/embedding-utils';
 import { SupabaseAuthService } from '../../src/app/services/supabase-auth-service';
 import { RegisterRequest } from '../../src/domain/entities/Auth';
-import { AIConfig } from '../../src/app/ai/ai-settings';
 import { DocLoveHelper } from '../../src/app/services/doc-love-helper';
 import { SupabaseMatchRepository } from '../../src/data/repositories/SupabaseMatchRepository';
 import { SupabaseMessageRepository } from '../../src/data/repositories/SupabaseMessageRepository';
@@ -47,7 +54,6 @@ import { SupabaseUserAIProfileRepository } from '../../src/data/repositories/Sup
 import { GetAllUserChats } from '../../src/domain/use-cases/chat/GetAllUserChats';
 import { GetUnprocessedMessages } from '../../src/domain/use-cases/chat/GetUnprocessedMessages';
 import { GenerateUserProfileFromChats } from '../../src/domain/use-cases/chat/GenerateUserProfileFromChats';
-import { createSummarizerModel, createEmbeddingModel } from '../../src/app/ai/core/config';
 import { UserAIProfileEmbeddingService } from '../../src/app/ai/profile/UserAIProfileEmbeddingService';
 
 // Get __dirname equivalent for ES modules
@@ -145,8 +151,9 @@ async function saveBiographyAsChatMessages(
   let currentMessage = '';
 
   for (let i = 0; i < sentences.length; i++) {
-    const sentence = sentences[i];
-    
+    const sentence = sentences[i] ?? '';
+    if (!sentence) continue;
+
     if (currentMessage.length + sentence.length < 200 && i < sentences.length - 1) {
       // Add sentence to current message
       currentMessage += (currentMessage ? ' ' : '') + sentence + '.';
@@ -166,10 +173,12 @@ async function saveBiographyAsChatMessages(
 
   // If we only have one message, save it directly
   if (messages.length === 1) {
+    const singleMessage = messages[0];
+    if (singleMessage === undefined) return;
     const result = await messageRepository.create({
       matchId: chatId,
       senderId: userId,
-      content: messages[0],
+      content: singleMessage,
     });
 
     if (!result.success) {
@@ -180,10 +189,12 @@ async function saveBiographyAsChatMessages(
 
   // Save multiple messages with small delays to simulate conversation
   for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    if (msg === undefined) continue;
     const result = await messageRepository.create({
       matchId: chatId,
       senderId: userId,
-      content: messages[i],
+      content: msg,
     });
 
     if (!result.success) {
@@ -210,11 +221,12 @@ function parseArguments(): {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--gender' && i + 1 < args.length) {
-      const genderValue = args[i + 1].toLowerCase();
+      const rawGender = args[i + 1];
+      const genderValue = rawGender?.toLowerCase();
       if (genderValue === 'male' || genderValue === 'female' || genderValue === 'non_binary') {
         gender = genderValue;
       } else {
-        throw new Error(`Invalid gender: ${genderValue}. Must be one of: male, female, non_binary`);
+        throw new Error(`Invalid gender: ${String(genderValue)}. Must be one of: male, female, non_binary`);
       }
       i++; // Skip next argument as it's the value
     } else if (args[i] === '--target-user-id' && i + 1 < args.length) {
@@ -227,7 +239,9 @@ function parseArguments(): {
     throw new Error('--gender parameter is required. Must be one of: male, female, non_binary');
   }
 
-  return { gender, targetUserId };
+  const result: { gender: 'male' | 'female' | 'non_binary'; targetUserId?: string } = { gender };
+  if (targetUserId !== undefined) result.targetUserId = targetUserId;
+  return result;
 }
 
 /**
@@ -351,9 +365,11 @@ async function getTopAffinityUsers(
     let normB = 0;
     
     for (let i = 0; i < targetEmbedding.length; i++) {
-      dotProduct += targetEmbedding[i] * embedding[i];
-      normA += targetEmbedding[i] * targetEmbedding[i];
-      normB += embedding[i] * embedding[i];
+      const ta = targetEmbedding[i] ?? 0;
+      const eb = embedding[i] ?? 0;
+      dotProduct += ta * eb;
+      normA += ta * ta;
+      normB += eb * eb;
     }
     
     const normProduct = Math.sqrt(normA) * Math.sqrt(normB);
@@ -476,7 +492,7 @@ async function saveAffinityAnalysis(
     cosine_similarity: number;
     affinity_pct: number;
   }>,
-  messageRepository: SupabaseMessageRepository,
+  _messageRepository: SupabaseMessageRepository,
   targetUserMessages: Array<{ content: string; created_at: string; formatted: string }>,
   targetUserEmail: string,
   targetUserName: string
@@ -708,23 +724,16 @@ async function createTestUsers() {
     logger
   );
 
-  // Initialize AI models
-  const summarizerModel = createSummarizerModel(logger);
-  const embeddingModel = createEmbeddingModel(logger);
-
-  // Initialize profile generation use case
+  // Initialize profile generation use case (uses ai-service internally)
   const generateUserProfile = new GenerateUserProfileFromChats(
     getAllUserChats,
     userAIProfileRepository,
     userRepository,
-    summarizerModel,
-    docLoveHelper,
     logger
   );
 
-  // Initialize embedding service
+  // Initialize embedding service (uses ai-service internally)
   const embeddingService = new UserAIProfileEmbeddingService(
-    embeddingModel,
     userAIProfileRepository,
     logger
   );
@@ -779,6 +788,9 @@ async function createTestUsers() {
       // Step 1: Read biography from file (before creating user, to fail fast if file is missing)
       const bioFileIndex = i - startUser; // 0-based index for array access
       const biographyFilePath_source = biographyFiles[bioFileIndex];
+      if (biographyFilePath_source === undefined) {
+        throw new Error(`Biography file index out of range: ${bioFileIndex}`);
+      }
       console.log(`   📖 Reading biography from: ${path.basename(biographyFilePath_source)}...`);
       
       let biography: string;
@@ -965,9 +977,11 @@ async function createTestUsers() {
               let normB = 0;
               
               for (let i = 0; i < targetEmbedding.length; i++) {
-                dotProduct += targetEmbedding[i] * userEmbedding[i];
-                normA += targetEmbedding[i] * targetEmbedding[i];
-                normB += userEmbedding[i] * userEmbedding[i];
+                const ta = targetEmbedding[i] ?? 0;
+                const ub = userEmbedding[i] ?? 0;
+                dotProduct += ta * ub;
+                normA += ta * ta;
+                normB += ub * ub;
               }
               
               const normProduct = Math.sqrt(normA) * Math.sqrt(normB);

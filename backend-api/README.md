@@ -32,10 +32,16 @@ Once the server is running, visit:
 
 ## Environment Variables
 
-Copy `env.example` to `.env` and configure:
+Copy `.env.example` to `.env` and configure (or create `.env` from scratch). Required variables include:
+
+- **DOC_LOVE_ID** – UUID of the Doc Love bot user in `auth.users` / `public.users`. Must be set and valid UUID; server fails fast at startup if missing or invalid.
+- **SUPABASE_URL**, **SUPABASE_SERVICE_ROLE_KEY** – Supabase project credentials.
+- **AI_PROVIDER** – Must be `ai-service` (backend talks only to ai-service).
+
+Example:
 
 ```bash
-cp env.example .env
+cp .env.example .env
 ```
 
 ## API Endpoints

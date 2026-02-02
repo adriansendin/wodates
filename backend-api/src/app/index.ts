@@ -45,6 +45,24 @@ import { startJobScheduler } from './jobs/scheduler';
 import { AffinitySentenceService } from './services/affinity-sentence-service';
 import { AiServiceChatClient } from './ai/clients/AiServiceChatClient';
 
+/** UUID v4 pattern (8-4-4-4-12 hex). */
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function requireDocLoveId(): void {
+  const docLoveId = process.env.DOC_LOVE_ID?.trim();
+  if (!docLoveId) {
+    throw new Error(
+      "DOC_LOVE_ID is required. Set DOC_LOVE_ID in .env (e.g. DOC_LOVE_ID=87ca0479-a2b7-47eb-97b3-42a95e7b1669)."
+    );
+  }
+  if (!UUID_REGEX.test(docLoveId)) {
+    throw new Error(
+      `DOC_LOVE_ID must be a valid UUID. Got: ${docLoveId}. Example: 87ca0479-a2b7-47eb-97b3-42a95e7b1669`
+    );
+  }
+}
+
 async function buildApp() {
   // Startup guard: AI_PROVIDER must be 'ai-service'
   const aiProvider = process.env.AI_PROVIDER;
@@ -55,6 +73,9 @@ async function buildApp() {
         'All AI operations must go through ai-service HTTP API.'
     );
   }
+
+  // Startup guard: DOC_LOVE_ID must be set and valid UUID
+  requireDocLoveId();
 
   const logLevel =
     process.env.FASTIFY_LOG_LEVEL ??

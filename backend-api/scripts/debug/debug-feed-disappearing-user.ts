@@ -32,60 +32,28 @@ function getSupabaseConfig(): SupabaseConfig {
   return { url, serviceRoleKey };
 }
 
-async function getDocLoveInfo(client: SupabaseClient) {
+async function getDocLoveInfo(client: SupabaseClient): Promise<string | null> {
   console.log('\n=== DOC LOVE INFO ===');
-  
-  // Get Doc Love user ID (with pagination)
-  const searchEmail = 'doclove@wodates.com';
-  const normalizedSearchEmail = searchEmail.toLowerCase().trim();
-  let page = 1;
-  const perPage = 1000;
-  let docLoveUser = null;
 
-  while (!docLoveUser) {
-    const { data: authUsers, error: authError } = await client.auth.admin.listUsers({
-      page,
-      perPage,
-    });
-
-    if (authError) {
-      console.error(`Error fetching auth users (page ${page}):`, authError);
-      return null;
-    }
-
-    const users = authUsers.users || [];
-
-    // Search for Doc Love by email (case-insensitive)
-    docLoveUser =
-      users.find(
-        (user) => user.email?.toLowerCase().trim() === normalizedSearchEmail
-      ) || null;
-
-    if (docLoveUser) {
-      break;
-    }
-
-    // If we got fewer users than perPage, we've reached the end
-    if (users.length < perPage) {
-      break;
-    }
-
-    // Move to next page
-    page++;
+  const docLoveId = process.env.DOC_LOVE_ID?.trim();
+  if (!docLoveId) {
+    console.error('❌ DOC_LOVE_ID not set in .env');
+    return null;
   }
-
-  if (!docLoveUser) {
-    console.error('❌ Doc Love user not found in auth.users');
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(docLoveId)) {
+    console.error(`❌ DOC_LOVE_ID is not a valid UUID: ${docLoveId}`);
     return null;
   }
 
-  console.log(`✅ Doc Love found in auth.users: ${docLoveUser.id}`);
+  console.log(`✅ Doc Love ID (from DOC_LOVE_ID): ${docLoveId}`);
 
-  // Get Doc Love info from public.users
+  // Get Doc Love info from public.users for diagnostic output
   const { data: publicUser, error: publicError } = await client
     .from('users')
     .select('id, is_bot, active_chats_count, city, gender, looking_for')
-    .eq('id', docLoveUser.id)
+    .eq('id', docLoveId)
     .single();
 
   if (publicError || !publicUser) {
@@ -99,7 +67,7 @@ async function getDocLoveInfo(client: SupabaseClient) {
   console.log(`   gender: ${publicUser.gender ?? 'null'}`);
   console.log(`   looking_for: ${publicUser.looking_for ?? 'null'}`);
 
-  return docLoveUser.id;
+  return docLoveId;
 }
 
 async function getUserInfo(client: SupabaseClient, userId: string) {

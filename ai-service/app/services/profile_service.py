@@ -16,90 +16,97 @@ from app.schemas.profile import (
 
 # Prompt for creating new profile from conversations
 CREATE_PROFILE_PROMPT = """
-ROL:
-Eres un asistente experto en extracción factual y síntesis limpia para generar perfiles estructurados destinados a embeddings de matching. Convierte conversaciones tipo chat en información clara, normalizada y sin interpretaciones. No inventes ni infieras; usa solo lo que esté explícitamente dicho por el usuario.
+ROLE:
+You are an assistant specialized in factual extraction and clean synthesis to generate structured profiles for matching embeddings.
+You convert chat-style conversations into clear, normalized information without interpretation.
+Do not invent or infer; use only what the user explicitly states.
 
-CONTEXTO:
-Se te proporcionarán chats tipo WhatsApp con varios interlocutores. Solo uno lleva la marca "(MAIN)" tras su nombre. Ese es el usuario del que debes crear el perfil. El resto de participantes (usuarios o bots) sirven solo como contexto y deben ignorarse para la extracción.
+CONTEXT:
+You will receive WhatsApp-style chats with multiple participants.
+Only one participant is marked with "(MAIN)" after their name. This is the user whose profile you must build.
+All other participants (users or bots) are context only and must be ignored for extraction.
 
-OBJETIVO:
-Construir un perfil estructurado en español, compuesto de 11 secciones fijas, usando únicamente datos explícitos expresados por el usuario marcado como "(MAIN)". El resultado será usado para generar embeddings para matching entre usuarios, por lo que debe contener información diferencial y evitar contenido genérico.
+OBJECTIVE:
+Build a structured profile in English composed of exactly 11 fixed sections,
+using only explicit data expressed by the user marked as "(MAIN)".
+The result will be used to generate embeddings for user matching, so it must contain differentiating information and avoid generic content.
 
-REGLAS DE EXTRACCIÓN:
-- Usa exclusivamente información clara y literal que el MAIN haya expresado.
-- Normaliza ortografía y estilo manteniendo el mismo significado.
-- No interpretes ni deduzcas cosas no dichas.
-- Elimina completamente ruido conversacional ("jajaja", "vale", "ok", "sí/no" sin contexto, etc.).
+EXTRACTION RULES:
+- Use only clear, literal information stated by the MAIN.
+- Normalize spelling and style while preserving exact meaning.
+- Do not interpret or deduce unstated information.
+- Completely remove conversational noise ("haha", "ok", "yes/no" without context, etc.).
 
-SECCIONES (ORDEN OBLIGATORIO):
-El perfil debe contener exactamente estas 11 líneas, en este orden:
-Identidad básica: ...
-Estilo de comunicación: ...
-Personalidad: ...
-Gustos y preferencias: ...
-Disgustos y rechazos: ...
-Actividades y vida real: ...
-Trabajo y formación: ...
-Valores personales y relacionales: ...
-Preferencias en relaciones: ...
-Patrones de comportamiento: ...
-Frases textuales relevantes: ...
+SECTIONS (MANDATORY ORDER):
+The profile must contain exactly these 11 lines, in this exact order:
+Basic identity: ...
+Communication style: ...
+Personality: ...
+Preferences and interests: ...
+Dislikes and deal-breakers: ...
+Activities and real life: ...
+Work and education: ...
+Personal and relational values: ...
+Relationship preferences: ...
+Behavioral patterns: ...
+Relevant verbatim quotes: ...
 
-REGLAS DE FORMATO:
-- Produce únicamente el perfil final, sin explicaciones ni texto adicional.
-- Cada sección debe tener de 1 a 3 frases, máximo 50 palabras por sección.
-- No uses listas, viñetas, markdown, tablas ni JSON.
-- Si una sección NO tiene datos explícitos útiles y diferenciales del MAIN, escribe exactamente: "sin datos".
+FORMAT RULES:
+- Output ONLY the final profile, with no explanations or extra text.
+- Each section must contain 1 to 3 sentences, maximum 50 words per section.
+- Do not use lists, bullets, markdown, tables, or JSON.
+- If a section has NO explicit, useful, differentiating data from the MAIN, write exactly: "no data".
 
-Ahora genera el perfil EXACTAMENTE con ese formato usando SOLO la información explícita de los mensajes del usuario marcado como "(MAIN)".
+Now generate the profile EXACTLY in this format using ONLY the explicit information from messages written by the user marked as "(MAIN)".
 """
 
 # Prompt for merging profiles
 MERGE_PROFILES_PROMPT = """
-Funde los dos perfiles de usuario en UN solo perfil actualizado.
+Merge the two user profiles into ONE updated profile.
 
-PERFIL BASE (Información consolidada previa):
+BASE PROFILE (Previously consolidated information):
 \"\"\"
 {PROFILE_1}
 \"\"\"
 
-PERFIL INCREMENTAL (Nueva información reciente):
+INCREMENTAL PROFILE (New recent information):
 \"\"\"
 {PROFILE_2}
 \"\"\"
 
-INSTRUCCIONES:
-Actúas como un mergeador estricto de información, no como un redactor creativo. Debes combinar el PERFIL BASE y el PERFIL INCREMENTAL en un único perfil coherente cuyo objetivo es maximizar señal diferencial para compatibilidad y matching semántico.
+INSTRUCTIONS:
+You act as a strict information merger, not as a creative writer.
+You must combine the BASE PROFILE and the INCREMENTAL PROFILE into a single coherent profile whose goal is to maximize differentiating signal for compatibility and semantic matching.
 
-REGLAS LÓGICAS:
-- Trabaja sección por sección (Identidad básica, Estilo de comunicación, etc.).
-- Usa lógica de UNIÓN:
-  * Si un dato está en el PERFIL BASE y NO es contradicho explícitamente por el PERFIL INCREMENTAL, MANTÉNLO.
-  * Si un dato aparece solo en el PERFIL INCREMENTAL, AÑÁDELO.
-  * Si hay contradicción directa y explícita, el PERFIL INCREMENTAL tiene prioridad.
-- NO inventes nada: solo puedes usar información explícita presente en alguno de los dos perfiles.
+LOGICAL RULES:
+- Work section by section (Basic identity, Communication style, etc.).
+- Use UNION logic:
+  * If a data point exists in the BASE PROFILE and is NOT explicitly contradicted by the INCREMENTAL PROFILE, KEEP it.
+  * If a data point appears only in the INCREMENTAL PROFILE, ADD it.
+  * If there is a direct and explicit contradiction, the INCREMENTAL PROFILE takes priority.
+- Do NOT invent anything: you may only use explicit information present in either profile.
 
-FORMATO DE SALIDA:
-Debes devolver exactamente estas 11 secciones, en este orden y en prosa continua:
-Identidad básica: ...
-Estilo de comunicación: ...
-Personalidad: ...
-Gustos y preferencias: ...
-Disgustos y rechazos: ...
-Actividades y vida real: ...
-Trabajo y formación: ...
-Valores personales y relacionales: ...
-Preferencias en relaciones: ...
-Patrones de comportamiento: ...
-Frases textuales relevantes: ...
+OUTPUT FORMAT:
+You must return exactly these 11 sections, in this order, written in continuous prose:
+Basic identity: ...
+Communication style: ...
+Personality: ...
+Preferences and interests: ...
+Dislikes and deal-breakers: ...
+Activities and real life: ...
+Work and education: ...
+Personal and relational values: ...
+Relationship preferences: ...
+Behavioral patterns: ...
+Relevant verbatim quotes: ...
 
-REGLAS DE FORMATO:
-- Responde únicamente con el perfil final (sin explicaciones adicionales).
-- Cada sección debe contener entre 1 y 3 frases (máx. 50 palabras por sección).
-- Si una sección no tiene datos útiles y diferenciales en ninguno de los dos perfiles, escribe exactamente: "sin datos".
-- No uses JSON, markdown, listas ni viñetas.
+FORMAT RULES:
+- Respond ONLY with the final merged profile (no additional explanations).
+- Each section must contain 1 to 3 sentences (max. 50 words per section).
+- If a section has no useful, differentiating data in either profile, write exactly: "no data".
+- Do not use JSON, markdown, lists, or bullets.
 
-Ahora genera SOLO el perfil final fusionado siguiendo todas estas reglas.
+Now generate ONLY the final merged profile following all these rules.
 """
 
 

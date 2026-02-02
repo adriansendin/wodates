@@ -481,19 +481,19 @@ export class DocLoveChatService {
     let systemPrompt = `${systemInstructions}\n\n`;
 
     if (userContext?.name) {
-      systemPrompt += `El usuario se llama ${userContext.name}.\n`;
+      systemPrompt += `The user's name is ${userContext.name}.\n`;
     }
 
     if (userContext?.bio) {
-      systemPrompt += `Su bio dice: "${userContext.bio}"\n`;
+      systemPrompt += `Their bio says: "${userContext.bio}"\n`;
     }
 
     if (activeMatches && activeMatches.length > 0) {
-      systemPrompt += `\nActualmente tiene ${activeMatches.length} conversación(es) activa(s):\n`;
+      systemPrompt += `\nThey currently have ${activeMatches.length} active conversation(s):\n`;
       for (const match of activeMatches.slice(0, 3)) {
-        systemPrompt += `- Con ${match.otherUserName}`;
+        systemPrompt += `- With ${match.otherUserName}`;
         if (match.lastMessage) {
-          systemPrompt += `: último mensaje sobre "${match.lastMessage.substring(0, 50)}..."`;
+          systemPrompt += `: last message about "${match.lastMessage.substring(0, 50)}..."`;
         }
         systemPrompt += '\n';
       }

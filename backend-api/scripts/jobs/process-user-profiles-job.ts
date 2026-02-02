@@ -180,86 +180,69 @@ async function resetUserMessages(
   }
 }
 
+const MESSAGES_PAGE_SIZE = 1000;
+
 /**
- * Gets user IDs that have unprocessed messages and are not bots
- * Optimized query: SELECT DISTINCT sender_id FROM messages
- * WHERE profile_processed_at IS NULL
- * AND sender_id IN (SELECT id FROM users WHERE is_bot = false OR is_bot IS NULL)
+ * Gets user IDs that have unprocessed messages and are not bots.
+ * Uses pagination so we don't miss users when there are more unprocessed
+ * messages than PostgREST's default row limit (e.g. 1000).
  */
 async function getUsersWithUnprocessedMessages(
   client: SupabaseClient
 ): Promise<string[]> {
-  try {
-    // Query to get distinct sender_ids from messages with unprocessed messages
-    // Join with users table to filter out bots
-    const { data, error } = await client
-      .from('messages')
-      .select('sender_id, users!messages_sender_id_fkey(id, is_bot)')
-      .is('profile_processed_at', null)
-      .or('users.is_bot.is.null,users.is_bot.eq.false');
+  const senderIds = new Set<string>();
+  let offset = 0;
+  let hasMore = true;
 
-    if (error) {
-      throw new Error(`Failed to fetch users with unprocessed messages: ${error.message}`);
-    }
-
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    // Extract unique sender_ids
-    // Filter to ensure we only include non-bot users (double check)
-    const userIds = new Set<string>();
-    
-    for (const row of data) {
-      const senderId = row.sender_id;
-      // Handle both single user object and array of users from join
-      const user = Array.isArray(row.users) ? row.users[0] : row.users;
-      
-      // Only include if user exists and is not a bot
-      if (senderId && user && (user.is_bot === false || user.is_bot === null)) {
-        userIds.add(senderId);
-      }
-    }
-
-    return Array.from(userIds);
-  } catch (error) {
-    // Fallback: if the join query failed, use a simpler approach
-    // Logging removed - fallback is automatic and expected behavior
-    
-    // Fallback: Get distinct sender_ids from unprocessed messages
+  while (hasMore) {
     const { data: messagesData, error: messagesError } = await client
       .from('messages')
       .select('sender_id')
-      .is('profile_processed_at', null);
+      .is('profile_processed_at', null)
+      .range(offset, offset + MESSAGES_PAGE_SIZE - 1);
 
     if (messagesError) {
       throw new Error(`Failed to fetch unprocessed messages: ${messagesError.message}`);
     }
 
-    if (!messagesData || messagesData.length === 0) {
-      return [];
+    if (!messagesData?.length) {
+      hasMore = false;
+      break;
     }
 
-    // Get unique sender IDs
-    const senderIds = [...new Set(messagesData.map((row) => row.sender_id).filter(Boolean))];
-
-    if (senderIds.length === 0) {
-      return [];
+    for (const row of messagesData) {
+      if (row.sender_id) senderIds.add(row.sender_id);
     }
+    hasMore = messagesData.length === MESSAGES_PAGE_SIZE;
+    offset += MESSAGES_PAGE_SIZE;
+  }
 
-    // Filter out bots by checking users table
+  if (senderIds.size === 0) {
+    return [];
+  }
+
+  const ids = Array.from(senderIds);
+  const userIds: string[] = [];
+
+  // Filter in chunks to avoid URL length limits (e.g. 100 ids per request)
+  const chunkSize = 100;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
     const { data: usersData, error: usersError } = await client
       .from('users')
       .select('id')
-      .in('id', senderIds)
+      .in('id', chunk)
       .or('is_bot.is.null,is_bot.eq.false');
 
     if (usersError) {
       throw new Error(`Failed to filter bot users: ${usersError.message}`);
     }
-
-    return (usersData ?? []).map((row) => row.id);
+    if (usersData?.length) {
+      userIds.push(...usersData.map((row) => row.id));
+    }
   }
+
+  return userIds;
 }
 
 /**
@@ -506,7 +489,7 @@ function getChatParticipants(chatText: string): { participants: Set<string>; cou
     const match = line.match(/^\[(\d+)\/(\d+)\/(\d+),\s*(\d+):(\d+)(?::(\d+))?\]\s*(.+?):\s*(.+)$/);
     
     if (match) {
-      const senderName = match[7].trim(); // Name before colon
+      const senderName = (match[7] ?? '').trim(); // Name before colon
       if (senderName.length > 0) {
         participants.add(senderName);
       }
@@ -532,8 +515,15 @@ function parseChatText(chatText: string): Array<{ role: 'user'; content: string;
     const match = line.match(/^\[(\d+)\/(\d+)\/(\d+),\s*(\d+):(\d+)(?::(\d+))?\]\s*(.+?):\s*(.+)$/);
     
     if (match) {
-      const [, day, month, year, hours, minutes, seconds, senderName, content] = match;
-      
+      const day = match[1] ?? '0';
+      const month = match[2] ?? '0';
+      const year = match[3] ?? '0';
+      const hours = match[4] ?? '0';
+      const minutes = match[5] ?? '0';
+      const seconds = match[6];
+      const senderName = (match[7] ?? '').trim();
+      const content = (match[8] ?? '').trim();
+
       const fullYear = 2000 + parseInt(year, 10);
       const timestamp = new Date(
         fullYear,
@@ -543,12 +533,12 @@ function parseChatText(chatText: string): Array<{ role: 'user'; content: string;
         parseInt(minutes, 10),
         seconds ? parseInt(seconds, 10) : 0
       );
-      
+
       messages.push({
         role: 'user',
-        content: content.trim(),
+        content,
         timestamp,
-        senderName: senderName.trim(), // Preserve sender name for MAIN marking
+        senderName, // Preserve sender name for MAIN marking
       });
     }
   }
@@ -834,7 +824,7 @@ async function processChatContent(
       throw error;
     }
   } else if (!consolidatedSummary && incrementalSummary) {
-    writeToLog(`Copying incremental to summary (first time)`, 'INFO');
+    writeToLog(`Copying incremental to summary`, 'INFO');
     const firstTimeUpsertResult = await userAIProfileRepository.upsert({
       userId,
       summary: incrementalSummary,
@@ -950,7 +940,7 @@ async function main() {
   if (args.length > 0 && !isReprocessAllMode) {
     writeToLog(`Invalid argument(s): ${args.join(' ')}`, 'ERROR');
     writeToLog(`Usage: npx tsx scripts/jobs/process-user-profiles-job.ts [--reprocess-all]`, 'ERROR');
-    writeToLog(`  --reprocess-all: Process all users and all chats (including already processed)`, 'ERROR');
+    writeToLog(`  --reprocess-all: Process all users and all chats`, 'ERROR');
     logStream.end(() => process.exit(1));
     return;
   }
@@ -959,7 +949,7 @@ async function main() {
   
   if (isReprocessAllMode) {
     writeToLog(`Starting user profile processing job (REPROCESS ALL MODE)`, 'INFO');
-    writeToLog(`Will process ALL users and ALL chats (including already processed)`, 'INFO');
+    writeToLog(`Will process ALL users and ALL chats`, 'INFO');
     writeToLog(`This will reset all messages as unprocessed and regenerate embeddings`, 'WARN');
   } else {
     writeToLog(`Starting user profile processing job (DEFAULT MODE)`, 'INFO');
@@ -1081,6 +1071,7 @@ async function main() {
       let totalResetCount = 0;
       for (let i = 0; i < userIds.length; i++) {
         const userId = userIds[i];
+        if (userId === undefined) continue;
         const userNumber = i + 1;
         writeToLog(`[${userNumber}/${userIds.length}] Resetting messages for user: ${userId}`, 'INFO');
         try {
@@ -1107,39 +1098,50 @@ async function main() {
 
     if (userIds.length === 0) {
       writeToLog('No users with unprocessed messages found', 'INFO');
-      writeToLog('Skipping to Process 2 (external chat files)', 'INFO');
+      writeToLog('Skipping to Process 2', 'INFO');
     } else {
+      // Resolve Doc Love ID once so their chat is never counted as "real user"
+      // (avoids skipping users who only have Doc Love chat when is_bot is not set in DB)
+      let docLoveId: string | undefined;
+      try {
+        docLoveId = await docLoveHelper.getDocLoveUserId();
+      } catch {
+        docLoveId = undefined;
+      }
+
       for (let i = 0; i < userIds.length; i++) {
         const userId = userIds[i];
+        if (userId === undefined) continue;
         const userNumber = i + 1;
-        
+
         writeToLog(`[${userNumber}/${userIds.length}] Processing user: ${userId}`, 'INFO');
 
       try {
-        // CRITICAL: Check if user has active chats with real users (not Doc Love)
-        // Only process if active_chats_count = 0 (user is not talking to anyone real)
-        const { data: userData, error: userError } = await client
-          .from('users')
-          .select('active_chats_count')
-          .eq('id', userId)
-          .single<{ active_chats_count: number | null }>();
-
-        if (userError) {
-          writeToLog(`Failed to check active_chats_count for user ${userId}: ${userError.message}`, 'WARN');
-          // Continue processing - better to process than skip on error
-        } else if (userData) {
-          const activeChatsCount = userData.active_chats_count ?? 0;
-          if (activeChatsCount >= 1) {
-            writeToLog(`User ${userId}: Has ${activeChatsCount} active chat(s) with real users, skipping processing (user is currently talking to someone)`, 'INFO');
-            skippedCount++;
-            results.push({ 
-              userId, 
-              status: 'skipped',
-              message: `User has ${activeChatsCount} active chat(s)`
-            });
-            continue;
-          }
+        // CRITICAL: Only process if user has 0 active chats with real users (excl. bots like Doc Love).
+        // We pass docLoveId so Doc Love's chat is never counted even if is_bot is not set in DB.
+        let activeChatsWithRealUsers: number;
+        try {
+          activeChatsWithRealUsers = await matchRepository.getActiveChatsWithRealUsersCount(
+            userId,
+            docLoveId ? [docLoveId] : undefined
+          );
+        } catch (err) {
+          writeToLog(`Failed to get active chats count for user ${userId}, proceeding: ${err}`, 'WARN');
+          activeChatsWithRealUsers = 0;
         }
+
+        if (activeChatsWithRealUsers >= 1) {
+          writeToLog(`User ${userId}: Has ${activeChatsWithRealUsers} active chat with human users , skipping because user is currently talking to someone`, 'INFO');
+          skippedCount++;
+          results.push({
+            userId,
+            status: 'skipped',
+            message: `User has ${activeChatsWithRealUsers} active chat with human users`,
+          });
+          continue;
+        }
+
+        writeToLog(`User ${userId}: 0 active chats with real users, proceeding to process profile`, 'INFO');
 
         // Get profile before processing to compare summary changes
         const profileBeforeResult = await userAIProfileRepository.findByUserId(userId);
@@ -1153,20 +1155,26 @@ async function main() {
         const result = await generateUserProfile.execute(userId);
 
         if (!result.success) {
-          writeToLog(`Failed to process user ${userId}: Code=${result.error.code}, Message=${result.error.message}`, 'ERROR');
+          const errMsg = result.error.message ?? 'Unknown error';
+          writeToLog(`Failed to process user ${userId}: Code=${result.error.code}, Message=${errMsg}`, 'ERROR');
           errorCount++;
           results.push({
             userId,
             status: 'error',
-            message: result.error.message,
+            message: errMsg,
           });
           continue;
         }
 
         if (result.data === 'No unprocessed chats to analyze') {
-          writeToLog(`User ${userId}: No unprocessed chats (may have been processed by another instance)`, 'INFO');
+          const reason = String(result.data);
+          writeToLog(`User ${userId}: ${reason}`, 'INFO');
           skippedCount++;
-          results.push({ userId, status: 'skipped' });
+          results.push({
+            userId,
+            status: 'skipped',
+            message: reason,
+          });
           continue;
         }
 
@@ -1188,7 +1196,7 @@ async function main() {
           const hasConsolidatedSummary = summaryAfterContent !== null;
           
           if (!hasConsolidatedSummary) {
-            writeToLog(`User ${userId}: No consolidated summary yet (only incremental), skipping embedding generation`, 'INFO');
+            writeToLog(`User ${userId}: No consolidated summary yet, skipping embedding generation`, 'INFO');
           } else if (!summaryChanged && summaryBeforeContent !== null) {
             writeToLog(`User ${userId}: Summary unchanged, skipping embedding generation`, 'INFO');
           } else {
@@ -1216,7 +1224,7 @@ async function main() {
             writeToLog(`User ${userId}: No consolidated summary available, skipping bio generation`, 'INFO');
           } else {
             // Always generate bio if summary exists (independent of whether it changed)
-            writeToLog(`User ${userId}: Generating bio from summary (independent of summary changes)...`, 'INFO');
+            writeToLog(`User ${userId}: Generating bio from summary...`, 'INFO');
             await bioGenerationService.generateBioFromSummary(userId);
             writeToLog(`Bio generated successfully for user ${userId}`, 'INFO');
           }
@@ -1224,12 +1232,14 @@ async function main() {
           // Log error but don't fail the whole process - summary and embedding are already saved
           writeToLog(`Failed to generate bio for user ${userId}: ${bioError instanceof Error ? bioError.message : String(bioError)}`, 'WARN');
         }
-        
+
+        writeToLog(`User ${userId}: Done — profile summary, embedding, and bio updated`, 'INFO');
         processedCount++;
         results.push({ userId, status: 'success' });
 
       } catch (error) {
-        writeToLog(`Unexpected error processing user ${userId}: ${error instanceof Error ? error.message : String(error)}`, 'ERROR');
+        const errMsg = error instanceof Error ? error.message : String(error);
+        writeToLog(`Unexpected error processing user ${userId}: ${errMsg}`, 'ERROR');
         if (error instanceof Error && error.stack) {
           writeToLog(`Stack trace: ${error.stack}`, 'ERROR');
         }
@@ -1237,9 +1247,25 @@ async function main() {
         results.push({
           userId,
           status: 'error',
-          message: error instanceof Error ? error.message : String(error),
+          message: errMsg,
         });
       }
+    }
+
+    // Resumen: usuarios no procesados (omitidos y fallidos) con identificador y motivo
+    const skippedResults = results.filter((r) => r.status === 'skipped');
+    const errorResults = results.filter((r) => r.status === 'error');
+    if (skippedResults.length > 0 || errorResults.length > 0) {
+      writeToLog('--- Usuarios no procesados ---', 'INFO');
+      for (const r of skippedResults) {
+        const reason = r.message ?? '(motivo no especificado)';
+        writeToLog(`  Omitido - userId: ${r.userId} | Motivo: ${reason}`, 'INFO');
+      }
+      for (const r of errorResults) {
+        const reason = r.message ?? 'Error desconocido';
+        writeToLog(`  Error   - userId: ${r.userId} | Motivo: ${reason}`, 'INFO');
+      }
+      writeToLog('--- Fin usuarios no procesados ---', 'INFO');
     }
 
     writeToLog('[PROCESS_1] Internal messages processing completed', 'INFO');

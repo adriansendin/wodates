@@ -457,136 +457,128 @@ export class SupabaseMatchRepository implements MatchRepository {
   }
 
   /**
-   * Updates active_chats_count for given users by counting their active chats
-   * (chats that are not blocked)
+   * Returns the number of active chats the user has with real users (non-bots).
+   * Used by the nightly job to decide whether to process a user; does not rely
+   * on the stored active_chats_count column (which may be stale or wrong).
+   * @param excludeUserIds Optional user IDs to always treat as bots (e.g. Doc Love)
+   *   so their chats are not counted, even if is_bot is not set in the DB.
    */
-  private async updateActiveChatsCount(userIds: string[]): Promise<void> {
-    for (const userId of userIds) {
-      // Count active chats: chats where user is participant AND not blocked
-      const { data: participantRows, error: participantError } =
-        await this.client
-          .from('chat_participants')
-          .select('chat_id')
-          .eq('user_id', userId);
+  async getActiveChatsWithRealUsersCount(
+    userId: string,
+    excludeUserIds?: string[]
+  ): Promise<number> {
+    return this.computeActiveChatsWithRealUsersCount(userId, excludeUserIds);
+  }
 
-      if (participantError) {
-        console.error(
-          `[SupabaseMatchRepository] Failed to count chats for user ${userId}:`,
-          this.formatSupabaseError(participantError)
-        );
-        continue;
+  /**
+   * Computes active chats with real users (excl. bots and blocked).
+   * Returns 0 on any DB error so callers can proceed safely.
+   * @param excludeUserIds Optional user IDs to always exclude (e.g. Doc Love).
+   */
+  private async computeActiveChatsWithRealUsersCount(
+    userId: string,
+    excludeUserIds?: string[]
+  ): Promise<number> {
+    const { data: participantRows, error: participantError } = await this.client
+      .from('chat_participants')
+      .select('chat_id')
+      .eq('user_id', userId);
+
+    if (participantError || !participantRows?.length) {
+      return 0;
+    }
+
+    const chatIds = participantRows.map((row: { chat_id: string }) => row.chat_id);
+
+    const { data: allParticipants, error: allParticipantsError } =
+      await this.client
+        .from('chat_participants')
+        .select('chat_id, user_id')
+        .in('chat_id', chatIds);
+
+    if (allParticipantsError || !allParticipants?.length) {
+      return 0;
+    }
+
+    const chatParticipantsMap = new Map<string, string[]>();
+    for (const participant of allParticipants) {
+      const chatId = participant.chat_id;
+      if (!chatParticipantsMap.has(chatId)) {
+        chatParticipantsMap.set(chatId, []);
       }
+      chatParticipantsMap.get(chatId)!.push(participant.user_id);
+    }
 
-      const chatIds =
-        participantRows?.map((row: { chat_id: string }) => row.chat_id) ?? [];
+    const { data: blocks, error: blocksError } = await this.client
+      .from('blocked_users')
+      .select('blocker_id, blocked_id')
+      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
 
-      if (chatIds.length === 0) {
-        // No chats, set to 0
-        await this.client
-          .from('users')
-          .update({ active_chats_count: 0 })
-          .eq('id', userId);
-        continue;
-      }
-
-      // Get all participants for these chats to check for blocks
-      const { data: allParticipants, error: allParticipantsError } =
-        await this.client
-          .from('chat_participants')
-          .select('chat_id, user_id')
-          .in('chat_id', chatIds);
-
-      if (allParticipantsError) {
-        console.error(
-          `[SupabaseMatchRepository] Failed to fetch all participants for user ${userId}:`,
-          this.formatSupabaseError(allParticipantsError)
-        );
-        continue;
-      }
-
-      // Group participants by chat_id
-      const chatParticipantsMap = new Map<string, string[]>();
-      for (const participant of allParticipants ?? []) {
-        const chatId = participant.chat_id;
-        if (!chatParticipantsMap.has(chatId)) {
-          chatParticipantsMap.set(chatId, []);
-        }
-        chatParticipantsMap.get(chatId)!.push(participant.user_id);
-      }
-
-      // Get all blocks involving this user
-      const { data: blocks, error: blocksError } = await this.client
-        .from('blocked_users')
-        .select('blocker_id, blocked_id')
-        .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
-
-      if (blocksError) {
-        console.error(
-          `[SupabaseMatchRepository] Failed to fetch blocks for user ${userId}:`,
-          this.formatSupabaseError(blocksError)
-        );
-        continue;
-      }
-
-      const blockedUserIds = new Set<string>();
-      for (const block of blocks ?? []) {
+    const blockedUserIds = new Set<string>();
+    if (!blocksError && blocks) {
+      for (const block of blocks) {
         if (block.blocker_id === userId) {
           blockedUserIds.add(block.blocked_id);
         } else {
           blockedUserIds.add(block.blocker_id);
         }
       }
+    }
 
-      // Get is_bot status for all other participants to exclude bot chats
-      const otherParticipantIds = Array.from(
-        new Set(
-          Array.from(chatParticipantsMap.values())
-            .flat()
-            .filter((id) => id !== userId)
-        )
-      );
+    const otherParticipantIds = Array.from(
+      new Set(
+        Array.from(chatParticipantsMap.values())
+          .flat()
+          .filter((id) => id !== userId)
+      )
+    );
 
-      const { data: userRows, error: usersError } = await this.client
-        .from('users')
-        .select('id, is_bot')
-        .in('id', otherParticipantIds);
+    if (otherParticipantIds.length === 0) {
+      return 0;
+    }
 
-      if (usersError) {
-        console.error(
-          `[SupabaseMatchRepository] Failed to fetch user bot status for user ${userId}:`,
-          this.formatSupabaseError(usersError)
-        );
-        continue;
+    const { data: userRows, error: usersError } = await this.client
+      .from('users')
+      .select('id, is_bot')
+      .in('id', otherParticipantIds);
+
+    if (usersError || !userRows?.length) {
+      return 0;
+    }
+
+    const botUserIds = new Set<string>();
+    for (const userRow of userRows) {
+      if (userRow.is_bot === true) {
+        botUserIds.add(userRow.id);
       }
-
-      const botUserIds = new Set<string>();
-      for (const userRow of userRows ?? []) {
-        if (userRow.is_bot === true) {
-          botUserIds.add(userRow.id);
-        }
+    }
+    if (excludeUserIds?.length) {
+      for (const id of excludeUserIds) {
+        if (id) botUserIds.add(id);
       }
+    }
 
-      // Count active chats (chats without blocks AND without bots)
-      let activeChatsCount = 0;
-      for (const [, participantIds] of chatParticipantsMap.entries()) {
-        // Get the other participant (not the current user)
-        const otherParticipantId = participantIds.find((id) => id !== userId);
-        if (!otherParticipantId) {
-          continue;
-        }
-
-        // Exclude chats with bots
-        if (botUserIds.has(otherParticipantId)) {
-          continue;
-        }
-
-        // Check if there's a block between this user and the other participant
-        if (!blockedUserIds.has(otherParticipantId)) {
-          activeChatsCount++;
-        }
+    let count = 0;
+    for (const [, participantIds] of chatParticipantsMap.entries()) {
+      const otherParticipantId = participantIds.find((id) => id !== userId);
+      if (!otherParticipantId) continue;
+      if (botUserIds.has(otherParticipantId)) continue;
+      if (!blockedUserIds.has(otherParticipantId)) {
+        count++;
       }
+    }
+    return count;
+  }
 
-      // Update active_chats_count
+  /**
+   * Updates active_chats_count for given users by counting their active chats
+   * (chats that are not blocked, excluding bots).
+   */
+  private async updateActiveChatsCount(userIds: string[]): Promise<void> {
+    for (const userId of userIds) {
+      const activeChatsCount =
+        await this.computeActiveChatsWithRealUsersCount(userId);
+
       const { error: updateError } = await this.client
         .from('users')
         .update({ active_chats_count: activeChatsCount })
