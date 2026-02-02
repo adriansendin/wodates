@@ -1,10 +1,3 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-type SupabaseConfig = {
-  url: string;
-  serviceRoleKey: string;
-};
-
 /** UUID v4 pattern (8-4-4-4-12 hex). */
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,26 +9,11 @@ const UUID_REGEX =
  * No DB or auth lookups by email/name/role. Validates UUID format and fails fast if missing/invalid.
  */
 export class DocLoveHelper {
-  private readonly client: SupabaseClient | undefined;
-
-  constructor(config?: Partial<SupabaseConfig>, injectedClient?: SupabaseClient) {
-    if (injectedClient) {
-      this.client = injectedClient;
-      return;
-    }
-    const url = config?.url ?? process.env.SUPABASE_URL;
-    const serviceRoleKey =
-      config?.serviceRoleKey ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (url && serviceRoleKey) {
-      this.client = createClient(url, serviceRoleKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
-    } else {
-      this.client = undefined;
-    }
+  constructor(
+    _config?: { url?: string; serviceRoleKey?: string },
+    _injectedClient?: unknown
+  ) {
+    // Constructor kept for API compatibility; only getDocLoveUserId() is used (reads from env).
   }
 
   /**
