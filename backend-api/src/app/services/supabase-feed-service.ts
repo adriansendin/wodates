@@ -420,8 +420,8 @@ export class SupabaseFeedService {
   private async mapRowToCandidate(row: FeedUserRow): Promise<FeedCandidate> {
     const gender = this.normalizeGender(row.gender);
     const birthDate = this.normalizeDate(row.birthDate);
-    // Always include bio - filtering is done on frontend based on show_bio_in_feed flags
-    const bio = row.bio ? this.truncateBio(row.bio) : null;
+    // Always include bio - filtering is done on frontend based on show_bio_in_feed flags (no truncation)
+    const bio = row.bio ? row.bio.trim() || null : null;
     const age = birthDate ? this.calculateAge(birthDate) : null;
     const photoUrl = await this.getMainPhotoUrl(row.id);
 
@@ -489,20 +489,6 @@ export class SupabaseFeedService {
     }
 
     return date.toISOString();
-  }
-
-  private truncateBio(bio: string | null): string | null {
-    if (!bio) {
-      return null;
-    }
-
-    const trimmed = bio.trim();
-    if (!trimmed) {
-      return null;
-    }
-
-    const limit = 180;
-    return trimmed.length > limit ? `${trimmed.slice(0, limit)}...` : trimmed;
   }
 
   private normalizeUrl(value: string | null): string | null {

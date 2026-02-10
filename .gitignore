@@ -131,6 +131,7 @@ ios/*.xcodeproj/xcuserdata/
 # BACKEND SPECIFIC
 # ===========================================
 uploads/
+fotos_perfiles/
 temp/
 tmp/
 *.tmp

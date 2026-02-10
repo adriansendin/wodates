@@ -14,19 +14,49 @@
  */
 
 import 'dotenv/config';
+import path from 'path';
+import { fileURLToPath } from 'node:url';
+import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { SupabaseAuthService } from '../../src/app/services/supabase-auth-service';
+import { UserPhotoService } from '../../src/app/services/user-photo-service';
 import { RegisterRequest } from '../../src/domain/entities/Auth';
 import { SystemUserService } from '../../src/app/services/system-user-service';
 import { DocLoveHelper } from '../../src/app/services/doc-love-helper';
 import { SupabaseLikeRepository } from '../../src/data/repositories/SupabaseLikeRepository';
 import { SupabaseMatchRepository } from '../../src/data/repositories/SupabaseMatchRepository';
 import { SupabaseMessageRepository } from '../../src/data/repositories/SupabaseMessageRepository';
+import { SupabaseUserRepository } from '../../src/data/repositories/SupabaseUserRepository';
+import { SupabaseUserAIProfileRepository } from '../../src/data/repositories/SupabaseUserAIProfileRepository';
+import { GetAllUserChats } from '../../src/domain/use-cases/chat/GetAllUserChats';
+import { GetUnprocessedMessages } from '../../src/domain/use-cases/chat/GetUnprocessedMessages';
+import { GenerateUserProfileFromChats } from '../../src/domain/use-cases/chat/GenerateUserProfileFromChats';
+import { UserAIProfileEmbeddingService } from '../../src/app/ai/profile/UserAIProfileEmbeddingService';
+import { UserBioGenerationService } from '../../src/app/ai/profile/UserBioGenerationService';
 import {
   runVerificationForUser,
   logVerificationResult,
   type VerificationDeps,
 } from './create-user-verification';
+import sharp from 'sharp';
+
+/** Carpeta de fotos de perfil por usuario (1, 2, ... 20). Al mismo nivel que backend-api/ y ai-service/. */
+const FOTOS_PERFILES_DIR = path.resolve(__dirname, '..', '..', '..', 'fotos_perfiles');
+
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
+const MIME_BY_EXT: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+};
+const MAX_PHOTOS_PER_USER = 5;
+
+/** Límite del bucket avatars en Supabase (500 KB). Dejamos margen para no rozar el límite. */
+const MAX_PHOTO_BYTES = 450 * 1024;
+const MAX_PHOTO_DIMENSION = 1200;
 
 // ============================================
 // CONFIGURACIÓN DE USUARIOS
@@ -36,7 +66,7 @@ import {
 // Modifica estos valores según tus necesidades antes de ejecutar el script.
 
 /** Sufijo que se añade al email de cada usuario (ej: iter="1" → rachel1@example.com). */
-const iter: string = '15';
+const iter: string = '21';
 
 /** Ciudad de prueba para todos los usuarios: base + valor de iter (ej: iter='10' → 'Liverpool10'). */
 const locationCity: string = 'Liverpool' + iter;
@@ -109,11 +139,11 @@ const USER_CONFIGS: UserConfig[] = [
 }
 ,
 {
-  email: 'nadia' + iter + '@example.com',
-  name: 'Nadia',
+  email: 'nadim' + iter + '@example.com',
+  name: 'Nadim',
   birthDate: '1987-08-11T00:00:00.000Z', // 38 years old
-  gender: 'female' as const,
-  lookingFor: 'male' as const,
+  gender: 'male' as const,
+  lookingFor: 'female' as const,
 
   chat1:
     "I’m a very people-oriented person, and a lot of my time and energy goes into social life and shared experiences. I’m the kind of person who always has something planned—even if it’s just a casual dinner or a walk with a friend. I don’t go to the gym and I’m not interested in structured workouts, but I’m constantly on the move: walking everywhere, dancing when there’s music, and generally staying active without thinking about it. I love hosting—having people over, cooking for groups, creating a warm atmosphere where everyone feels comfortable. Food is central to my life, especially big, generous meals inspired by Middle Eastern and Mediterranean cuisines. I’m not a big reader at all, but I love storytelling in other forms: podcasts, documentaries, and long conversations. My evenings are rarely spent alone unless I really need to recharge; otherwise, I’m out meeting friends, at a casual bar, or at someone’s home. Travel for me is about people and culture rather than sights—I love visiting friends abroad or staying in neighbourhoods where life feels local. I’d describe myself as warm, expressive, and very present with the people I care about.",
@@ -143,11 +173,11 @@ const USER_CONFIGS: UserConfig[] = [
     "I’m close to my family, but we’re not overly emotional—we show care through reliability and showing up when it matters. I value independence and mutual respect in all relationships. My friendships are selective but strong; I prefer a few people I truly trust over a large social circle. Socially, I’m confident and direct, but I also need downtime to recharge after intense weeks. In romantic relationships, I’m loyal, honest, and very clear about my expectations. I’m not interested in ambiguity or games—I value consistency, mutual ambition, and emotional maturity. I’m looking for a serious relationship with someone who has their own drive, takes care of themselves, and wants to build something stable and supportive together, without unnecessary drama."
 }
 ,{
-  email: 'harry' + iter + '@example.com',
-  name: 'Harry',
+  email: 'Chloe' + iter + '@example.com',
+  name: 'Chloe',
   birthDate: '1988-04-05T00:00:00.000Z', // 37 years old
-  gender: 'male' as const,
-  lookingFor: 'female' as const,
+  gender: 'female' as const,
+  lookingFor: 'male' as const,
 
   chat1:
     "My lifestyle is quite simple and home-focused, and I’m very comfortable with that. I enjoy calm routines and having a place that really feels like home. I don’t go to the gym and I’ve never been particularly sporty, but I walk a lot and try to stay generally active without turning it into a project. Most evenings I cook dinner from scratch, usually something comforting rather than experimental, and then unwind with a series, a film, or a documentary. I read occasionally, mostly non-fiction or historical books, but I’m not someone who reads every day. My free time is often spent on small, grounding activities: organising my space, fixing things around the house, or spending time in local cafés where you start recognising faces. Weekends are usually low-key—grocery shopping, visiting family, watching football at home, or meeting a friend for a long lunch. I’m not very spontaneous, but I’m reliable, and I value stability over excitement. Travel for me is something I enjoy a few times a year, but I prefer short, well-planned trips rather than constant movement.",
@@ -180,8 +210,8 @@ const USER_CONFIGS: UserConfig[] = [
   email: 'arjun' + iter + '@example.com',
   name: 'Arjun',
   birthDate: '1992-02-14T00:00:00.000Z', // 33 years old
-  gender: 'male' as const,
-  lookingFor: 'female' as const,
+  gender: 'female' as const,
+  lookingFor: 'male' as const,
 
   chat1:
     "My lifestyle is pretty calm and intentionally low-noise. I like London, but I don’t try to squeeze everything out of it every weekend—too much stimulation drains me. I’m not a gym person, and I’m not particularly athletic, but I do enjoy long walks with a good audiobook and I cycle casually when the weather isn’t miserable. Most of my free time goes into reading and building small personal projects. I’m the kind of person who can happily spend a Saturday afternoon in a bookshop, then come home and cook something simple while listening to a podcast. I read a lot—mostly non-fiction (history, behavioural science, technology, philosophy) and some sci-fi when I want something imaginative. I don’t drink much and I’m not into late nights out, but I do enjoy a cosy pub with a few friends and a proper conversation. I’m quite into board games and puzzle-type hobbies, and I love museums in a quiet, nerdy way—especially anything related to science or design. I prefer a few deep interests over lots of shallow ones, and I’m happiest when my life feels steady and mentally stimulating.",
@@ -214,8 +244,8 @@ const USER_CONFIGS: UserConfig[] = [
   email: 'elin' + iter + '@example.com',
   name: 'Elin',
   birthDate: '1990-07-09T00:00:00.000Z', // 35 years old
-  gender: 'female' as const,
-  lookingFor: 'male' as const,
+  gender: 'male' as const,
+  lookingFor: 'female' as const,
 
   chat1:
     "My lifestyle is very grounded and nature-oriented, and I actively try to keep my life from becoming too screen-heavy. I live in London, but I don’t feel particularly attached to the idea of ‘city life’ as an identity. I spend a lot of my free time outdoors—long walks in parks, weekend hikes just outside the city, and swimming whenever I get the chance, even if the weather isn’t perfect. I don’t go to the gym at all; movement for me comes from walking, stretching, and being outside rather than structured workouts. I read a lot, especially novels and nature writing, and I can easily spend an afternoon reading with a cup of tea and no background noise. I enjoy cooking simple, seasonal food and eating at home most days. Socially, I’m quite selective and I prefer daytime plans—walks, coffee, quiet lunches—over late nights. Travel for me is about landscapes and calm rather than cities or packed itineraries. I value slowness, presence, and feeling connected to my body and surroundings.",
@@ -245,11 +275,11 @@ const USER_CONFIGS: UserConfig[] = [
 }
 ,
 {
-  email: 'tomas' + iter + '@example.com',
-  name: 'Tomas',
+  email: 'tomasa' + iter + '@example.com',
+  name: 'Tomasa',
   birthDate: '1990-09-30T00:00:00.000Z', // 35 years old
-  gender: 'male' as const,
-  lookingFor: 'female' as const,
+  gender: 'female' as const,
+  lookingFor: 'male' as const,
 
   chat1:
     "My lifestyle is quite structured and predictable, and that’s something I genuinely enjoy. I like knowing how my week will look and having routines that keep life simple and manageable. I go to the gym three times a week, mostly strength training and some cardio, but I’m not obsessed with it—it’s more about health and mental clarity than pushing limits. Outside of that, I’m fairly low-key. I enjoy cooking at home, usually straightforward meals that I can repeat and improve over time rather than constantly experimenting. I don’t read a lot, but I do follow the news and listen to podcasts about economics, technology, and current affairs. My evenings are usually calm: cooking, watching a series, or doing something practical around the house. I’m not very spontaneous, but I’m consistent and reliable. Travel for me is something I plan carefully and enjoy a few times a year; I prefer well-organised trips where I can relax rather than improvising everything. I value stability, order, and a sense of progress in everyday life.",
@@ -262,11 +292,11 @@ const USER_CONFIGS: UserConfig[] = [
 }
 ,
 {
-  email: 'yasmin' + iter + '@example.com',
-  name: 'Yasmin',
+  email: 'martin' + iter + '@example.com',
+  name: 'Martin',
   birthDate: '1991-01-12T00:00:00.000Z', // 35 years old
-  gender: 'female' as const,
-  lookingFor: 'male' as const,
+  gender: 'male' as const,
+  lookingFor: 'female' as const,
 
   chat1:
     "My lifestyle is very culture-driven and a bit unconventional. I don’t really follow strict routines, and my energy tends to peak later in the day rather than early mornings. I’m not a gym person at all, but I stay active through walking, dancing, and just moving around the city a lot. A big part of my free time goes into cultural life: theatre, live music, talks, film screenings, and exhibitions. I love being in spaces where ideas are exchanged and conversations flow easily. I read quite a lot, mostly fiction, essays, and anything related to social issues, identity, or art, but I read in intense phases rather than every day. Evenings are often spent out—meeting friends, going to events, or having long dinners that turn into deep conversations. Food is social for me; I enjoy eating out and sharing meals much more than cooking alone. Travel is important, especially to cities with a strong cultural scene. I’d describe myself as expressive, curious, and energised by people and ideas.",
@@ -279,11 +309,11 @@ const USER_CONFIGS: UserConfig[] = [
 }
 ,
 {
-  email: 'owen' + iter + '@example.com',
-  name: 'Owen',
+  email: 'owena' + iter + '@example.com',
+  name: 'Owena',
   birthDate: '1989-05-03T00:00:00.000Z', // 36 years old
-  gender: 'male' as const,
-  lookingFor: 'female' as const,
+  gender: 'female' as const,
+  lookingFor: 'male' as const,
 
   chat1:
     "My lifestyle is hands-on and practical, and I get a lot of satisfaction from making and fixing things. I’m not into the gym or organised fitness, but I stay active through cycling, DIY projects, and weekend jobs that keep me moving. I spend a lot of my free time in my workshop space—woodworking, basic metal work, restoring old furniture, or learning new tools through trial and error. I enjoy quiet focus and working with my hands after a day at work. I read occasionally, mostly technical books, manuals, or long articles rather than novels. Evenings are usually calm: cooking something simple, listening to music or a podcast, and working on a small project. Socially, I prefer one-to-one plans or small groups; big crowds drain me quickly. Travel for me is usually purpose-driven—visiting friends, doing a course, or exploring places known for craft or design. I value competence, patience, and doing things properly.",
@@ -313,11 +343,11 @@ const USER_CONFIGS: UserConfig[] = [
 }
 ,
 {
-  email: 'amina' + iter + '@example.com',
-  name: 'Amina',
+  email: 'amin' + iter + '@example.com',
+  name: 'Amin',
   birthDate: '1996-08-14T00:00:00.000Z', // 29 years old
-  gender: 'female' as const,
-  lookingFor: 'male' as const,
+  gender: 'male' as const,
+  lookingFor: 'female' as const,
 
   chat1:
     "My lifestyle is quite balanced but lively, and I’m someone who enjoys feeling connected—to my body, to people, and to what’s happening around me. I’m not hardcore about fitness, but I do enjoy staying active: I go to spin or barre classes a couple of times a week, do yoga when I need to slow down, and walk everywhere. I’m quite curious about wellness in a non-extreme way—trying new classes, breathwork sessions, or workshops, but without turning it into an identity. I enjoy social plans and usually have a few things in the diary, whether it’s dinner with friends, a talk, or a casual drink. At the same time, I protect my solo time and enjoy slow mornings with coffee and music. I read occasionally—mostly novels or personal essays—and I like podcasts about relationships, psychology, and culture. Food-wise, I eat intuitively and enjoy both cooking simple meals and going out to eat. Travel is important to me, especially trips that mix relaxation and exploration. I’d describe myself as warm, upbeat, and emotionally aware.",
@@ -332,8 +362,8 @@ const USER_CONFIGS: UserConfig[] = [
   email: 'leo' + iter + '@example.com',
   name: 'Leo',
   birthDate: '1991-11-18T00:00:00.000Z', // 34 years old
-  gender: 'male' as const,
-  lookingFor: 'female' as const,
+  gender: 'female' as const,
+  lookingFor: 'male' as const,
 
   chat1:
     "My lifestyle is quite urban and digitally oriented, and I’m naturally more of a night person than an early riser. I don’t follow very strict routines, but I do like having a loose structure that leaves room for spontaneity. I’m not a gym regular, though I try to stay active through walking, occasional climbing sessions, and cycling when the mood hits. A lot of my free time goes into creative and digital hobbies: gaming with friends (mostly co-op or strategy games), tinkering with side projects, and keeping up with tech, design, and internet culture. I read occasionally, but mostly short-form—articles, essays, and long threads rather than full books. Evenings are often spent meeting friends, cooking something quick, or getting lost in a game or a film. I enjoy the buzz of the city at night—late dinners, quiet bars, or just walking when things slow down. Travel for me is usually city-based and curiosity-driven. I’d describe myself as curious, adaptable, and quietly creative.",
@@ -346,11 +376,11 @@ const USER_CONFIGS: UserConfig[] = [
 }
 ,
 {
-  email: 'farah' + iter + '@example.com',
-  name: 'Farah',
+  email: 'fran' + iter + '@example.com',
+  name: 'Fran',
   birthDate: '1988-06-02T00:00:00.000Z', // 37 years old
-  gender: 'female' as const,
-  lookingFor: 'male' as const,
+  gender: 'male' as const,
+  lookingFor: 'female' as const,
 
   chat1:
     "My lifestyle is very people- and home-centred. I get a lot of joy from taking care of my space and the people around me. I’m not interested in the gym or structured exercise, but I stay active through walking, running errands on foot, and being generally on the move throughout the day. I love cooking and I spend a lot of time in the kitchen—preparing meals, trying family recipes, and making food that brings people together. I read occasionally, mostly novels or poetry, but I’m more drawn to conversation and shared moments than solitary hobbies. My evenings are usually quiet and home-based, sometimes with a friend dropping by, sometimes just cooking and listening to music. I enjoy travel, but in a grounded way—visiting family, spending time by the sea, or staying somewhere comfortable rather than constantly exploring. I value warmth, routine, and feeling emotionally connected to my environment.",
@@ -366,8 +396,8 @@ const USER_CONFIGS: UserConfig[] = [
   email: 'noah' + iter + '@example.com',
   name: 'Noah',
   birthDate: '1992-12-06T00:00:00.000Z', // 33 years old
-  gender: 'male' as const,
-  lookingFor: 'female' as const,
+  gender: 'female' as const,
+  lookingFor: 'male' as const,
 
   chat1:
     "My lifestyle is quite intense and idea-driven, and I tend to move in bursts of energy rather than steady routines. I’m not great with rigid schedules, but I’m very engaged with whatever I’m interested in at the moment. I don’t go to the gym consistently, though I try to stay active with runs, long walks, or the occasional class when I feel my body needs it. A lot of my free time goes into thinking, reading, and talking—brainstorming ideas, debating concepts, or getting lost in articles and essays about technology, society, and psychology. I read a lot, but in a messy way: several books at once, plus long reads online. Evenings can be very different depending on my mood—sometimes I’m deep into a project at home, other times I’m out meeting friends or going to talks and events. Food is functional during the week and more social on weekends. Travel for me is inspiring rather than relaxing; I like places that spark new ideas. I’d describe myself as curious, energetic, and mentally restless, but also reflective once I slow down.",
@@ -380,11 +410,11 @@ const USER_CONFIGS: UserConfig[] = [
 }
 ,
 {
-  email: 'rachel' + iter + '@example.com',
-  name: 'Rachel',
+  email: 'peter' + iter + '@example.com',
+  name: 'Peter',
   birthDate: '1991-10-15T00:00:00.000Z', // 34 years old
-  gender: 'female' as const,
-  lookingFor: 'male' as const,
+  gender: 'male' as const,
+  lookingFor: 'female' as const,
 
   chat1:
     "My lifestyle revolves a lot around food, people, and enjoying everyday pleasures properly. I’m not someone who chases extreme routines or optimisation—I prefer consistency with space for enjoyment. I don’t go to the gym and never really have; instead, I stay active by walking everywhere, doing the occasional yoga class when I feel stiff, and generally keeping myself moving without forcing it. Cooking is one of my favourite ways to unwind: I love trying new recipes, especially comfort food from different cultures, and I’m happiest when I’m feeding other people. I enjoy hosting small dinners or inviting friends over for casual evenings that end up lasting hours. I read sometimes, mostly fiction or memoirs, but I’m just as likely to spend an evening listening to music, watching a well-chosen series, or talking. Weekends usually involve a mix of markets, long lunches, and unplanned social time. I travel a few times a year and prefer trips that are relaxed and indulgent rather than packed with activities. I’d describe myself as warm, grounded, and very present in the moment.",
@@ -546,6 +576,177 @@ async function createSingleUser(
   }
 }
 
+type SupabaseConfigForPhotos = { url: string; serviceRoleKey: string };
+
+/**
+ * Redimensiona y comprime la imagen para que no supere el límite del bucket (500 KB).
+ * Devuelve un JPEG listo para subir.
+ */
+async function resizeImageUnderLimit(
+  buffer: Buffer,
+  _mimeType: string
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  let pipeline = sharp(buffer)
+    .rotate()
+    .resize(MAX_PHOTO_DIMENSION, MAX_PHOTO_DIMENSION, { fit: 'inside', withoutEnlargement: true });
+
+  const qualities = [85, 70, 55, 40];
+  for (const quality of qualities) {
+    const out = await pipeline
+      .jpeg({ quality, chromaSubsampling: '4:4:4' })
+      .toBuffer();
+    if (out.length <= MAX_PHOTO_BYTES) {
+      return { buffer: out, mimeType: 'image/jpeg' };
+    }
+    pipeline = sharp(buffer)
+      .rotate()
+      .resize(MAX_PHOTO_DIMENSION, MAX_PHOTO_DIMENSION, { fit: 'inside', withoutEnlargement: true });
+  }
+  const out = await pipeline.jpeg({ quality: 30 }).toBuffer();
+  return { buffer: out, mimeType: 'image/jpeg' };
+}
+
+/**
+ * Sube las fotos de la carpeta fotos_perfiles/{folderNumber} al bucket de Supabase
+ * como fotos de perfil del usuario recién creado. Máximo MAX_PHOTOS_PER_USER fotos.
+ * Las imágenes se redimensionan/comprimen para no superar el límite del bucket (500 KB).
+ */
+async function uploadProfilePhotosForUser(
+  config: SupabaseConfigForPhotos,
+  userId: string,
+  folderNumber: number
+): Promise<void> {
+  const dir = path.join(FOTOS_PERFILES_DIR, String(folderNumber));
+  if (!fs.existsSync(dir)) {
+    console.log(`   📁 Carpeta ${dir} no existe, omitiendo fotos para usuario ${folderNumber}`);
+    return;
+  }
+  const stat = fs.statSync(dir);
+  if (!stat.isDirectory()) {
+    console.log(`   📁 ${dir} no es un directorio, omitiendo fotos`);
+    return;
+  }
+
+  const files = fs.readdirSync(dir)
+    .filter((f) => {
+      const ext = path.extname(f).toLowerCase();
+      return ALLOWED_IMAGE_EXTENSIONS.has(ext);
+    })
+    .sort();
+
+  if (files.length === 0) {
+    console.log(`   📁 No hay imágenes en ${dir}`);
+    return;
+  }
+
+  const toUpload = files.slice(0, MAX_PHOTOS_PER_USER);
+  const photoService = new UserPhotoService(config);
+  let uploaded = 0;
+
+  for (const file of toUpload) {
+    const filePath = path.join(dir, file);
+    const ext = path.extname(file).toLowerCase();
+    const mimeType = MIME_BY_EXT[ext] ?? 'image/jpeg';
+    try {
+      const buffer = fs.readFileSync(filePath);
+      const { buffer: resizedBuffer, mimeType: resizedMime } = await resizeImageUnderLimit(buffer, mimeType);
+      const result = await photoService.addUserPhoto(userId, resizedBuffer, resizedMime);
+      if (result.success) {
+        uploaded++;
+      } else {
+        console.warn(`   ⚠️  No se pudo subir ${file}:`, result.error.message);
+      }
+    } catch (err) {
+      console.warn(`   ⚠️  Error leyendo/subiendo ${file}:`, err instanceof Error ? err.message : err);
+    }
+    await new Promise((r) => setTimeout(r, 200));
+  }
+
+  if (uploaded > 0) {
+    console.log(`   ✅ Fotos de perfil subidas: ${uploaded} desde fotos_perfiles/${folderNumber}`);
+  }
+}
+
+/** Dependencias para ejecutar la lógica del job de perfiles (summary, embedding, bio) para un usuario. */
+type ProfileJobDeps = {
+  matchRepository: SupabaseMatchRepository;
+  docLoveHelper: DocLoveHelper;
+  generateUserProfile: GenerateUserProfileFromChats;
+  userAIProfileRepository: SupabaseUserAIProfileRepository;
+  embeddingService: UserAIProfileEmbeddingService;
+  bioGenerationService: UserBioGenerationService;
+};
+
+/**
+ * Ejecuta para un usuario la misma lógica que process-user-profiles-job (Proceso 1):
+ * lee conversaciones no procesadas, genera/actualiza summary en user_ai_profiles,
+ * genera embedding en summary_embedding y bio en users.bio.
+ */
+async function runProfileJobForUser(
+  deps: ProfileJobDeps,
+  userId: string,
+  userName: string
+): Promise<void> {
+  const {
+    matchRepository,
+    docLoveHelper,
+    generateUserProfile,
+    userAIProfileRepository,
+    embeddingService,
+    bioGenerationService,
+  } = deps;
+
+  let docLoveId: string | undefined;
+  try {
+    docLoveId = await docLoveHelper.getDocLoveUserId();
+  } catch {
+    docLoveId = undefined;
+  }
+
+  const activeChatsWithRealUsers = await matchRepository.getActiveChatsWithRealUsersCount(
+    userId,
+    docLoveId ? [docLoveId] : undefined
+  );
+  if (activeChatsWithRealUsers >= 1) {
+    console.log(`   ⏭️  Perfil: usuario tiene ${activeChatsWithRealUsers} chat(s) con usuarios reales, omitiendo`);
+    return;
+  }
+
+  const result = await generateUserProfile.execute(userId);
+  if (!result.success) {
+    console.error(`   ❌ Perfil: error generando perfil para ${userName}:`, result.error.message);
+    return;
+  }
+  if (result.data === 'No unprocessed chats to analyze') {
+    console.log(`   ⏭️  Perfil: sin chats sin procesar para ${userName}`);
+    return;
+  }
+
+  try {
+    const profileAfterResult = await userAIProfileRepository.findByUserId(userId);
+    const summaryAfter =
+      profileAfterResult.success && profileAfterResult.data
+        ? profileAfterResult.data.summary
+        : null;
+    const summaryAfterContent = summaryAfter?.trim() || null;
+    const hasSummary = summaryAfterContent !== null && summaryAfterContent.length > 0;
+
+    if (hasSummary) {
+      await embeddingService.generateEmbeddingFromSummary(userId);
+      console.log(`   ✅ Perfil: summary y embedding generados para ${userName}`);
+      await bioGenerationService.generateBioFromSummary(userId);
+      console.log(`   ✅ Perfil: bio generada para ${userName}`);
+    } else {
+      console.log(`   ⏭️  Perfil: sin summary consolidado para ${userName}`);
+    }
+  } catch (err) {
+    console.warn(
+      `   ⚠️  Perfil: error en embedding/bio para ${userName}:`,
+      err instanceof Error ? err.message : err
+    );
+  }
+}
+
 async function createUsers() {
   console.log('🚀 Iniciando creación de usuarios...\n');
   console.log(`📊 Total de usuarios a crear: ${CONFIGS_TO_CREATE.length}\n`);
@@ -576,13 +777,58 @@ async function createUsers() {
   const likeRepository = new SupabaseLikeRepository(supabaseConfig);
   const matchRepository = new SupabaseMatchRepository(supabaseConfig);
   const messageRepository = new SupabaseMessageRepository(supabaseConfig);
-  
+  const userRepository = new SupabaseUserRepository(supabaseConfig);
+  const userAIProfileRepository = new SupabaseUserAIProfileRepository(supabaseConfig);
+
   const systemUserService = new SystemUserService(
     docLoveHelper,
     likeRepository,
     matchRepository,
     messageRepository
   );
+
+  // Logger para el job de perfiles (mismo flujo que process-user-profiles-job)
+  const profileJobLogger = {
+    debug: (...args: unknown[]) => console.log('[profile]', ...args),
+    info: (...args: unknown[]) => console.log('[profile]', ...args),
+    warn: (...args: unknown[]) => console.warn('[profile]', ...args),
+    error: (...args: unknown[]) => console.error('[profile]', ...args),
+  };
+  const getUnprocessedMessages = new GetUnprocessedMessages(
+    messageRepository,
+    matchRepository
+  );
+  const getAllUserChats = new GetAllUserChats(
+    matchRepository,
+    userRepository,
+    getUnprocessedMessages,
+    messageRepository,
+    docLoveHelper,
+    profileJobLogger
+  );
+  const generateUserProfile = new GenerateUserProfileFromChats(
+    getAllUserChats,
+    userAIProfileRepository,
+    userRepository,
+    profileJobLogger
+  );
+  const embeddingService = new UserAIProfileEmbeddingService(
+    userAIProfileRepository,
+    profileJobLogger
+  );
+  const bioGenerationService = new UserBioGenerationService(
+    userAIProfileRepository,
+    userRepository,
+    profileJobLogger
+  );
+  const profileJobDeps: ProfileJobDeps = {
+    matchRepository,
+    docLoveHelper,
+    generateUserProfile,
+    userAIProfileRepository,
+    embeddingService,
+    bioGenerationService,
+  };
 
   // Crear usuarios uno por uno
   const createdUsers: CreatedUser[] = [];
@@ -608,6 +854,17 @@ async function createUsers() {
     if (result) {
       createdUsers.push(result);
 
+      // Subir fotos de perfil desde fotos_perfiles/{1..20} (usuario 1 → carpeta 1, usuario 2 → carpeta 2, …)
+      try {
+        const folderNumber = i + 1;
+        await uploadProfilePhotosForUser(supabaseConfig, result.id, folderNumber);
+      } catch (photoError) {
+        console.error(
+          `   ❌ Error subiendo fotos de perfil para ${result.name} (carpeta ${i + 1}):`,
+          photoError instanceof Error ? photoError.message : photoError
+        );
+      }
+
       // Fase de verificación conceptual: comprobar estado coherente y elegibilidad para el job de perfil
       try {
         const verificationDeps: VerificationDeps = {
@@ -626,6 +883,16 @@ async function createUsers() {
         console.error(
           `   ❌ Error en la verificación para ${result.name} (${result.id}):`,
           verificationError
+        );
+      }
+
+      // Ejecutar lógica del job de perfiles: summary, summary_embedding, users.bio (como process-user-profiles-job)
+      try {
+        await runProfileJobForUser(profileJobDeps, result.id, result.name);
+      } catch (profileJobError) {
+        console.error(
+          `   ❌ Error en job de perfil para ${result.name}:`,
+          profileJobError instanceof Error ? profileJobError.message : profileJobError
         );
       }
     } else {

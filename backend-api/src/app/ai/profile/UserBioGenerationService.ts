@@ -142,21 +142,6 @@ Now generate the bio based on this profile.`;
 
         bio = bio.trim();
         bio = bio.replace(/(.)\1{9,}/g, '').trim();
-        const MAX = 340;
-        if (bio.length > MAX) {
-          if (this.logger) {
-            this.logger.warn(
-              {
-                userId,
-                bioLength: bio.length,
-                bioPreview: bio.substring(0, 50),
-              },
-              'Bio exceeds 340 chars; truncating with ellipsis'
-            );
-          }
-          bio = bio.slice(0, MAX - 1).trimEnd() + '…';
-        }
-        if (bio.length > MAX) bio = bio.slice(0, MAX);
 
         if (this.logger) {
           this.logger.debug(

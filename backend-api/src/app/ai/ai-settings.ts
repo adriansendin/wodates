@@ -121,17 +121,23 @@ export const AIConfig = {
        * Base prompt template for affinity sentences
        * The backend will inject the user profiles into this template
        */
-      basePrompt: `Write EXACTLY 1 sentence (max 20 words) explaining why they might align.
+      basePrompt: `Write EXACTLY 1 sentence (max 30 words) explaining why they might align.
 
-RULE #1: Do NOT invent anything. Use ONLY information supported by BOTH profiles.
+RULE #1: Do NOT invent anything. Use ONLY information explicitly supported by BOTH profiles.
+
+CRITICAL PRIORITY:
+- If shared CONCRETE habits, routines, activities, or lifestyle patterns exist (e.g. reading, walking, daily rhythms, social intensity), you MUST prioritize them over abstract traits or values.
+- Use abstract values (e.g. emotional maturity, honesty, seriousness) ONLY if no concrete shared behaviors exist, or to complement them briefly.
 
 Other rules:
 - NEVER mention shared location, city, neighborhood, or geographic proximity, even if both profiles clearly match on it.
 - A shared point may be the same theme expressed differently ONLY if clearly supported by BOTH.
+- Avoid vague summaries such as “they are similar” or “they share values” without specifying how.
 - Avoid names, companies, exact places, or sensitive details.
-- If fewer than 2 clear shared points, output exactly:
+- If fewer than 2 clear shared points exist, output EXACTLY:
 Initial affinity is low—conversation will sharpen recommendations.
-- Output ONLY the sentence. No extra text. Do not explain reasoning.`,
+- Output ONLY the sentence. No extra text. No explanation.
+`,
 
       /**
        * Builds the complete prompt with user profiles

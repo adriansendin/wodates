@@ -163,6 +163,12 @@ export class FeedController {
       if (!currentUserHasProfile || !candidateHasProfile) {
         // Return fallback sentence when either profile is missing/empty
         // This avoids useless LLM calls and ensures stable UX
+        console.log(
+          '[Affinity] Fallback: missing profile(s). No prompt sent. currentUserHasProfile:',
+          currentUserHasProfile,
+          ', candidateHasProfile:',
+          candidateHasProfile
+        );
         if (this.logger) {
           this.logger.warn(
             {
@@ -186,6 +192,13 @@ export class FeedController {
       const fullPrompt = AIConfig.prompt.affinitySentences.buildPrompt(
         currentUserProfile,
         candidateProfile
+      );
+
+      // Debug: log full prompt sent to AI (sum of both "fichas") for affinity conclusion
+      console.log(
+        '[Affinity] Full prompt sent to AI (current user + candidate profiles):\n---\n',
+        fullPrompt,
+        '\n---'
       );
 
       // Call ai-service chat endpoint with the complete prompt
@@ -230,6 +243,11 @@ export class FeedController {
           });
         } else {
           // If parsing resulted in no sentences, return fallback
+          console.log(
+            '[Affinity] Fallback (no affinity): no sentences parsed. Prompt that was sent:\n---\n',
+            fullPrompt,
+            '\n---'
+          );
           if (this.logger) {
             this.logger.warn(
               {
@@ -247,7 +265,11 @@ export class FeedController {
         }
       } catch (error) {
         // If ai-service fails, return fallback sentence (non-blocking)
-        // Log error with full details for debugging
+        console.log(
+          '[Affinity] Fallback (AI error). Prompt that was sent:\n---\n',
+          fullPrompt,
+          '\n---'
+        );
         if (this.logger) {
           this.logger.error(
             {
