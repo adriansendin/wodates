@@ -177,24 +177,12 @@ export default function PreviewFeedScreen() {
           </View>
         )}
 
-        {/* 3) Affinity card (inline) + circular Like button on the right */}
+        {/* 3) Affinity card (inline) */}
         <View style={styles.discoverCard}>
-          <View style={styles.affinityCardRow}>
-            <View style={styles.affinityCardContent}>
-              <Text style={styles.discoverCardTitle}>Affinity</Text>
-              <Text style={styles.discoverCardBody}>{PREVIEW_AFFINITY_SENTENCE}</Text>
-              <Text style={styles.discoverCardLabel}>Based on conversations</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.likeButtonCircle}
-              onPress={handleLike}
-              accessibilityRole="button"
-              accessibilityLabel="I want to meet them"
-              accessibilityHint="Show interest in this person"
-              activeOpacity={0.8}
-            >
-              <Check size={26} color="#10b981" />
-            </TouchableOpacity>
+          <View style={styles.affinityCardContent}>
+            <Text style={styles.discoverCardTitle}>Affinity</Text>
+            <Text style={styles.discoverCardBody}>{PREVIEW_AFFINITY_SENTENCE}</Text>
+            <Text style={styles.discoverCardLabel}>Based on conversations</Text>
           </View>
         </View>
 
@@ -232,7 +220,7 @@ export default function PreviewFeedScreen() {
         ))}
       </ScrollView>
 
-      {/* Floating Discard button - bottom left */}
+      {/* Floating Dislike button - bottom left */}
       <TouchableOpacity
         style={styles.discardButtonFloating}
         onPress={handlePass}
@@ -242,6 +230,18 @@ export default function PreviewFeedScreen() {
         activeOpacity={0.8}
       >
         <X size={24} color="#ef4444" />
+      </TouchableOpacity>
+
+      {/* Floating Like button - bottom right, always visible */}
+      <TouchableOpacity
+        style={styles.likeButtonFloating}
+        onPress={handleLike}
+        accessibilityRole="button"
+        accessibilityLabel="I want to meet them"
+        accessibilityHint="Show interest in this person"
+        activeOpacity={0.8}
+      >
+        <Check size={26} color="#10b981" />
       </TouchableOpacity>
 
       {/* Registration Modal */}
@@ -323,6 +323,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  likeButtonFloating: {
+    position: 'absolute',
+    right: 20,
+    bottom: 40,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#10b981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   discoverPhotoBlock: {
     marginHorizontal: 20,
     marginTop: 20,
@@ -381,28 +399,8 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
   },
-  affinityCardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 16,
-  },
   affinityCardContent: {
     flex: 1,
     minWidth: 0,
-  },
-  likeButtonCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#10b981',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 2,
   },
 });

@@ -864,32 +864,19 @@ export default function FeedScreen() {
           </View>
         )}
 
-        {/* 3) Affinity card (inline, no popup) + circular Like button on the right */}
+        {/* 3) Affinity card (inline, no popup) */}
         <View style={styles.discoverCard}>
-          <View style={styles.affinityCardRow}>
-            <View style={styles.affinityCardContent}>
-              <Text style={styles.discoverCardTitle}>Affinity</Text>
-              {isLoadingSentences ? (
-                <View style={styles.affinityLoadingRow}>
-                  <ActivityIndicator size="small" color="#e91e63" />
-                  <Text style={styles.discoverCardBody}>Finding highlights...</Text>
-                </View>
-              ) : (
-                <Text style={styles.discoverCardBody}>{affinityExplanationText}</Text>
-              )}
-              <Text style={styles.discoverCardLabel}>Based on conversations</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.likeButtonCircle, (isLiking || isDislikeInitiallyDisabled) && styles.likeButtonInCardDisabled]}
-              onPress={handleLike}
-              disabled={isLiking || isDislikeInitiallyDisabled}
-              accessibilityRole="button"
-              accessibilityLabel="I want to meet them"
-              accessibilityHint="Show interest in this person"
-              activeOpacity={0.8}
-            >
-              <Check size={26} color="#10b981" />
-            </TouchableOpacity>
+          <View style={styles.affinityCardContent}>
+            <Text style={styles.discoverCardTitle}>Affinity</Text>
+            {isLoadingSentences ? (
+              <View style={styles.affinityLoadingRow}>
+                <ActivityIndicator size="small" color="#e91e63" />
+                <Text style={styles.discoverCardBody}>Finding highlights...</Text>
+              </View>
+            ) : (
+              <Text style={styles.discoverCardBody}>{affinityExplanationText}</Text>
+            )}
+            <Text style={styles.discoverCardLabel}>Based on conversations</Text>
           </View>
         </View>
 
@@ -927,7 +914,7 @@ export default function FeedScreen() {
         ))}
       </ScrollView>
 
-      {/* Floating Discard button - bottom left */}
+      {/* Floating Dislike button - bottom left */}
       <TouchableOpacity
         style={[
           styles.discardButtonFloating,
@@ -941,6 +928,19 @@ export default function FeedScreen() {
         activeOpacity={0.8}
       >
         <X size={24} color={isDislikeInitiallyDisabled ? 'rgba(239, 68, 68, 0.45)' : '#ef4444'} />
+      </TouchableOpacity>
+
+      {/* Floating Like button - bottom right, always visible */}
+      <TouchableOpacity
+        style={[styles.likeButtonFloating, (isLiking || isDislikeInitiallyDisabled) && styles.likeButtonFloatingDisabled]}
+        onPress={handleLike}
+        disabled={isLiking || isDislikeInitiallyDisabled}
+        accessibilityRole="button"
+        accessibilityLabel="I want to meet them"
+        accessibilityHint="Show interest in this person"
+        activeOpacity={0.8}
+      >
+        <Check size={26} color="#10b981" />
       </TouchableOpacity>
 
       {/* Match Confirmation Modal */}
@@ -1349,6 +1349,27 @@ const styles = StyleSheet.create({
   discardButtonDisabled: {
     opacity: 0.45,
   },
+  likeButtonFloating: {
+    position: 'absolute',
+    right: 20,
+    bottom: 40,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#10b981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  likeButtonFloatingDisabled: {
+    opacity: 0.45,
+  },
   discoverPhotoBlock: {
     marginHorizontal: 20,
     marginTop: 20,
@@ -1407,11 +1428,6 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
   },
-  affinityCardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 16,
-  },
   affinityCardContent: {
     flex: 1,
     minWidth: 0,
@@ -1421,23 +1437,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 16,
-  },
-  likeButtonCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#10b981',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  likeButtonInCardDisabled: {
-    opacity: 0.45,
   },
 });
