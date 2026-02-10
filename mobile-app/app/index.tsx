@@ -2,11 +2,13 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../src/domain/stores/authStore';
 import { usePreviewStore } from '../src/domain/stores/previewStore';
 
 export default function Home() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { enterPreview } = usePreviewStore();
 
@@ -35,6 +37,17 @@ export default function Home() {
         }} 
       />
       <View style={styles.container}>
+        {/* Top-right: matchmaker CTA (absolute so main content stays centered) */}
+        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
+          <TouchableOpacity
+            style={styles.matchmakerButton}
+            onPress={() => router.push('/intromatchmaker')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.matchmakerButtonText}>are you a matchmaker?</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Logo completo: icono + palabra Wodates */}
         <View style={styles.logoContainer}>
           <Image 
@@ -89,6 +102,30 @@ const styles = StyleSheet.create({
     padding: 32,
     backgroundColor: '#ffffff',
     gap: 40,
+  },
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    zIndex: 1,
+  },
+  matchmakerButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F45C5C',
+    backgroundColor: 'transparent',
+  },
+  matchmakerButtonText: {
+    color: '#F45C5C',
+    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
   logoContainer: {
     alignItems: 'center',
