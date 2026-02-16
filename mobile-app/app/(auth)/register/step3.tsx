@@ -14,14 +14,88 @@ import {
   type WaitlistFieldErrors,
 } from './waitlistHelpers';
 
-type CityOption = 'london' | 'paris' | 'nyc' | 'other';
+type CityOption =
+  | 'london'
+  | 'manchester'
+  | 'birmingham'
+  | 'leeds'
+  | 'liverpool'
+  | 'bristol'
+  | 'sheffield'
+  | 'newcastle'
+  | 'glasgow'
+  | 'edinburgh'
+  | 'nottingham'
+  | 'cardiff'
+  | 'dublin'
+  | 'paris'
+  | 'berlin'
+  | 'barcelona'
+  | 'amsterdam'
+  | 'milan'
+  | 'nyc'
+  | 'other';
+
+const UK_CITIES: { value: CityOption; label: string }[] = [
+  { value: 'london', label: 'London' },
+  { value: 'birmingham', label: 'Birmingham' },
+  { value: 'bristol', label: 'Bristol' },
+  { value: 'cardiff', label: 'Cardiff' },
+  { value: 'dublin', label: 'Dublin' },
+  { value: 'edinburgh', label: 'Edinburgh' },
+  { value: 'glasgow', label: 'Glasgow' },
+  { value: 'leeds', label: 'Leeds' },
+  { value: 'liverpool', label: 'Liverpool' },
+  { value: 'manchester', label: 'Manchester' },
+  { value: 'newcastle', label: 'Newcastle upon Tyne' },
+  { value: 'nottingham', label: 'Nottingham' },
+  { value: 'sheffield', label: 'Sheffield' },
+];
+
+const WAITLIST_CITIES: { value: CityOption; label: string; status: 'Waitlist' }[] = [
+  { value: 'amsterdam', label: 'Amsterdam', status: 'Waitlist' },
+  { value: 'barcelona', label: 'Barcelona', status: 'Waitlist' },
+  { value: 'berlin', label: 'Berlin', status: 'Waitlist' },
+  { value: 'milan', label: 'Milan', status: 'Waitlist' },
+  { value: 'nyc', label: 'NYC (Manhattan)', status: 'Waitlist' },
+  { value: 'paris', label: 'Paris', status: 'Waitlist' },
+  { value: 'other', label: 'Other city', status: 'Waitlist' },
+];
 
 const CITY_OPTIONS = [
-  { value: 'london' as CityOption, label: 'London (Central)', status: 'Available now' },
-  { value: 'paris' as CityOption, label: 'Paris (Central)', status: 'Waitlist' },
-  { value: 'nyc' as CityOption, label: 'NYC (Manhattan)', status: 'Waitlist' },
-  { value: 'other' as CityOption, label: 'Other city', status: 'Waitlist' },
+  ...UK_CITIES.map((c) => ({ ...c, status: 'Available now' as const })),
+  ...WAITLIST_CITIES,
 ];
+
+const UK_CITY_LABELS: Record<CityOption, string> = {
+  london: 'London',
+  manchester: 'Manchester',
+  birmingham: 'Birmingham',
+  leeds: 'Leeds',
+  liverpool: 'Liverpool',
+  bristol: 'Bristol',
+  sheffield: 'Sheffield',
+  newcastle: 'Newcastle upon Tyne',
+  glasgow: 'Glasgow',
+  edinburgh: 'Edinburgh',
+  nottingham: 'Nottingham',
+  cardiff: 'Cardiff',
+  dublin: 'Dublin',
+  paris: 'Paris',
+  berlin: 'Berlin',
+  barcelona: 'Barcelona',
+  amsterdam: 'Amsterdam',
+  milan: 'Milan',
+  nyc: 'NYC (Manhattan)',
+  other: '',
+};
+
+const WAITLIST_CITY_OPTIONS: CityOption[] = [
+  'amsterdam', 'barcelona', 'berlin', 'milan', 'nyc', 'paris', 'other',
+];
+
+const isUKCity = (city: CityOption): boolean =>
+  UK_CITIES.some((c) => c.value === city);
 
 const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,8 +117,8 @@ export default function Step3Screen() {
   const [fieldErrors, setFieldErrors] = useState<WaitlistFieldErrors>({});
   const [genericError, setGenericError] = useState<string | null>(null);
 
-  const isWaitlistCity = selectedCity === 'paris' || selectedCity === 'nyc' || selectedCity === 'other';
-  const showContinueButton = selectedCity === 'london' && !waitlistSuccess;
+  const isWaitlistCity = WAITLIST_CITY_OPTIONS.includes(selectedCity);
+  const showContinueButton = isUKCity(selectedCity) && !waitlistSuccess;
   const showWaitlistForm = isWaitlistCity && !waitlistSuccess;
 
   const handleCitySelect = (city: CityOption) => {
@@ -57,14 +131,14 @@ export default function Step3Screen() {
   };
 
   const handleNext = () => {
-    if (selectedCity !== 'london') {
+    if (!isUKCity(selectedCity)) {
       return;
     }
-    
-    // Save selected city and set country
-    updateData({ 
-      location: 'London',
-      country: 'UK'
+
+    const locationName = UK_CITY_LABELS[selectedCity];
+    updateData({
+      location: locationName,
+      country: 'UK',
     });
     nextStep();
     router.push('/(auth)/register/step4');
@@ -92,11 +166,9 @@ export default function Step3Screen() {
     setIsSubmittingWaitlist(true);
 
     try {
-      const cityName = selectedCity === 'other' 
-        ? waitlistCity.trim() 
-        : selectedCity === 'paris' 
-          ? 'Paris (Central)' 
-          : 'NYC (Manhattan)';
+      const cityName = selectedCity === 'other'
+        ? waitlistCity.trim()
+        : UK_CITY_LABELS[selectedCity];
 
       const result = await authApi.joinWaitlist(cityName, waitlistEmail.trim());
 
@@ -132,11 +204,9 @@ export default function Step3Screen() {
       }
     } catch (error) {
       // Unexpected error - graceful degradation (show success)
-      const cityName = selectedCity === 'other' 
-        ? waitlistCity.trim() 
-        : selectedCity === 'paris' 
-          ? 'Paris (Central)' 
-          : 'NYC (Manhattan)';
+      const cityName = selectedCity === 'other'
+        ? waitlistCity.trim()
+        : UK_CITY_LABELS[selectedCity];
       setWaitlistSuccess({ city: cityName });
       setFieldErrors({});
       setGenericError(null);
