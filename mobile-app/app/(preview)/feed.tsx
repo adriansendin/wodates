@@ -27,6 +27,7 @@ const PREVIEW_USER_DATA: FeedCandidate = {
   photoUrl: null, // Will use placeholder
   birthDate: null,
   show_bio_in_feed: true, // Must be true to show the (i) button
+  city: 'London',
   location: {
     latitude: 51.5074,
     longitude: -0.1278,
@@ -156,12 +157,13 @@ export default function PreviewFeedScreen() {
         contentContainerStyle={styles.discoverScrollContent}
         showsVerticalScrollIndicator={true}
       >
-        {/* 1) Top: Name, Age */}
+        {/* 1) Top: Name, Age, City */}
         <View style={styles.discoverHeader}>
           <View style={styles.discoverNameAgeRow}>
             <Text style={styles.discoverName}>
               {previewUser.name}
               {typeof age === 'number' ? `, ${age}` : ''}
+              {previewUser.city?.trim() ? ` · ${previewUser.city.trim()}` : ''}
             </Text>
           </View>
         </View>

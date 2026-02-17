@@ -843,12 +843,13 @@ export default function FeedScreen() {
         contentContainerStyle={styles.discoverScrollContent}
         showsVerticalScrollIndicator={true}
       >
-        {/* 1) Top: Name, Age */}
+        {/* 1) Top: Name, Age, City */}
         <View style={styles.discoverHeader}>
           <View style={styles.discoverNameAgeRow}>
             <Text style={styles.discoverName}>
               {currentUser.name}
               {typeof age === 'number' ? `, ${age}` : ''}
+              {currentUser.city?.trim() ? ` · ${currentUser.city.trim()}` : ''}
             </Text>
           </View>
         </View>

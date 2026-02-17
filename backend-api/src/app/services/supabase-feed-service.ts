@@ -23,6 +23,7 @@ type FeedUserRow = {
   gender: string | null;
   looking_for: LookingForValue | null;
   bio: string | null;
+  city: string | null;
   show_bio_in_feed: boolean | null;
 };
 
@@ -45,6 +46,7 @@ export type FeedCandidate = {
   age: number | null;
   gender: Gender | null;
   photoUrl: string | null;
+  city: string | null;
   show_bio_in_feed: boolean | null;
 };
 
@@ -76,7 +78,7 @@ export class SupabaseFeedService {
           'id, birthDate, gender, looking_for, bio, city, show_bio_in_feed'
         ) // Added 'show_bio_in_feed' to control bio visibility
         .neq('id', userId)
-        .lt('active_chats_count', 1) // Exclude users with any active chats (must be 0)
+        // .lt('active_chats_count', 1) // Exclude users with any active chats (must be 0)
         .or('is_bot.is.null,is_bot.eq.false') // Exclude bots (system users)
         .order('id', { ascending: false }) // Order by ID descending to show newer users first
         .range(offset, offset + limit - 1);
@@ -86,10 +88,10 @@ export class SupabaseFeedService {
         query = query.in('gender', genderFilter).not('gender', 'is', null);
       }
 
-      // Filter by city: only show users in the same city
-      if (currentUser.city) {
-        query = query.eq('city', currentUser.city);
-      }
+      // Filter by city: only show users in the same city (commented out - discover shows all cities)
+      // if (currentUser.city) {
+      //   query = query.eq('city', currentUser.city);
+      // }
 
       const [{ data, error }, excludedIds] = await Promise.all([
         query,
@@ -433,6 +435,7 @@ export class SupabaseFeedService {
       age,
       gender,
       photoUrl,
+      city: row.city ? row.city.trim() || null : null,
       show_bio_in_feed: row.show_bio_in_feed,
     };
   }

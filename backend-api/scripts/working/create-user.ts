@@ -66,10 +66,10 @@ const MAX_PHOTO_DIMENSION = 1200;
 // Modifica estos valores según tus necesidades antes de ejecutar el script.
 
 /** Sufijo que se añade al email de cada usuario (ej: iter="1" → rachel1@example.com). */
-const iter: string = '21';
+const iter: string = '';
 
 /** Ciudad de prueba para todos los usuarios: base + valor de iter (ej: iter='10' → 'Liverpool10'). */
-const locationCity: string = 'Liverpool' + iter;
+const locationCity: string = 'London' + iter;
 
 /** Número de usuarios a crear desde USER_CONFIGS (se toman los primeros N). Ej: 4 → solo 4, 8 → 8. */
 const usersToCreate: number = 20;

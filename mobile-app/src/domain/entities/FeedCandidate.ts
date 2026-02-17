@@ -9,6 +9,7 @@ export const FeedCandidateSchema = z.object({
   age: z.number().int().min(18).max(100).nullable().optional(),
   gender: GenderSchema.nullable().optional(),
   photoUrl: z.string().url().nullable().optional(),
+  city: z.string().nullable().optional(),
   show_bio_in_feed: z.boolean().nullable().optional(),
   location: z
     .object({

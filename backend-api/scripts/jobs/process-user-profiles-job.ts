@@ -84,7 +84,6 @@ import { UserBioGenerationService } from '../../src/app/ai/profile/UserBioGenera
 import { ExternalChatFilesService } from '../../src/app/services/external-chat-files-service';
 import { AiServiceProfileClient } from '../../src/app/ai/clients/AiServiceProfileClient';
 import { AiServiceEmbeddingClient } from '../../src/app/ai/clients/AiServiceEmbeddingClient';
-
 type SupabaseConfig = {
   url: string;
   serviceRoleKey: string;
@@ -1100,15 +1099,7 @@ async function main() {
       writeToLog('No users with unprocessed messages found', 'INFO');
       writeToLog('Skipping to Process 2', 'INFO');
     } else {
-      // Resolve Doc Love ID once so their chat is never counted as "real user"
-      // (avoids skipping users who only have Doc Love chat when is_bot is not set in DB)
-      let docLoveId: string | undefined;
-      try {
-        docLoveId = await docLoveHelper.getDocLoveUserId();
-      } catch {
-        docLoveId = undefined;
-      }
-
+      // Process all users with unprocessed messages, regardless of active chats
       for (let i = 0; i < userIds.length; i++) {
         const userId = userIds[i];
         if (userId === undefined) continue;
@@ -1117,32 +1108,6 @@ async function main() {
         writeToLog(`[${userNumber}/${userIds.length}] Processing user: ${userId}`, 'INFO');
 
       try {
-        // CRITICAL: Only process if user has 0 active chats with real users (excl. bots like Doc Love).
-        // We pass docLoveId so Doc Love's chat is never counted even if is_bot is not set in DB.
-        let activeChatsWithRealUsers: number;
-        try {
-          activeChatsWithRealUsers = await matchRepository.getActiveChatsWithRealUsersCount(
-            userId,
-            docLoveId ? [docLoveId] : undefined
-          );
-        } catch (err) {
-          writeToLog(`Failed to get active chats count for user ${userId}, proceeding: ${err}`, 'WARN');
-          activeChatsWithRealUsers = 0;
-        }
-
-        if (activeChatsWithRealUsers >= 1) {
-          writeToLog(`User ${userId}: Has ${activeChatsWithRealUsers} active chat with human users , skipping because user is currently talking to someone`, 'INFO');
-          skippedCount++;
-          results.push({
-            userId,
-            status: 'skipped',
-            message: `User has ${activeChatsWithRealUsers} active chat with human users`,
-          });
-          continue;
-        }
-
-        writeToLog(`User ${userId}: 0 active chats with real users, proceeding to process profile`, 'INFO');
-
         // Get profile before processing to compare summary changes
         const profileBeforeResult = await userAIProfileRepository.findByUserId(userId);
         const summaryBefore = profileBeforeResult.success && profileBeforeResult.data 

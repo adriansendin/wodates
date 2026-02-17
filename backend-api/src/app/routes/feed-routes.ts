@@ -52,6 +52,7 @@ export async function feedRoutes(fastify: FastifyInstance) {
                     },
                     age: { type: 'number', nullable: true },
                     bio: { type: 'string', nullable: true },
+                    city: { type: 'string', nullable: true },
                     photoUrl: { type: 'string', nullable: true },
                   },
                 },
