@@ -16,6 +16,7 @@ import {
 
 type CityOption =
   | 'london'
+  | 'wurzburg'
   | 'manchester'
   | 'birmingham'
   | 'leeds'
@@ -38,6 +39,7 @@ type CityOption =
 
 const UK_CITIES: { value: CityOption; label: string }[] = [
   { value: 'london', label: 'London' },
+  { value: 'wurzburg', label: 'Würzburg' },
   { value: 'birmingham', label: 'Birmingham' },
   { value: 'bristol', label: 'Bristol' },
   { value: 'cardiff', label: 'Cardiff' },
@@ -51,6 +53,30 @@ const UK_CITIES: { value: CityOption; label: string }[] = [
   { value: 'nottingham', label: 'Nottingham' },
   { value: 'sheffield', label: 'Sheffield' },
 ];
+
+const AVAILABLE_CITY_COUNTRY: Record<CityOption, string> = {
+  london: 'UK',
+  wurzburg: 'Germany',
+  manchester: 'UK',
+  birmingham: 'UK',
+  leeds: 'UK',
+  liverpool: 'UK',
+  bristol: 'UK',
+  sheffield: 'UK',
+  newcastle: 'UK',
+  glasgow: 'UK',
+  edinburgh: 'UK',
+  nottingham: 'UK',
+  cardiff: 'UK',
+  dublin: 'UK',
+  paris: '',
+  berlin: '',
+  barcelona: '',
+  amsterdam: '',
+  milan: '',
+  nyc: '',
+  other: '',
+};
 
 const WAITLIST_CITIES: { value: CityOption; label: string; status: 'Waitlist' }[] = [
   { value: 'amsterdam', label: 'Amsterdam', status: 'Waitlist' },
@@ -69,6 +95,7 @@ const CITY_OPTIONS = [
 
 const UK_CITY_LABELS: Record<CityOption, string> = {
   london: 'London',
+  wurzburg: 'Würzburg',
   manchester: 'Manchester',
   birmingham: 'Birmingham',
   leeds: 'Leeds',
@@ -94,7 +121,7 @@ const WAITLIST_CITY_OPTIONS: CityOption[] = [
   'amsterdam', 'barcelona', 'berlin', 'milan', 'nyc', 'paris', 'other',
 ];
 
-const isUKCity = (city: CityOption): boolean =>
+const isAvailableCity = (city: CityOption): boolean =>
   UK_CITIES.some((c) => c.value === city);
 
 const isValidEmail = (email: string): boolean => {
@@ -118,7 +145,7 @@ export default function Step3Screen() {
   const [genericError, setGenericError] = useState<string | null>(null);
 
   const isWaitlistCity = WAITLIST_CITY_OPTIONS.includes(selectedCity);
-  const showContinueButton = isUKCity(selectedCity) && !waitlistSuccess;
+  const showContinueButton = isAvailableCity(selectedCity) && !waitlistSuccess;
   const showWaitlistForm = isWaitlistCity && !waitlistSuccess;
 
   const handleCitySelect = (city: CityOption) => {
@@ -131,14 +158,15 @@ export default function Step3Screen() {
   };
 
   const handleNext = () => {
-    if (!isUKCity(selectedCity)) {
+    if (!isAvailableCity(selectedCity)) {
       return;
     }
 
     const locationName = UK_CITY_LABELS[selectedCity];
+    const country = AVAILABLE_CITY_COUNTRY[selectedCity];
     updateData({
       location: locationName,
-      country: 'UK',
+      country,
     });
     nextStep();
     router.push('/(auth)/register/step4');
