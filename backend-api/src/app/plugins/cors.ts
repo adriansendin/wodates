@@ -28,26 +28,15 @@ export async function registerCors(fastify: FastifyInstance) {
   const localNetworkRegex =
     /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}):(8080|8081|19006|3000)$/;
 
+  console.log(`[CORS] Allowed origins: ${allowedOrigins.join(', ')}`);
+
   await fastify.register(cors, {
     origin: (origin, callback) => {
-      console.log(`[CORS] Checking origin: ${origin || 'none'}`);
-      console.log(`[CORS] Allowed origins: ${allowedOrigins.join(', ')}`);
-
       if (!origin) {
-        // Allow server-to-server or curl requests with no origin
-        console.log('[CORS] Allowing request with no origin');
         return callback(null, true);
       }
 
-      // Check exact match first
-      if (allowedOrigins.includes(origin)) {
-        console.log(`[CORS] Origin ${origin} is allowed`);
-        return callback(null, true);
-      }
-
-      // Check if it's a local network IP (for physical devices)
-      if (localNetworkRegex.test(origin)) {
-        console.log(`[CORS] Local network IP ${origin} is allowed`);
+      if (allowedOrigins.includes(origin) || localNetworkRegex.test(origin)) {
         return callback(null, true);
       }
 

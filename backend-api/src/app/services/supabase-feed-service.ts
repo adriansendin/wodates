@@ -18,7 +18,7 @@ type SupabaseConfig = {
 
 type FeedUserRow = {
   id: string;
-  name: string; // Retrieved from auth.users.raw_user_meta_data.display_name
+  display_name: string;
   birthDate: string | null;
   gender: string | null;
   looking_for: LookingForValue | null;
@@ -69,34 +69,43 @@ export class SupabaseFeedService {
     offset: number = 0
   ): Promise<FeedCandidate[]> {
     try {
-      const currentUser = await this.fetchCurrentUser(userId);
+      const [currentUser, excludedIds] = await Promise.all([
+        this.fetchCurrentUser(userId),
+        this.fetchExcludedUserIds(userId),
+      ]);
+
       const genderFilter = this.resolveGenderFilter(currentUser.looking_for);
+      const currentUserGender = this.normalizeGender(currentUser.gender);
 
       let query = this.client
-        .from('users')
+        .from('users_active')
         .select(
-          'id, birthDate, gender, looking_for, bio, city, show_bio_in_feed'
-        ) // Added 'show_bio_in_feed' to control bio visibility
+          'id, display_name, birthDate, gender, looking_for, bio, city, show_bio_in_feed'
+        )
         .neq('id', userId)
-        // .lt('active_chats_count', 1) // Exclude users with any active chats (must be 0)
-        .or('is_bot.is.null,is_bot.eq.false') // Exclude bots (system users)
-        .order('id', { ascending: false }) // Order by ID descending to show newer users first
-        .range(offset, offset + limit - 1);
+        .or('is_bot.is.null,is_bot.eq.false');
 
-      // Initial filter: optimize query by filtering candidates that current user is looking for
+      // Exclude users already interacted with (likes, passes, matches, blocks)
+      if (excludedIds.size > 0) {
+        const ids = Array.from(excludedIds);
+        query = query.not('id', 'in', `(${ids.join(',')})`);
+      }
+
+      // Filter: candidates whose gender matches what the current user is looking for
       if (genderFilter !== 'any') {
         query = query.in('gender', genderFilter).not('gender', 'is', null);
       }
 
-      // Filter by city: only show users in the same city (commented out - discover shows all cities)
-      // if (currentUser.city) {
-      //   query = query.eq('city', currentUser.city);
-      // }
+      // Bidirectional filter: candidates must be looking for the current user's gender
+      query = query.or(
+        this.buildReverseLookingForFilter(currentUserGender)
+      );
 
-      const [{ data, error }, excludedIds] = await Promise.all([
-        query,
-        this.fetchExcludedUserIds(userId),
-      ]);
+      query = query
+        .order('id', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      const { data, error } = await query;
 
       if (error) {
         throw new InternalError(
@@ -108,54 +117,11 @@ export class SupabaseFeedService {
         return [];
       }
 
-      // Filter out excluded users (liked/passed) and apply bidirectional gender filter
-      const currentUserGender = this.normalizeGender(currentUser.gender);
-      const filtered = data.filter((row) => {
-        if (excludedIds.has(row.id)) {
-          return false;
-        }
-
-        // Bidirectional filter: both users must be looking for each other's gender
-        const candidateGender = this.normalizeGender(row.gender);
-        const candidateLookingFor = row.looking_for;
-
-        // Check if current user is looking for candidate's gender
-        if (!this.includesGender(currentUser.looking_for, candidateGender)) {
-          return false;
-        }
-
-        // Check if candidate is looking for current user's gender
-        // If current user has no gender, allow if candidate is looking for "both" or has no preference
-        if (currentUserGender) {
-          // Current user has gender - check if candidate is looking for it
-          if (!this.includesGender(candidateLookingFor, currentUserGender)) {
-            return false;
-          }
-        } else {
-          // Current user has no gender - only allow if candidate is looking for "both" or has no preference
-          if (candidateLookingFor && candidateLookingFor !== 'both') {
-            return false;
-          }
-        }
-
-        return true;
-      });
-
-      // Fetch identity info from auth.users for all candidates in parallel
-      const candidatesWithNames = await Promise.all(
-        filtered.map(async (row) => {
-          const identity = await this.fetchUserIdentity(row.id);
-          if (!identity || identity.deletedAt) {
-            return null;
-          }
-
-          return await this.mapRowToCandidate({ ...row, name: identity.name });
-        })
+      const candidates = await Promise.all(
+        data.map((row) => this.mapRowToCandidate(row))
       );
 
-      return candidatesWithNames.filter(
-        (candidate): candidate is FeedCandidate => candidate !== null
-      );
+      return candidates;
     } catch (error) {
       if (error instanceof DomainError) {
         throw error;
@@ -189,44 +155,24 @@ export class SupabaseFeedService {
   }
 
   /**
-   * Determines if a looking_for preference includes a specific gender.
-   * Pure function for bidirectional gender filtering.
+   * Builds a PostgREST OR filter so only candidates whose looking_for
+   * is compatible with the current user's gender are returned.
    *
-   * @param lookingFor - The user's looking_for preference ('male', 'female', 'both', or null)
-   * @param gender - The gender to check ('male', 'female', 'non_binary')
-   * @returns true if the looking_for preference includes the gender
+   * 'both' and NULL looking_for always match any gender.
    */
-  private includesGender(
-    lookingFor: LookingForValue | null,
-    gender: Gender | null
-  ): boolean {
-    if (!gender) {
-      return false;
+  private buildReverseLookingForFilter(currentUserGender: Gender | null): string {
+    if (currentUserGender === 'male') {
+      return 'looking_for.eq.male,looking_for.eq.both,looking_for.is.null';
     }
-
-    if (!lookingFor || lookingFor === 'both') {
-      // 'both' means "any gender" - includes all genders (male, female, non_binary)
-      return true;
+    if (currentUserGender === 'female') {
+      return 'looking_for.eq.female,looking_for.eq.both,looking_for.is.null';
     }
-
-    // Map looking_for values to gender values
-    if (lookingFor === 'male') {
-      return gender === 'male';
-    }
-
-    if (lookingFor === 'female') {
-      return gender === 'female';
-    }
-
-    return false;
+    return 'looking_for.eq.both,looking_for.is.null';
   }
 
   /**
    * Resolves looking_for preference to a list of genders for SQL query optimization.
    * Used for initial filtering in the database query.
-   *
-   * @param lookingFor - The user's looking_for preference
-   * @returns Array of genders or 'any' if no filter should be applied
    */
   private resolveGenderFilter(
     lookingFor: LookingForValue | null
@@ -374,62 +320,16 @@ export class SupabaseFeedService {
     return excluded;
   }
 
-  /**
-   * Obtiene el nombre del usuario desde auth.users.raw_user_meta_data.display_name
-   *
-   * @param userId - ID del usuario
-   * @returns El nombre del usuario o un valor por defecto
-   */
-  private async fetchUserIdentity(
-    userId: string
-  ): Promise<{ name: string; deletedAt: string | null } | null> {
-    try {
-      const { data, error } = await this.client.auth.admin.getUserById(userId);
-
-      if (error || !data?.user) {
-        console.warn(
-          `[SupabaseFeedService] Could not fetch name for user ${userId}`,
-          error
-        );
-        return null;
-      }
-
-      const user = data.user;
-      const metadata = user.user_metadata as Record<string, unknown> | null;
-
-      const displayName =
-        metadata && typeof metadata.display_name === 'string'
-          ? metadata.display_name.trim()
-          : '';
-
-      const result = displayName || user.email || 'Usuario';
-      const deletedAt =
-        (user as unknown as { deleted_at?: string | null })?.deleted_at ?? null;
-
-      return {
-        name: result,
-        deletedAt,
-      };
-    } catch (error) {
-      console.warn(
-        `[SupabaseFeedService] Error fetching name for user ${userId}`,
-        error
-      );
-      return null;
-    }
-  }
-
   private async mapRowToCandidate(row: FeedUserRow): Promise<FeedCandidate> {
     const gender = this.normalizeGender(row.gender);
     const birthDate = this.normalizeDate(row.birthDate);
-    // Always include bio - filtering is done on frontend based on show_bio_in_feed flags (no truncation)
     const bio = row.bio ? row.bio.trim() || null : null;
     const age = birthDate ? this.calculateAge(birthDate) : null;
     const photoUrl = await this.getMainPhotoUrl(row.id);
 
     return {
       id: row.id,
-      name: row.name, // Already fetched from auth.users
+      name: row.display_name,
       bio,
       birthDate,
       age,
