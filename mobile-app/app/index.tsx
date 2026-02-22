@@ -37,8 +37,8 @@ export default function Home() {
         }} 
       />
       <View style={styles.container}>
-        {/* Top-right: matchmaker CTA (absolute so main content stays centered) */}
-        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
+        {/* Top-right: matchmaker CTA - hidden in production (page /intromatchmaker still exists) */}
+        {/* <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
           <TouchableOpacity
             style={styles.matchmakerButton}
             onPress={() => router.push('/intromatchmaker')}
@@ -46,7 +46,7 @@ export default function Home() {
           >
             <Text style={styles.matchmakerButtonText}>are you a matchmaker?</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Logo completo: icono + palabra Wodates */}
         <View style={styles.logoContainer}>
