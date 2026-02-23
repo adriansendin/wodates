@@ -37,16 +37,16 @@ export default function Home() {
         }} 
       />
       <View style={styles.container}>
-        {/* Top-right: matchmaker CTA - hidden in production (page /intromatchmaker still exists) */}
-        {/* <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
+        {/* Top-right: Manifesto link */}
+        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
           <TouchableOpacity
-            style={styles.matchmakerButton}
-            onPress={() => router.push('/intromatchmaker')}
+            style={styles.manifestoButton}
+            onPress={() => router.push('/manifesto')}
             activeOpacity={0.7}
           >
-            <Text style={styles.matchmakerButtonText}>are you a matchmaker?</Text>
+            <Text style={styles.manifestoButtonText}>Manifesto</Text>
           </TouchableOpacity>
-        </View> */}
+        </View>
 
         {/* Logo completo: icono + palabra Wodates */}
         <View style={styles.logoContainer}>
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     zIndex: 1,
   },
-  matchmakerButton: {
+  manifestoButton: {
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     borderColor: '#F45C5C',
     backgroundColor: 'transparent',
   },
-  matchmakerButtonText: {
+  manifestoButtonText: {
     color: '#F45C5C',
     fontSize: 14,
     fontWeight: '500',
