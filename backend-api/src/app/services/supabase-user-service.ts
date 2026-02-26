@@ -42,6 +42,8 @@ type UserProfileRow = {
   // Habits
   smoking: Smoking | null;
   cares_about_partner_smoking: CaresAboutPartnerSmoking | null;
+  // Doc Love onboarding: set when user taps "Build my profile" (button hidden forever)
+  build_profile_cta_tapped_at: string | null;
 };
 
 export type UserProfile = {
@@ -65,6 +67,8 @@ export type UserProfile = {
   // Habits
   smoking: Smoking | null;
   cares_about_partner_smoking: CaresAboutPartnerSmoking | null;
+  /** Set when user taps "Build my profile" in Doc Love chat (CTA hidden forever) */
+  build_profile_cta_tapped_at: string | null;
 };
 
 export type UpdateUserProfileInput = {
@@ -84,6 +88,7 @@ export type UpdateUserProfileInput = {
   // Habits
   smoking?: Smoking | null;
   cares_about_partner_smoking?: CaresAboutPartnerSmoking | null;
+  build_profile_cta_tapped_at?: string | null;
 };
 
 /**
@@ -292,6 +297,10 @@ export class SupabaseUserService {
           '[SupabaseUserService] cares_about_partner_smoking NOT in input'
         );
       }
+      if ('build_profile_cta_tapped_at' in input) {
+        updatePayload.build_profile_cta_tapped_at =
+          input.build_profile_cta_tapped_at ?? null;
+      }
 
       console.log('[SupabaseUserService] Final updatePayload:', updatePayload);
       console.log(
@@ -323,7 +332,7 @@ export class SupabaseUserService {
         .update(updatePayload)
         .eq('id', userId)
         .select(
-          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking'
+          'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at'
         )
         .single();
 
@@ -375,6 +384,26 @@ export class SupabaseUserService {
       }
 
       throw new InternalError('Unexpected error updating user profile', error);
+    }
+  }
+
+  /**
+   * Marks that the user has tapped the "Build my profile" CTA in Doc Love chat.
+   * Used to hide the button forever.
+   */
+  async setBuildProfileCtaTapped(userId: string): Promise<void> {
+    const { error } = await this.client
+      .from('users')
+      .update({
+        build_profile_cta_tapped_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (error) {
+      throw new InternalError(
+        `Failed to set build_profile_cta_tapped_at: ${this.formatSupabaseError(error)}`,
+        error
+      );
     }
   }
 
@@ -435,7 +464,7 @@ export class SupabaseUserService {
       .from('users')
       .insert(defaults)
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at'
       )
       .single();
 
@@ -499,7 +528,7 @@ export class SupabaseUserService {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -648,6 +677,7 @@ export class SupabaseUserService {
       // Habits
       smoking: row.smoking ?? null,
       cares_about_partner_smoking: row.cares_about_partner_smoking ?? null,
+      build_profile_cta_tapped_at: row.build_profile_cta_tapped_at ?? null,
     };
   }
 

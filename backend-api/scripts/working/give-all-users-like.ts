@@ -14,7 +14,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // ============================================================================
 // CONFIGURACIÓN: Cambia este email por el del usuario que quieres que reciba likes
 // ============================================================================
-const TARGET_USER_EMAIL = 'test2@example.com'; // ⬅️ CAMBIA ESTE EMAIL
+const TARGET_USER_EMAIL = 'arjun@example.com'; // ⬅️ CAMBIA ESTE EMAIL
 // ============================================================================
 
 interface SupabaseConfig {

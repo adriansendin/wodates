@@ -11,6 +11,7 @@ import {
 import { MatchRepository } from '../../domain/repositories/MatchRepository';
 import { MessageRepository } from '../../domain/repositories/MessageRepository';
 import { AffinitySentenceService } from '../services/affinity-sentence-service';
+import { BuildProfileCtaService } from '../services/build-profile-cta-service';
 import { z } from 'zod';
 
 const SendMessageSchema = z.object({
@@ -46,7 +47,8 @@ export class ChatController {
     private blockUserUseCase: BlockUser,
     private matchRepository: MatchRepository,
     private messageRepository: MessageRepository,
-    private affinitySentenceService?: AffinitySentenceService
+    private affinitySentenceService?: AffinitySentenceService,
+    private buildProfileCtaService?: BuildProfileCtaService
   ) {}
 
   async sendMessage(request: FastifyRequest, reply: FastifyReply) {
@@ -240,6 +242,40 @@ export class ChatController {
 
       return reply.send({ hasSent });
     } catch (error) {
+      return this.handleValidationError(reply, error);
+    }
+  }
+
+  async getBuildProfileCta(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      if (!this.buildProfileCtaService) {
+        return reply.send({ showButton: false });
+      }
+      const userId = request.user!.id;
+      const { matchId } = request.params as { matchId: string };
+      const showButton = await this.buildProfileCtaService.getShowButton(
+        userId,
+        matchId
+      );
+      return reply.send({ showButton });
+    } catch (error) {
+      return this.handleValidationError(reply, error);
+    }
+  }
+
+  async markBuildProfileTapped(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      if (!this.buildProfileCtaService) {
+        return reply.status(204).send();
+      }
+      const userId = request.user!.id;
+      const { matchId } = request.params as { matchId: string };
+      await this.buildProfileCtaService.markTapped(userId, matchId);
+      return reply.status(204).send();
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return this.handleError(reply, error);
+      }
       return this.handleValidationError(reply, error);
     }
   }

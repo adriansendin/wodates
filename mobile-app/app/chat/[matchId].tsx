@@ -25,13 +25,15 @@ import { ApiClient } from '../../src/data/api/apiClient';
 import { ChatApi } from '../../src/data/api/chatApi';
 import { BlockApi } from '../../src/data/api/blockApi';
 import { MatchApi } from '../../src/data/api/matchApi';
+import { ProfileApi } from '../../src/data/api/profileApi';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { useChatStore } from '../../src/domain/stores/chatStore';
 import { Message, MessageSchema } from '../../src/domain/entities/Message';
 import { useMatchesStore } from '../../src/domain/stores/matchesStore';
 import { z } from 'zod';
 
-import { pickZipFile, uploadZipFile } from '../../src/data/api/zipUploadService';
+// Adjuntar archivos (Doc Love) — comentado
+// import { pickZipFile, uploadZipFile } from '../../src/data/api/zipUploadService';
 
 // More lenient message schema for displaying messages - allows longer content
 // The backend may return messages that exceed the normal 1000 char limit
@@ -319,10 +321,11 @@ export default function ChatScreen() {
   const [isBlocking, setIsBlocking] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [isUploadingZip, setIsUploadingZip] = useState(false);
-  const [showUploadSuccessModal, setShowUploadSuccessModal] = useState(false);
-  const [showUploadErrorModal, setShowUploadErrorModal] = useState(false);
-  const [uploadErrorMessage, setUploadErrorMessage] = useState<string>('');
+  // Adjuntar archivos (Doc Love) — comentado
+  // const [isUploadingZip, setIsUploadingZip] = useState(false);
+  // const [showUploadSuccessModal, setShowUploadSuccessModal] = useState(false);
+  // const [showUploadErrorModal, setShowUploadErrorModal] = useState(false);
+  // const [uploadErrorMessage, setUploadErrorMessage] = useState<string>('');
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [pastedTextToSplit, setPastedTextToSplit] = useState<string | null>(null);
@@ -333,6 +336,8 @@ export default function ChatScreen() {
   const [affinitySentence, setAffinitySentence] = useState<string | null>(null);
   const [hasSentMessage, setHasSentMessage] = useState<boolean>(false);
   const [showAffinityModal, setShowAffinityModal] = useState(false);
+  const [isBuildingProfile, setIsBuildingProfile] = useState(false);
+  const [showBuildProfileButton, setShowBuildProfileButton] = useState(false);
 
   // Blank chat opener state
   const [openerTemplateIndex, setOpenerTemplateIndex] = useState<number>(() => {
@@ -352,6 +357,7 @@ export default function ChatScreen() {
   const chatApi = useMemo(() => new ChatApi(apiClient), [apiClient]);
   const blockApi = useMemo(() => new BlockApi(apiClient), [apiClient]);
   const matchApi = useMemo(() => new MatchApi(apiClient), [apiClient]);
+  const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
   const isInitialLoad = useRef(true);
   const hasInitialLoadCompleted = useRef(false); // Track if initial message load has completed (independent of scroll)
   const hasScrolledToBottom = useRef(false);
@@ -407,6 +413,7 @@ export default function ChatScreen() {
     hasSentMessageInSessionRef.current = false; // Reset sent message flag for new chat
     setAffinitySentence(null); // Reset affinity sentence for new chat
     setHasSentMessage(false); // Reset has sent message for new chat
+    setShowBuildProfileButton(false); // Reset until we fetch from backend
   }, [matchId]);
 
   // Fetch affinity sentence and has-sent-message on mount and when matchId changes
@@ -442,6 +449,18 @@ export default function ChatScreen() {
 
     fetchAffinityAndHasSent();
   }, [matchId, tokens?.accessToken, isBot]);
+
+  // Fetch "Build my profile" button visibility for Doc Love chat (persisted in backend)
+  useEffect(() => {
+    if (!matchId || !tokens?.accessToken || !isBot) return;
+    const fetchBuildProfileCta = async () => {
+      const result = await chatApi.getBuildProfileCta(matchId, tokens.accessToken);
+      if (result.success) {
+        setShowBuildProfileButton(result.data.showButton);
+      }
+    };
+    fetchBuildProfileCta();
+  }, [matchId, tokens?.accessToken, isBot, chatApi]);
 
   // Scroll inicial solo una vez, sin animación
   // Este efecto se ejecuta cuando los mensajes cambian, pero esperamos a que el contenido esté renderizado
@@ -1383,65 +1402,84 @@ export default function ChatScreen() {
     });
   }, [photoUrl, otherUserName, otherUserId, matchId, matches, router, isBot]);
 
-  const handleAttachZip = useCallback(async () => {
-    console.log('[ChatScreen] handleAttachZip called', { userId: user?.id, isUploadingZip, isBlocked });
-    
-    if (!user?.id || isUploadingZip || isBlocked) {
-      console.log('[ChatScreen] Early return:', { hasUserId: !!user?.id, isUploadingZip, isBlocked });
-      return;
-    }
+  // Adjuntar archivos (Doc Love) — comentado
+  // const handleAttachZip = useCallback(async () => {
+  //   console.log('[ChatScreen] handleAttachZip called', { userId: user?.id, isUploadingZip, isBlocked });
+  //
+  //   if (!user?.id || isUploadingZip || isBlocked) {
+  //     console.log('[ChatScreen] Early return:', { hasUserId: !!user?.id, isUploadingZip, isBlocked });
+  //     return;
+  //   }
+  //
+  //   clearError();
+  //
+  //   try {
+  //     console.log('[ChatScreen] Step 1: Picking ZIP file...');
+  //     const pickResult = await pickZipFile();
+  //     console.log('[ChatScreen] Pick result:', { success: pickResult.success, hasData: !!pickResult.success && !!pickResult.data });
+  //
+  //     if (!pickResult.success) {
+  //       console.error('[ChatScreen] Pick failed:', pickResult.error);
+  //       setUploadErrorMessage(pickResult.error.message);
+  //       setShowUploadErrorModal(true);
+  //       setError(pickResult.error.message);
+  //       return;
+  //     }
+  //
+  //     if (!pickResult.data) {
+  //       console.log('[ChatScreen] User cancelled file pick');
+  //       return;
+  //     }
+  //
+  //     setIsUploadingZip(true);
+  //     console.log('[ChatScreen] Step 2: Uploading ZIP file...', { fileName: pickResult.data.name, fileSize: pickResult.data.size });
+  //     const uploadResult = await uploadZipFile(pickResult.data);
+  //     console.log('[ChatScreen] Upload result:', { success: uploadResult.success });
+  //
+  //     setIsUploadingZip(false);
+  //
+  //     if (!uploadResult.success) {
+  //       console.error('[ChatScreen] Upload failed:', uploadResult.error);
+  //       setUploadErrorMessage(uploadResult.error.message);
+  //       setShowUploadErrorModal(true);
+  //       setError(uploadResult.error.message);
+  //       return;
+  //     }
+  //
+  //     console.log('[ChatScreen] Upload successful!');
+  //     setShowUploadSuccessModal(true);
+  //   } catch (error) {
+  //     console.error('[ChatScreen] Error uploading ZIP:', error);
+  //     const errorMessage = error instanceof Error ? error.message : 'Upload failed. Please try again.';
+  //     setIsUploadingZip(false);
+  //     setUploadErrorMessage(errorMessage);
+  //     setShowUploadErrorModal(true);
+  //     setError(errorMessage);
+  //   }
+  // }, [user?.id, isUploadingZip, isBlocked, clearError, setError]);
 
-    clearError();
-
+  const handleBuildProfile = useCallback(async () => {
+    if (!tokens?.accessToken || isBuildingProfile) return;
+    setIsBuildingProfile(true);
     try {
-      console.log('[ChatScreen] Step 1: Picking ZIP file...');
-      // Step 1: Pick ZIP file
-      const pickResult = await pickZipFile();
-      console.log('[ChatScreen] Pick result:', { success: pickResult.success, hasData: !!pickResult.success && !!pickResult.data });
-      
-      if (!pickResult.success) {
-        console.error('[ChatScreen] Pick failed:', pickResult.error);
-        setUploadErrorMessage(pickResult.error.message);
-        setShowUploadErrorModal(true);
-        setError(pickResult.error.message);
-        return;
+      if (matchId) {
+        await chatApi.postBuildProfileTapped(matchId, tokens.accessToken);
+        setShowBuildProfileButton(false);
       }
-
-      if (!pickResult.data) {
-        // User cancelled
-        console.log('[ChatScreen] User cancelled file pick');
-        return;
+      const result = await profileApi.generateProfile(tokens.accessToken);
+      if (result.success) {
+        Alert.alert('Profile built', result.data.message);
+      } else {
+        const msg = result.error?.message ?? 'Could not build profile. Try again later.';
+        Alert.alert('Error', msg);
       }
-
-      // Now start uploading - set loading state
-      setIsUploadingZip(true);
-      console.log('[ChatScreen] Step 2: Uploading ZIP file...', { fileName: pickResult.data.name, fileSize: pickResult.data.size });
-      // Step 2: Upload ZIP file
-      const uploadResult = await uploadZipFile(pickResult.data);
-      console.log('[ChatScreen] Upload result:', { success: uploadResult.success });
-      
-      setIsUploadingZip(false); // Hide loading
-      
-      if (!uploadResult.success) {
-        console.error('[ChatScreen] Upload failed:', uploadResult.error);
-        setUploadErrorMessage(uploadResult.error.message);
-        setShowUploadErrorModal(true);
-        setError(uploadResult.error.message);
-        return;
-      }
-
-      // Step 3: Show success message
-      console.log('[ChatScreen] Upload successful!');
-      setShowUploadSuccessModal(true);
-    } catch (error) {
-      console.error('[ChatScreen] Error uploading ZIP:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed. Please try again.';
-      setIsUploadingZip(false);
-      setUploadErrorMessage(errorMessage);
-      setShowUploadErrorModal(true);
-      setError(errorMessage);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Could not build profile. Try again later.';
+      Alert.alert('Error', msg);
+    } finally {
+      setIsBuildingProfile(false);
     }
-  }, [user?.id, isUploadingZip, isBlocked, clearError, setError]);
+  }, [matchId, tokens?.accessToken, isBuildingProfile, profileApi, chatApi]);
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isOwn = item.senderId === user?.id;
@@ -1649,6 +1687,24 @@ export default function ChatScreen() {
                   )}
                 </View>
               }
+              ListFooterComponent={
+                isBot && showBuildProfileButton ? (
+                  <View style={styles.buildProfileButtonWrap}>
+                    <TouchableOpacity
+                      style={styles.buildProfileButton}
+                      onPress={handleBuildProfile}
+                      disabled={isBuildingProfile || !tokens?.accessToken}
+                      activeOpacity={0.8}
+                    >
+                      {isBuildingProfile ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.buildProfileButtonText}>Build my profile</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ) : null
+              }
             />
           </View>
 
@@ -1665,6 +1721,7 @@ export default function ChatScreen() {
             styles.inputContainer,
             Platform.OS === 'android' && { marginBottom: keyboardHeight > 0 ? keyboardHeight : 0 }
           ]}>
+            {/* Adjuntar archivos (Doc Love) — comentado
             {isBot && (
               <TouchableOpacity
                 style={styles.attachButton}
@@ -1678,6 +1735,7 @@ export default function ChatScreen() {
                 )}
               </TouchableOpacity>
             )}
+            */}
             <View style={styles.textInputWrapper}>
               <TextInput
                 style={[
@@ -1929,7 +1987,7 @@ export default function ChatScreen() {
         </View>
       </Modal>
 
-      {/* Upload Success Modal */}
+      {/* Adjuntar archivos (Doc Love) — Upload Success Modal comentado
       <Modal
         visible={showUploadSuccessModal}
         transparent
@@ -1953,7 +2011,6 @@ export default function ChatScreen() {
         </View>
       </Modal>
 
-      {/* Upload Error Modal */}
       <Modal
         visible={showUploadErrorModal}
         transparent
@@ -1991,6 +2048,7 @@ export default function ChatScreen() {
           </View>
         </View>
       </Modal>
+      */}
 
       {/* About Doc Love Modal */}
       <Modal
@@ -2106,12 +2164,13 @@ const styles = StyleSheet.create({
     minHeight: 60,
     overflow: 'visible',
   },
-  attachButton: {
-    marginRight: 8,
-    padding: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  // Adjuntar archivos (Doc Love) — comentado
+  // attachButton: {
+  //   marginRight: 8,
+  //   padding: 8,
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  // },
   textInputWrapper: {
     flex: 1,
     marginRight: 12,
@@ -2381,6 +2440,24 @@ const styles = StyleSheet.create({
   loadOlderButtonText: {
     color: '#e91e63',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  buildProfileButtonWrap: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
+  buildProfileButton: {
+    backgroundColor: '#F45C5C',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buildProfileButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
   aboutDocLoveTitle: {

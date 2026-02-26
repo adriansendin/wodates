@@ -54,4 +54,22 @@ export class ChatApi {
   ): Promise<Result<{ hasSent: boolean }, DomainError>> {
     return this.apiClient.get(`/chats/${matchId}/has-sent-message`, token);
   }
+
+  async getBuildProfileCta(
+    matchId: string,
+    token?: string
+  ): Promise<Result<{ showButton: boolean }, DomainError>> {
+    return this.apiClient.get(`/chats/${matchId}/build-profile-cta`, token);
+  }
+
+  async postBuildProfileTapped(
+    matchId: string,
+    token?: string
+  ): Promise<Result<void, DomainError>> {
+    return this.apiClient.post(
+      `/chats/${matchId}/build-profile-tapped`,
+      {},
+      token
+    );
+  }
 }

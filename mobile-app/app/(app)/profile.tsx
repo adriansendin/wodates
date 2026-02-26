@@ -1334,6 +1334,14 @@ export default function ProfileScreen() {
             Changes are saved automatically.
           </Text>
 
+          <TouchableOpacity
+            style={styles.manifestoLinkContainer}
+            onPress={() => router.push('/manifesto')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.manifestoLink}>Read the Wodates Manifesto</Text>
+          </TouchableOpacity>
+
           {/* Contact and Delete options */}
           <View style={styles.actionButtonsContainer}>
             <TouchableOpacity
@@ -1834,6 +1842,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 24,
     fontStyle: 'italic',
+  },
+  manifestoLinkContainer: {
+    marginTop: 16,
+    alignSelf: 'center',
+  },
+  manifestoLink: {
+    fontSize: 14,
+    color: '#888',
+    textDecorationLine: 'underline',
   },
   verificationButton: {
     width: '100%',

@@ -29,4 +29,13 @@ export class ProfileApi {
       token
     );
   }
+
+  /** Build AI profile from chat messages (summary, embedding, bio). */
+  generateProfile(token: string): Promise<Result<{ summary: string; message: string }, DomainError>> {
+    return this.apiClient.post<{ summary: string; message: string }>(
+      '/users/me/generate-profile',
+      {},
+      token
+    );
+  }
 }

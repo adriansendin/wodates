@@ -19,6 +19,7 @@ import {
   UpdateUserProfileInput,
 } from '../services/supabase-user-service';
 import { GenerateUserProfileFromChats } from '../../domain/use-cases/chat/GenerateUserProfileFromChats';
+import { ProcessUserProfileService } from '../services/process-user-profile-service';
 
 const dateSchema = z.preprocess(
   (value) => {
@@ -139,7 +140,7 @@ const UpdateProfileSchema = z
 export class UsersController {
   constructor(
     private readonly userService: SupabaseUserService,
-    private generateUserProfileUseCase?: GenerateUserProfileFromChats
+    private readonly profileBuilder?: ProcessUserProfileService | GenerateUserProfileFromChats
   ) {}
 
   async getProfile(request: FastifyRequest, reply: FastifyReply) {
@@ -322,13 +323,13 @@ export class UsersController {
   }
 
   async generateProfile(request: FastifyRequest, reply: FastifyReply) {
-    try {      
+    try {
       const authUser = request.user;
       if (!authUser) {
         throw new UnauthorizedError('Missing authenticated user');
       }
 
-      if (!this.generateUserProfileUseCase) {
+      if (!this.profileBuilder) {
         return reply.status(503).send({
           error: 'SERVICE_UNAVAILABLE',
           message: 'Profile generation service is not available',
@@ -340,12 +341,21 @@ export class UsersController {
         'Generating user profile from chats'
       );
 
-      const result = await this.generateUserProfileUseCase.execute(authUser.id);
+      if ('run' in this.profileBuilder) {
+        const result = await (this.profileBuilder as ProcessUserProfileService).run(authUser.id);
+        if (!result.success) {
+          return this.handleError(reply, result.error);
+        }
+        return reply.send({
+          summary: 'skipped' in result ? result.message : result.summary,
+          message: result.message,
+        });
+      }
 
+      const result = await (this.profileBuilder as GenerateUserProfileFromChats).execute(authUser.id);
       if (!result.success) {
         return this.handleError(reply, result.error);
       }
-
       return reply.send({
         summary: result.data,
         message: 'Profile generated successfully',

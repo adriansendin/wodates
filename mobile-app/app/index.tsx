@@ -2,15 +2,11 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../src/domain/stores/authStore';
-import { usePreviewStore } from '../src/domain/stores/previewStore';
 
 export default function Home() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
-  const { enterPreview } = usePreviewStore();
 
   useEffect(() => {
     if (user) {
@@ -18,77 +14,52 @@ export default function Home() {
     }
   }, [user, router]);
 
-  const handleEnterPreview = () => {
-    enterPreview();
-    router.push('/(preview)/feed');
-  };
-
-  const handleDirectRegister = () => {
-    // Navigate directly to registration onboarding (first screen: city selection)
-    // TODO: Add analytics tracking if needed: cta_register_direct_clicked
+  const handleJoinLondonDrop = () => {
     router.push('/(auth)/register');
   };
 
   return (
     <>
-      <Stack.Screen 
-        options={{ 
-          headerShown: false 
-        }} 
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
       />
       <View style={styles.container}>
-        {/* Top-right: Manifesto link */}
-        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
-          <TouchableOpacity
-            style={styles.manifestoButton}
-            onPress={() => router.push('/manifesto')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.manifestoButtonText}>Manifesto</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Logo completo: icono + palabra Wodates */}
+        {/* Logo + app name */}
         <View style={styles.logoContainer}>
-          <Image 
-            source={require('../assets/icon.png')} 
+          <Image
+            source={require('../assets/icon.png')}
             style={styles.logoIcon}
             resizeMode="contain"
           />
           <Text style={styles.logoText}>Wodates</Text>
         </View>
 
-        {/* Tagline */}
+        {/* Headline + subheadline */}
         <View style={styles.sloganBlock}>
-                <Text style={styles.tagline}>Dating by affinity</Text>
-                <Text style={styles.tagline}>One connection at a time</Text>
+          <Text style={styles.headline}>Designed for people who are done with swipe culture.</Text>
+          <Text style={styles.subheadline}>One conversation. Real depth.</Text>
         </View>
 
-        {/* Botones principales */}
+        {/* Primary CTA: Join London Drop */}
         <View style={styles.buttonsContainer}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleJoinLondonDrop}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.primaryButtonText}>Join London Drop</Text>
+          </TouchableOpacity>
+          <Text style={styles.caption}>London only · Drop #1 · March 8</Text>
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => router.push('/(auth)/login')}
+            activeOpacity={0.8}
           >
             <Text style={styles.secondaryButtonText}>Sign in</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handleEnterPreview}
-          >
-            <Text style={styles.primaryButtonText}>Enter preview</Text>
-          </TouchableOpacity>
         </View>
-
-        {/* Link de registro directo */}
-        <TouchableOpacity
-          style={styles.registerLinkContainer}
-          onPress={handleDirectRegister}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.registerLinkText}>New here? Create an account</Text>
-        </TouchableOpacity>
       </View>
     </>
   );
@@ -102,30 +73,6 @@ const styles = StyleSheet.create({
     padding: 32,
     backgroundColor: '#ffffff',
     gap: 40,
-  },
-  topBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    zIndex: 1,
-  },
-  manifestoButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#F45C5C',
-    backgroundColor: 'transparent',
-  },
-  manifestoButtonText: {
-    color: '#F45C5C',
-    fontSize: 14,
-    fontWeight: '500',
-    letterSpacing: 0.2,
   },
   logoContainer: {
     alignItems: 'center',
@@ -141,17 +88,30 @@ const styles = StyleSheet.create({
     color: '#F45C5C',
     letterSpacing: -0.5,
   },
-  tagline: {
-    fontSize: 18,
+  sloganBlock: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  headline: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    lineHeight: 26,
+    paddingHorizontal: 8,
+  },
+  subheadline: {
+    fontSize: 17,
+    fontWeight: '400',
     color: '#6B6B6B',
     textAlign: 'center',
-    fontWeight: '400',
     lineHeight: 24,
   },
   buttonsContainer: {
     width: '100%',
-    gap: 16,
+    gap: 12,
     maxWidth: 280,
+    alignItems: 'center',
   },
   primaryButton: {
     backgroundColor: '#F45C5C',
@@ -159,11 +119,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderRadius: 16,
     alignItems: 'center',
+    width: '100%',
     shadowColor: '#F45C5C',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
@@ -174,6 +132,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
+  caption: {
+    fontSize: 13,
+    color: '#888',
+    textAlign: 'center',
+    fontWeight: '400',
+  },
   secondaryButton: {
     backgroundColor: 'transparent',
     paddingVertical: 16,
@@ -182,30 +146,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#F45C5C',
     alignItems: 'center',
+    width: '100%',
   },
   secondaryButtonText: {
     color: '#F45C5C',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.5,
-  },
-  sloganBlock: {
-    alignItems: 'center',
-    gap: 2, // reduce o aumenta según prefieras
-    marginTop: -10, // opcional: ajusta verticalmente si queda muy separado del logo
-  },
-  registerLinkContainer: {
-    marginTop: 0,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  registerLinkText: {
-    fontSize: 15,
-    color: '#F45C5C',
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-    fontWeight: '500',
-    letterSpacing: 0.2,
   },
 });

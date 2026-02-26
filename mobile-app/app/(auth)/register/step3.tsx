@@ -4,18 +4,16 @@ import { useRouter } from 'expo-router';
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
 
+/** Exact value persisted to DB city/location field. Do not use for display-only text. */
+const CITY_VALUE = 'London';
+
 export default function Step3Screen() {
   const router = useRouter();
-  const { data, updateData, nextStep, previousStep } = useRegistrationStore();
-  const [selectedCity, setSelectedCity] = React.useState(data.location ?? '');
-
-  const trimmedCity = selectedCity.trim();
-  const isValid = trimmedCity.length > 0;
+  const { updateData, nextStep, previousStep } = useRegistrationStore();
 
   const handleNext = () => {
-    if (!isValid) return;
     updateData({
-      location: trimmedCity,
+      location: CITY_VALUE,
       country: '',
     });
     nextStep();
@@ -39,28 +37,23 @@ export default function Step3Screen() {
         <ProgressBar totalSteps={5} currentStep={1} />
 
         <View style={styles.content}>
-          <Text style={styles.title}>Where are you based?</Text>
+          <Text style={styles.title}>London only</Text>
 
           <View style={styles.form}>
-            {/* Replaced predefined city list with free text input (major city only) */}
             <TextInput
-              style={styles.input}
-              placeholder="e.g. London, Manchester, Berlin"
-              value={selectedCity}
-              onChangeText={setSelectedCity}
-              autoCapitalize="words"
-              returnKeyType="done"
-              onSubmitEditing={handleNext}
+              style={[styles.input, styles.inputDisabled]}
+              value={CITY_VALUE}
+              editable={false}
+              showSoftInputOnFocus={false}
             />
-            <Text style={styles.helperText}>Enter your nearest major city.</Text>
+            <Text style={styles.helperText}>Wodates is currently available in London.</Text>
           </View>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               testID="continuar-step3-button"
-              style={[styles.button, !isValid && styles.buttonDisabled]}
+              style={styles.button}
               onPress={handleNext}
-              disabled={!isValid}
             >
               <Text style={styles.buttonText}>Continue</Text>
             </TouchableOpacity>
@@ -107,6 +100,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginBottom: 8,
   },
+  inputDisabled: {
+    backgroundColor: '#F0F0F0',
+    color: '#2C3E50',
+  },
   helperText: {
     fontSize: 12,
     color: '#7F8C8D',
@@ -120,10 +117,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#BDC3C7',
-    opacity: 0.6,
   },
   buttonText: {
     color: '#FFFFFF',

@@ -130,14 +130,16 @@ export class SystemUserService {
       }
 
       // Send welcome messages from Doc Love (static messages, not AI-generated)
-      // Split into 5 separate chat bubbles
+      // Each sentence in its own chat bubble
       if (this.messageRepository) {
         const welcomeMessages = [
           "Hi — I'm Doc Love.",
-          'Wodates learns from conversation to show you a better fit over time. Wodates is built for intentional dating — real compatibility, not noise.',
-          "That's why you can only have one active chat with a human at a time.",
-          "In Discover (where you'll see new people and your shared compatibility highlights), it's available when you're not in a chat — it pauses while you're matched.",
-          'Ready?',
+          'Wodates is for intentional dating — real compatibility, not noise. You’ll have one active human chat at a time.',
+          "Let’s build your profile. 3 quick questions:",
+          "1. What do you do for work — and do you enjoy it?",
+          "2. What does a great weekend look like for you?",
+          "3. What do you enjoy doing regularly — not once a year, but often?",
+          "When you're done, tap the button below to generate your profile.",
         ];
 
         // Create each message sequentially

@@ -10,6 +10,7 @@ declare module 'fastify' {
     matchRepository: any;
     messageRepository: any;
     affinitySentenceService: any; // AffinitySentenceService | undefined
+    buildProfileCtaService: any; // BuildProfileCtaService | undefined
   }
 }
 
@@ -20,7 +21,8 @@ export async function chatRoutes(fastify: FastifyInstance) {
     fastify.blockUser,
     fastify.matchRepository,
     fastify.messageRepository,
-    fastify.affinitySentenceService
+    fastify.affinitySentenceService,
+    fastify.buildProfileCtaService
   );
 
   fastify.get(
@@ -214,5 +216,56 @@ export async function chatRoutes(fastify: FastifyInstance) {
       preHandler: fastify.authMiddleware,
     },
     chatController.hasSentMessage.bind(chatController)
+  );
+
+  fastify.get(
+    '/chats/:matchId/build-profile-cta',
+    {
+      schema: {
+        description:
+          'Whether to show the "Build my profile" button in this Doc Love chat',
+        tags: ['chat'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            matchId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              showButton: { type: 'boolean' },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    chatController.getBuildProfileCta.bind(chatController)
+  );
+
+  fastify.post(
+    '/chats/:matchId/build-profile-tapped',
+    {
+      schema: {
+        description:
+          'Mark that the user tapped "Build my profile" (hides the button forever)',
+        tags: ['chat'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            matchId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          204: { type: 'null', description: 'Success' },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    chatController.markBuildProfileTapped.bind(chatController)
   );
 }

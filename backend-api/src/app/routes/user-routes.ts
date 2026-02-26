@@ -16,6 +16,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     authMiddleware: any;
     generateUserProfile?: any;
+    processUserProfileService?: any;
   }
 }
 
@@ -23,7 +24,7 @@ export async function userRoutes(fastify: FastifyInstance) {
   const userService = new SupabaseUserService();
   const controller = new UsersController(
     userService,
-    fastify.generateUserProfile
+    fastify.processUserProfileService ?? fastify.generateUserProfile
   );
   const genderEnum = [...GENDER_VALUES, null];
   const lookingForEnum = [...LOOKING_FOR_VALUES, null];

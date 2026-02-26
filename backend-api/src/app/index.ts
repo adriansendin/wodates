@@ -36,6 +36,8 @@ import { DocLoveChatService } from './ai/chat/DocLoveChatService';
 import { ChatCloseMessageService } from './services/chat-close-message-service';
 import { createChatModel } from './ai/core/config';
 import { UserAIProfileEmbeddingService } from './ai/profile/UserAIProfileEmbeddingService';
+import { UserBioGenerationService } from './ai/profile/UserBioGenerationService';
+import { ProcessUserProfileService } from './services/process-user-profile-service';
 import { SupabaseUserAIProfileRepository } from '../data/repositories/SupabaseUserAIProfileRepository';
 import { SupabaseUserRepository } from '../data/repositories/SupabaseUserRepository';
 import { GetAllUserChats } from '../domain/use-cases/chat/GetAllUserChats';
@@ -43,6 +45,8 @@ import { GetUnprocessedMessages } from '../domain/use-cases/chat/GetUnprocessedM
 import { GenerateUserProfileFromChats } from '../domain/use-cases/chat/GenerateUserProfileFromChats';
 import { startJobScheduler } from './jobs/scheduler';
 import { AffinitySentenceService } from './services/affinity-sentence-service';
+import { BuildProfileCtaService } from './services/build-profile-cta-service';
+import { SupabaseUserService } from './services/supabase-user-service';
 import { AiServiceChatClient } from './ai/clients/AiServiceChatClient';
 
 /** UUID v4 pattern (8-4-4-4-12 hex). */
@@ -177,6 +181,7 @@ async function buildApp() {
   // Initialize AI services (for Doc Love chatbot and affinity sentences)
   let docLoveChatService: DocLoveChatService | undefined;
   let affinitySentenceService: AffinitySentenceService | undefined;
+  let userAIProfileEmbeddingService: UserAIProfileEmbeddingService | undefined;
 
   try {
     // Create chat model (ChatModelHttp wrapper for ai-service)
@@ -198,14 +203,10 @@ async function buildApp() {
     // This service generates embeddings from summaries stored in user_ai_profiles table
     // Should be called asynchronously (via jobs/cron/webhooks) when summaries are updated
     const userAIProfileRepository = new SupabaseUserAIProfileRepository();
-    const userAIProfileEmbeddingService = new UserAIProfileEmbeddingService(
+    userAIProfileEmbeddingService = new UserAIProfileEmbeddingService(
       userAIProfileRepository,
       fastify.log
     );
-    // Store reference for potential future use (e.g., admin endpoints, cron jobs, webhooks)
-    // Currently not exposed, but available if needed
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    void userAIProfileEmbeddingService;
 
     // Initialize Affinity Sentence Service for match creation
     const aiServiceChatClient = new AiServiceChatClient(
@@ -273,10 +274,11 @@ async function buildApp() {
     blockedUserRepository
   );
 
-  // Initialize AI profile generation use case (if AI services are available)
+  // Initialize AI profile generation use case and full pipeline (if AI services are available)
   let generateUserProfile: GenerateUserProfileFromChats | undefined;
+  let processUserProfileService: ProcessUserProfileService | undefined;
   try {
-    if (docLoveChatService) {
+    if (docLoveChatService && userAIProfileEmbeddingService) {
       const userRepository = new SupabaseUserRepository();
       const userAIProfileRepository = new SupabaseUserAIProfileRepository();
       const docLoveHelper = new DocLoveHelper();
@@ -299,6 +301,19 @@ async function buildApp() {
         userRepository,
         fastify.log
       );
+
+      const userBioGenerationService = new UserBioGenerationService(
+        userAIProfileRepository,
+        userRepository,
+        fastify.log
+      );
+      processUserProfileService = new ProcessUserProfileService(
+        generateUserProfile,
+        userAIProfileRepository,
+        userAIProfileEmbeddingService,
+        userBioGenerationService,
+        fastify.log
+      );
     }
   } catch (error) {
     fastify.log.warn(
@@ -315,9 +330,18 @@ async function buildApp() {
   fastify.decorate('blockUser', blockUser);
   fastify.decorate('matchOverviewService', matchOverviewService);
   fastify.decorate('generateUserProfile', generateUserProfile);
+  fastify.decorate('processUserProfileService', processUserProfileService);
   fastify.decorate('matchRepository', matchRepository);
   fastify.decorate('messageRepository', messageRepository);
   fastify.decorate('affinitySentenceService', affinitySentenceService);
+
+  const buildProfileCtaService = new BuildProfileCtaService(
+    new DocLoveHelper(),
+    matchRepository,
+    messageRepository,
+    new SupabaseUserService()
+  );
+  fastify.decorate('buildProfileCtaService', buildProfileCtaService);
 
   // Register routes
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });

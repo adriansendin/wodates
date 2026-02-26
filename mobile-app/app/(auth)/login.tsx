@@ -118,9 +118,10 @@ export default function LoginScreen() {
               <Text style={styles.logoText}>Wodates</Text>
             </View>
 
-            {/* Tagline */}
-            <View style={styles.sloganBlock}>
-            <Text style={styles.tagline}>Dating by affinity</Text>
+            {/* Contextual copy: London Drop positioning */}
+            <View style={styles.contextualBlock}>
+              <Text style={styles.contextualText}>London Drop</Text>
+              <Text style={styles.contextualText}>For people who are done with swipe culture.</Text>
             </View>
 
 
@@ -152,6 +153,8 @@ export default function LoginScreen() {
               >
                 <Text style={styles.primaryButtonText}>{isLoading ? 'Signing in...' : 'Sign in'}</Text>
               </TouchableOpacity>
+
+              <Text style={styles.caption}>London only · Drop #1 · March 8</Text>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
               
@@ -197,12 +200,24 @@ const styles = StyleSheet.create({
     color: '#F45C5C',
     letterSpacing: -0.5,
   },
-  tagline: {
-    fontSize: 18,
+  contextualBlock: {
+    alignItems: 'center',
+    gap: 2,
+    marginTop: -10,
+  },
+  contextualText: {
+    fontSize: 14,
     color: '#6B6B6B',
     textAlign: 'center',
     fontWeight: '400',
-    lineHeight: 24,
+    lineHeight: 20,
+  },
+  caption: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#9E9E9E',
+    textAlign: 'center',
+    fontWeight: '400',
   },
   form: {
     width: '100%',
@@ -249,9 +264,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
   },
-  sloganBlock: {
-    alignItems: 'center',
-    gap: 2, // reduce o aumenta según prefieras
-    marginTop: -10, // opcional: ajusta verticalmente si queda muy separado del logo
-  },  
 });

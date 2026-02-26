@@ -33,7 +33,7 @@ export default function Manifesto() {
       />
       <View style={[styles.container, { paddingTop: Math.max(insets.top, 8), paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.replace('/')} style={styles.backTouchable} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backTouchable} activeOpacity={0.7}>
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
         </View>

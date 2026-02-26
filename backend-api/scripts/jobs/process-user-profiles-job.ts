@@ -3,6 +3,7 @@
  * 
  * Modo de ejecución:
  *   - Sin parámetros (por defecto): Procesa solo usuarios con mensajes sin procesar
+ *   - Con --user-id <uuid>: Procesa solo ese usuario (opcional: --reprocess-all para resetear mensajes)
  *   - Con --reprocess-all: Procesa TODOS los usuarios y TODOS los chats
  *     (incluso los ya procesados), regenerando los embeddings
  *   - El scheduler automático ejecuta SIN parámetros cada 24h a las 3:00 AM
@@ -57,11 +58,14 @@
  * Manual execution:
  *   - Default mode (process users with unprocessed messages):
  *     npx tsx scripts/jobs/process-user-profiles-job.ts
+ *   - Single user: npx tsx scripts/jobs/process-user-profiles-job.ts --user-id <uuid>
+ *   - Single user + reprocess: npx tsx scripts/jobs/process-user-profiles-job.ts --user-id <uuid> --reprocess-all
  *   - Reprocess all mode (all users, all chats, regenerate embeddings):
  *     npx tsx scripts/jobs/process-user-profiles-job.ts --reprocess-all
  * 
  * Examples:
  *   npx tsx scripts/jobs/process-user-profiles-job.ts
+ *   npx tsx scripts/jobs/process-user-profiles-job.ts --user-id <uuid>
  *   npx tsx scripts/jobs/process-user-profiles-job.ts --reprocess-all
  */
 
@@ -93,6 +97,9 @@ type SupabaseConfig = {
 const BUCKET_NAME = 'external_chats';
 const TARGET_FILE_NAME = '_chat.txt';
 const PROCESSABLE_STATUSES = ['uploaded', 'processing', 'processed', 'error'];
+
+/** UUID v4 pattern for --user-id validation */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getSupabaseConfig(): SupabaseConfig {
   const url = process.env.SUPABASE_URL;
@@ -934,19 +941,41 @@ async function main() {
   // Check command line arguments
   const args = process.argv.slice(2);
   const isReprocessAllMode = args.includes('--reprocess-all');
-  
-  // Validate arguments
-  if (args.length > 0 && !isReprocessAllMode) {
-    writeToLog(`Invalid argument(s): ${args.join(' ')}`, 'ERROR');
-    writeToLog(`Usage: npx tsx scripts/jobs/process-user-profiles-job.ts [--reprocess-all]`, 'ERROR');
-    writeToLog(`  --reprocess-all: Process all users and all chats`, 'ERROR');
+  const userIdArgIndex = args.indexOf('--user-id');
+  const singleUserId =
+    userIdArgIndex >= 0 && args[userIdArgIndex + 1]
+      ? (args[userIdArgIndex + 1] as string).trim()
+      : null;
+
+  if (singleUserId !== null && !UUID_REGEX.test(singleUserId)) {
+    writeToLog(`Invalid --user-id: must be a valid UUID. Got: ${singleUserId}`, 'ERROR');
     logStream.end(() => process.exit(1));
     return;
   }
-  
+
+  const allowedArgs =
+    singleUserId !== null
+      ? new Set(['--user-id', singleUserId, '--reprocess-all'])
+      : new Set(['--reprocess-all']);
+  const hasInvalidArg =
+    args.length > 0 && args.some((a) => !allowedArgs.has(a));
+  if (hasInvalidArg) {
+    writeToLog(`Invalid argument(s): ${args.join(' ')}`, 'ERROR');
+    writeToLog(`Usage: npx tsx scripts/jobs/process-user-profiles-job.ts [--user-id <uuid>] [--reprocess-all]`, 'ERROR');
+    writeToLog(`  --user-id <uuid>: Process only this user`, 'ERROR');
+    writeToLog(`  --reprocess-all: Reset messages and reprocess (all users or the given --user-id)`, 'ERROR');
+    logStream.end(() => process.exit(1));
+    return;
+  }
+
   writeToLog(`Log file: ${logFilePath}`, 'INFO');
-  
-  if (isReprocessAllMode) {
+
+  if (singleUserId !== null) {
+    writeToLog(`Starting user profile processing job (SINGLE USER MODE): ${singleUserId}`, 'INFO');
+    if (isReprocessAllMode) {
+      writeToLog(`Will reset messages for this user and reprocess`, 'WARN');
+    }
+  } else if (isReprocessAllMode) {
     writeToLog(`Starting user profile processing job (REPROCESS ALL MODE)`, 'INFO');
     writeToLog(`Will process ALL users and ALL chats`, 'INFO');
     writeToLog(`This will reset all messages as unprocessed and regenerate embeddings`, 'WARN');
@@ -1059,12 +1088,24 @@ async function main() {
     
     // Get users to process
     let userIds: string[];
-    if (isReprocessAllMode) {
+    if (singleUserId !== null) {
+      userIds = [singleUserId];
+      writeToLog(`Single user mode: processing ${singleUserId}`, 'INFO');
+      if (isReprocessAllMode) {
+        writeToLog('Resetting messages as unprocessed for this user...', 'INFO');
+        try {
+          const resetCount = await resetUserMessages(client, singleUserId, writeToLog);
+          writeToLog(`Messages reset: ${resetCount}`, 'INFO');
+        } catch (error) {
+          writeToLog(`Failed to reset messages for user ${singleUserId}, continuing...`, 'WARN');
+        }
+      }
+    } else if (isReprocessAllMode) {
       // Get all users (not just those with unprocessed messages)
       writeToLog('Reprocess all mode: Querying all users...', 'INFO');
       userIds = await getAllUsers(client);
       writeToLog(`Found ${userIds.length} total users`, 'INFO');
-      
+
       // Reset all messages for all users as unprocessed
       writeToLog('Resetting all messages as unprocessed for all users...', 'INFO');
       let totalResetCount = 0;
