@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
 
@@ -9,6 +11,7 @@ const CITY_VALUE = 'London';
 
 export default function Step3Screen() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const { updateData, nextStep, previousStep } = useRegistrationStore();
 
   const handleNext = () => {
@@ -37,7 +40,7 @@ export default function Step3Screen() {
         <ProgressBar totalSteps={5} currentStep={1} />
 
         <View style={styles.content}>
-          <Text style={styles.title}>London only</Text>
+          <Text style={styles.title}>{t('register.londonOnly')}</Text>
 
           <View style={styles.form}>
             <TextInput
@@ -46,7 +49,7 @@ export default function Step3Screen() {
               editable={false}
               showSoftInputOnFocus={false}
             />
-            <Text style={styles.helperText}>Wodates is currently available in London.</Text>
+            <Text style={styles.helperText}>{t('register.wodatesLondon')}</Text>
           </View>
 
           <View style={styles.buttonContainer}>
@@ -55,11 +58,11 @@ export default function Step3Screen() {
               style={styles.button}
               onPress={handleNext}
             >
-              <Text style={styles.buttonText}>Continue</Text>
+              <Text style={styles.buttonText}>{t('common.continue')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
           </View>
         </View>

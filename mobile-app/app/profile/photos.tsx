@@ -20,8 +20,10 @@ import {
 import { ArrowLeft } from 'lucide-react-native';
 import { TouchableOpacity } from 'react-native';
 import { notifySystem } from '../../src/utils/notificationService';
+import { useTranslation } from 'react-i18next';
 
 export default function PhotosScreen() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const { user } = useAuthStore();
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export default function PhotosScreen() {
         console.log('[PhotosScreen] Pick result:', result);
         if (!result.success) {
           // Image picker errors are system errors
-          notifySystem('Something went wrong', 'Try again', result.error);
+          notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error);
           return;
         }
 
@@ -73,7 +75,7 @@ export default function PhotosScreen() {
           console.log('[PhotosScreen] Upload result:', uploadResult);
           if (!uploadResult.success) {
             // Upload errors are system errors
-            notifySystem('Something went wrong', 'Try again', uploadResult.error);
+            notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), uploadResult.error);
           } else {
             console.log('[PhotosScreen] Photo uploaded successfully');
           }
@@ -83,7 +85,7 @@ export default function PhotosScreen() {
       } catch (error) {
         console.error('[PhotosScreen] Error in pickFromGallery:', error);
         // Network errors are system errors
-        notifySystem('Something went wrong', 'Try again', error);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error);
       }
     };
 
@@ -94,7 +96,7 @@ export default function PhotosScreen() {
         console.log('[PhotosScreen] Camera result:', result);
         if (!result.success) {
           // Camera errors are system errors
-          notifySystem('Something went wrong', 'Try again', result.error);
+          notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error);
           return;
         }
 
@@ -104,7 +106,7 @@ export default function PhotosScreen() {
           console.log('[PhotosScreen] Upload result:', uploadResult);
           if (!uploadResult.success) {
             // Upload errors are system errors
-            notifySystem('Something went wrong', 'Try again', uploadResult.error);
+            notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), uploadResult.error);
           } else {
             console.log('[PhotosScreen] Photo uploaded successfully');
           }
@@ -114,7 +116,7 @@ export default function PhotosScreen() {
       } catch (error) {
         console.error('[PhotosScreen] Error in takePhoto:', error);
         // Network errors are system errors
-        notifySystem('Something went wrong', 'Try again', error);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error);
       }
     };
 
@@ -135,7 +137,7 @@ export default function PhotosScreen() {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancel', 'Take photo', 'Choose from gallery'],
+          options: [t('common.cancel'), t('common.takePhoto'), t('common.chooseFromGallery')],
           cancelButtonIndex: 0,
         },
         async (buttonIndex) => {
@@ -144,10 +146,10 @@ export default function PhotosScreen() {
         }
       );
     } else {
-      Alert.alert('Add photo', 'Where would you like to get your photo from?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Take photo', onPress: takePhoto },
-        { text: 'Choose from gallery', onPress: pickFromGallery },
+      Alert.alert(t('profile.addPhotoTitle'), t('profile.whereGetPhoto'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.takePhoto'), onPress: takePhoto },
+        { text: t('common.chooseFromGallery'), onPress: pickFromGallery },
       ]);
     }
   };
@@ -156,10 +158,10 @@ export default function PhotosScreen() {
     console.log('[PhotosScreen] Setting photo as main:', photoId);
     const result = await setMainPhoto(photoId);
     if (result.success) {
-      Alert.alert('Success', 'The photo has been set as your main photo');
+      Alert.alert(t('profile.mainPhotoSetTitle'), t('profile.mainPhotoSetMessage'));
     } else {
       // API errors setting main photo are system errors
-      notifySystem('Something went wrong', 'Try again', result.error, () => handleSetMain(photoId));
+      notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error, () => handleSetMain(photoId));
     }
   };
 
@@ -177,7 +179,7 @@ export default function PhotosScreen() {
 
     if (!result.success) {
       // API errors deleting photo are system errors
-      notifySystem('Something went wrong', 'Try again', result.error, handleDeleteConfirm);
+      notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error, handleDeleteConfirm);
     }
   };
 
@@ -196,7 +198,7 @@ export default function PhotosScreen() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: '',
+          headerTitle: t('profile.photosTitle'),
           headerLeft: () => (
             <TouchableOpacity
               onPress={handleBackToProfile}
@@ -204,7 +206,7 @@ export default function PhotosScreen() {
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <ArrowLeft size={22} color="#e91e63" />
-              <Text style={styles.headerBrandText}>Wodates</Text>
+              <Text style={styles.headerBrandText}>{t('app.title')}</Text>
             </TouchableOpacity>
           ),
         }}
@@ -238,9 +240,9 @@ export default function PhotosScreen() {
             <View style={styles.overlayContent}>
               <ActivityIndicator size="large" color="#e91e63" />
               <Text style={styles.overlayText}>
-                {isUploading && 'Uploading photo...'}
-                {isDeleting && 'Deleting photo...'}
-                {isSettingMain && 'Updating main photo...'}
+                {isUploading && t('profile.uploadingPhoto')}
+                {isDeleting && t('profile.deletingPhoto')}
+                {isSettingMain && t('profile.updatingMainPhoto')}
               </Text>
             </View>
           </View>

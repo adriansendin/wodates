@@ -9,6 +9,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useFeedStore } from '../../src/domain/stores/feedStore';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { FeedApi } from '../../src/data/api/feedApi';
@@ -71,6 +73,7 @@ const resolvePhotoUrl = (photoUrl?: string | null) => {
 export default function FeedScreen() {
   console.log('[FeedScreen] Component mounted');
   const router = useRouter();
+  const { t } = useTranslation('common');
   const {
     users,
     currentIndex,
@@ -167,7 +170,7 @@ export default function FeedScreen() {
           // On error, always show fallback sentence instead of error message
           // Error is logged in backend, user should not see error UI
           console.error('Backend returned error for affinity sentences:', result.error);
-          setAffinitySentences(['Initial affinity is low—conversation will sharpen recommendations.']);
+          setAffinitySentences([t('feed.affinityFallback')]);
           setAffinitySentencesError(false);
         }
       } catch (error) {
@@ -180,7 +183,7 @@ export default function FeedScreen() {
         if (error instanceof Error && !error.message.includes('429')) {
           console.error('Failed to load affinity sentences:', error);
         }
-        setAffinitySentences(['Initial affinity is low—conversation will sharpen recommendations.']);
+        setAffinitySentences([t('feed.affinityFallback')]);
         setAffinitySentencesError(false);
       } finally {
         if (!abortController.signal.aborted && currentCandidateIdRef.current === candidateId) {
@@ -222,13 +225,6 @@ export default function FeedScreen() {
   useEffect(() => {
     loadCurrentUserProfile();
   }, [loadCurrentUserProfile]);
-
-  // Reload profile when screen comes into focus to get latest show_bio_in_feed value
-  useFocusEffect(
-    useCallback(() => {
-      loadCurrentUserProfile();
-    }, [loadCurrentUserProfile])
-  );
 
   // Load matches to get activeChatsCount
   // Only load once when component mounts or when tokens change (not on every user.id change)
@@ -296,12 +292,11 @@ export default function FeedScreen() {
       } else {
         setError(result.error.message);
         // API errors loading feed are system errors
-        notifySystem('Something went wrong', 'Try again', result.error, () => loadFeed(offset, append));
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error, () => loadFeed(offset, append));
       }
     } catch (error) {
-      setError('Network error');
-      // Network errors are system errors with retry
-      notifySystem('Something went wrong', 'Try again', error, () => loadFeed(offset, append));
+      setError(t('errors.networkError'));
+      notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error, () => loadFeed(offset, append));
     } finally {
       setLoading(false);
       // Mark initial load as complete when first load finishes (success or failure)
@@ -310,6 +305,19 @@ export default function FeedScreen() {
       }
     }
   }, [tokens?.accessToken, feedApi, addUsers, setUsers, setHasMore, setLoading, setError]);
+
+  // Reload profile when screen comes into focus to get latest show_bio_in_feed value.
+  // When feed was invalidated (e.g. after changing "Looking for" in profile), reload discover.
+  // Read store state inside callback to avoid dependency on isLoading (would cause re-run loop).
+  useFocusEffect(
+    useCallback(() => {
+      loadCurrentUserProfile();
+      const state = useFeedStore.getState();
+      if (tokens?.accessToken && !state.isLoading && state.users.length === 0) {
+        loadFeed(0, false);
+      }
+    }, [loadCurrentUserProfile, tokens?.accessToken, loadFeed])
+  );
 
   // Load more users when approaching the end
   const loadMoreIfNeeded = useCallback(async () => {
@@ -497,7 +505,7 @@ export default function FeedScreen() {
           return;
         }
         // For other errors, show system error
-        notifySystem('Something went wrong', 'Try again', result.error);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error);
         return;
       }
 
@@ -522,7 +530,7 @@ export default function FeedScreen() {
     } catch (error) {
       // Only show error if request wasn't aborted
       if (!abortControllerRef.current?.signal.aborted) {
-        notifySystem('Something went wrong', 'Try again', error, handleLike);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error, handleLike);
       }
     } finally {
       // Debounce: keep button disabled for 300ms to prevent rapid clicking
@@ -546,7 +554,7 @@ export default function FeedScreen() {
 
       if (!result.success) {
         // API errors confirming match are system errors
-        notifySystem('Something went wrong', 'Try again', result.error);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error);
         setShowMatchModal(false);
         setPotentialMatch(null);
         nextUser();
@@ -596,7 +604,7 @@ export default function FeedScreen() {
       }, 100);
     } catch (error) {
       // Network errors are system errors
-      notifySystem('Something went wrong', 'Try again', error);
+      notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error);
       setShowMatchModal(false);
       setPotentialMatch(null);
       nextUser();
@@ -660,7 +668,7 @@ export default function FeedScreen() {
           return;
         }
         // For other errors, show system error
-        notifySystem('Something went wrong', 'Try again', result.error);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error);
         return;
       }
 
@@ -672,7 +680,7 @@ export default function FeedScreen() {
     } catch (error) {
       // Only show error if request wasn't aborted
       if (!abortControllerRef.current?.signal.aborted) {
-        notifySystem('Something went wrong', 'Try again', error, handlePass);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error, handlePass);
       }
     } finally {
       // Debounce: keep button disabled for 300ms to prevent rapid clicking
@@ -703,7 +711,7 @@ export default function FeedScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#e91e63" />
-        <Text style={styles.loadingText}>Loading feed...</Text>
+        <Text style={styles.loadingText}>{t('feed.loadingFeed')}</Text>
       </View>
     );
   }
@@ -721,16 +729,14 @@ export default function FeedScreen() {
           {/* Exclusive mode badge */}
           <View style={styles.exclusiveBadge}>
             <Lock size={10} color="#999" />
-            <Text style={styles.exclusiveBadgeText}>Exclusive</Text>
+            <Text style={styles.exclusiveBadgeText}>{t('feed.exclusive')}</Text>
           </View>
-          {/* Title */}
-          <Text style={styles.lockedTitle}>Discover is paused</Text>
+          <Text style={styles.lockedTitle}>{t('feed.discoverPaused')}</Text>
 
-          {/* Subtitle */}
           <Text style={styles.lockedSubtitle}>
             {activeChat
-              ? `You're getting to know ${activeChat.otherUser?.name ?? 'someone'}.`
-              : "You're getting to know someone."}
+              ? t('feed.gettingToKnow', { name: activeChat.otherUser?.name ?? t('common.someone') })
+              : t('feed.gettingToKnowSomeone')}
           </Text>
 
           {/* Active chat card */}
@@ -749,10 +755,10 @@ export default function FeedScreen() {
               <View style={styles.activeChatInfo}>
                 <View style={styles.activeChatNameContainer}>
                   <Text style={styles.activeChatName}>
-                    {activeChat.otherUser?.name ?? 'Unknown user'}
+                    {activeChat.otherUser?.name ?? t('feed.unknownUser')}
                   </Text>
                   <View style={styles.activeChatTag}>
-                    <Text style={styles.activeChatTagText}>Active chat</Text>
+                    <Text style={styles.activeChatTagText}>{t('feed.activeChat')}</Text>
                   </View>
                 </View>
                 {activeChat.lastMessage?.content && (
@@ -782,15 +788,12 @@ export default function FeedScreen() {
               }}
             >
               <Text style={styles.goToChatButtonText}>
-                Continue conversation
+                {t('feed.continueConversation')}
               </Text>
             </TouchableOpacity>
           )}
 
-          {/* Footnote */}
-          <Text style={styles.lockedFootnote}>
-            Discover resumes when you close your active chat.
-          </Text>
+          <Text style={styles.lockedFootnote}>{t('feed.discoverResumes')}</Text>
         </View>
       </View>
     );
@@ -805,13 +808,11 @@ export default function FeedScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>
-          {hasMore 
-            ? 'Loading more users...' 
-            : 'Wodates prioritizes quality over quantity. Improve your affinity by talking with Doc Love.'}
+          {hasMore ? t('feed.loadingMore') : t('feed.emptyQuality')}
         </Text>
         {!hasMore && (
           <TouchableOpacity style={styles.refreshButton} onPress={() => loadFeed(0, false)}>
-            <Text style={styles.refreshButtonText}>Refresh</Text>
+            <Text style={styles.refreshButtonText}>{t('common.refresh')}</Text>
           </TouchableOpacity>
         )}
         {isLoading && <ActivityIndicator size="small" color="#e91e63" style={{ marginTop: 10 }} />}
@@ -834,7 +835,7 @@ export default function FeedScreen() {
   const affinityExplanationText =
     affinitySentences.length > 0
       ? affinitySentences.join(' ')
-      : 'Initial affinity is low—conversation will sharpen recommendations.';
+      : t('feed.affinityFallback');
 
   return (
     <View style={styles.container}>
@@ -868,16 +869,16 @@ export default function FeedScreen() {
         {/* 3) Affinity card (inline, no popup) */}
         <View style={styles.discoverCard}>
           <View style={styles.affinityCardContent}>
-            <Text style={styles.discoverCardTitle}>Affinity</Text>
+            <Text style={styles.discoverCardTitle}>{t('feed.affinity')}</Text>
             {isLoadingSentences ? (
               <View style={styles.affinityLoadingRow}>
                 <ActivityIndicator size="small" color="#e91e63" />
-                <Text style={styles.discoverCardBody}>Finding highlights...</Text>
+                <Text style={styles.discoverCardBody}>{t('feed.findingHighlights')}</Text>
               </View>
             ) : (
               <Text style={styles.discoverCardBody}>{affinityExplanationText}</Text>
             )}
-            <Text style={styles.discoverCardLabel}>Based on conversations</Text>
+            <Text style={styles.discoverCardLabel}>{t('feed.basedOnConversations')}</Text>
           </View>
         </View>
 
@@ -894,13 +895,13 @@ export default function FeedScreen() {
 
         {/* 5) Bio card */}
         <View style={styles.discoverCard}>
-          <Text style={styles.discoverCardTitle}>Bio</Text>
+          <Text style={styles.discoverCardTitle}>{t('feed.bio')}</Text>
           {showBioCard ? (
             <Text style={styles.discoverCardBody}>{currentUser.bio}</Text>
           ) : (
-            <Text style={styles.discoverCardBodyMuted}>No bio available</Text>
+            <Text style={styles.discoverCardBodyMuted}>{t('feed.noBioAvailable')}</Text>
           )}
-          <Text style={styles.discoverCardLabel}>Based on conversations</Text>
+          <Text style={styles.discoverCardLabel}>{t('feed.basedOnConversations')}</Text>
         </View>
 
         {/* 6) Remaining photos (3rd, 4th, 5th) */}
@@ -924,8 +925,8 @@ export default function FeedScreen() {
         onPress={handlePass}
         disabled={isDislikeInitiallyDisabled}
         accessibilityRole="button"
-        accessibilityLabel="Not for me"
-        accessibilityHint="Dismiss this suggested profile"
+        accessibilityLabel={t('feed.notForMe')}
+        accessibilityHint={t('feed.notForMeHint')}
         activeOpacity={0.8}
       >
         <X size={24} color={isDislikeInitiallyDisabled ? 'rgba(239, 68, 68, 0.45)' : '#ef4444'} />
@@ -937,8 +938,8 @@ export default function FeedScreen() {
         onPress={handleLike}
         disabled={isLiking || isDislikeInitiallyDisabled}
         accessibilityRole="button"
-        accessibilityLabel="I want to meet them"
-        accessibilityHint="Show interest in this person"
+        accessibilityLabel={t('feed.wantToMeet')}
+        accessibilityHint={t('feed.wantToMeetHint')}
         activeOpacity={0.8}
       >
         <Check size={26} color="#10b981" />

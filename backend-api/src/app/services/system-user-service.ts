@@ -6,6 +6,28 @@ import { MessageRepository } from '../../domain/repositories/MessageRepository';
 import { DocLoveHelper } from './doc-love-helper';
 import { Match } from '../../domain/entities/Match';
 
+/** Welcome messages from Doc Love (EN). */
+const WELCOME_MESSAGES_EN: string[] = [
+  "Hi — I'm Doc Love.",
+  'Wodates is for intentional dating — real compatibility, not noise. You\'ll have one active human chat at a time.',
+  "Let's build your profile. 3 quick questions:",
+  "1. What do you do for work — and do you enjoy it?",
+  "2. What does a great weekend look like for you?",
+  "3. What do you enjoy doing regularly — not once a year, but often?",
+  "When you're done, tap the button below to generate your profile.",
+];
+
+/** Welcome messages from Doc Love (ES). */
+const WELCOME_MESSAGES_ES: string[] = [
+  "Hola — soy Doc Love.",
+  "Wodates es para conocer gente con intención: compatibilidad real, sin ruido. Solo tendrás un chat humano activo a la vez.",
+  "Vamos a preparar tu perfil con 3 preguntas rápidas:",
+  "1. ¿A qué te dedicas? ¿Lo disfrutas?",
+  "2. ¿Qué sería para ti un fin de semana perfecto?",
+  "3. ¿Qué cosas te gusta hacer a menudo, en tu día a día?",
+  "Cuando termines, pulsa el botón de abajo y generaré tu perfil.",
+];
+
 /**
  * Service for managing system user interactions (like Doc Love)
  *
@@ -20,6 +42,14 @@ export class SystemUserService {
   ) {}
 
   /**
+   * Returns welcome messages in the requested locale (en | es). Defaults to en.
+   */
+  private getWelcomeMessages(locale: string): string[] {
+    const lang = locale?.toLowerCase().startsWith('es') ? 'es' : 'en';
+    return lang === 'es' ? WELCOME_MESSAGES_ES : WELCOME_MESSAGES_EN;
+  }
+
+  /**
    * Creates a welcome match between a new user and Doc Love
    *
    * This method:
@@ -32,10 +62,12 @@ export class SystemUserService {
    * chats don't count toward the limit.
    *
    * @param userId - The new user's ID
+   * @param locale - Optional locale (e.g. 'en', 'es') for welcome message language
    * @returns The created match, or existing match if already present
    */
   async createWelcomeMatch(
-    userId: string
+    userId: string,
+    locale?: string
   ): Promise<Result<Match, DomainError>> {
     try {
       // Get Doc Love's user ID
@@ -130,17 +162,9 @@ export class SystemUserService {
       }
 
       // Send welcome messages from Doc Love (static messages, not AI-generated)
-      // Each sentence in its own chat bubble
+      // Each sentence in its own chat bubble. Language from locale (default en).
       if (this.messageRepository) {
-        const welcomeMessages = [
-          "Hi — I'm Doc Love.",
-          'Wodates is for intentional dating — real compatibility, not noise. You’ll have one active human chat at a time.',
-          "Let’s build your profile. 3 quick questions:",
-          "1. What do you do for work — and do you enjoy it?",
-          "2. What does a great weekend look like for you?",
-          "3. What do you enjoy doing regularly — not once a year, but often?",
-          "When you're done, tap the button below to generate your profile.",
-        ];
+        const welcomeMessages = this.getWelcomeMessages(locale ?? 'en');
 
         // Create each message sequentially
         for (const content of welcomeMessages) {

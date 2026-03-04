@@ -43,6 +43,7 @@ const DisplayMessageSchema = MessageSchema.extend({
 
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { notifySystem, notifyActionable } from '../../src/utils/notificationService';
+import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
 const API_URL = getApiUrl();
@@ -244,6 +245,7 @@ const isSameDay = (date1: Date, date2: Date): boolean => {
 };
 
 export default function ChatScreen() {
+  const { t } = useTranslation('common');
   const componentInstanceId = useRef(++globalComponentCounter);
   const mountTime = useRef(Date.now());
 
@@ -607,7 +609,7 @@ export default function ChatScreen() {
           setError(messageText);
           if (isInitialLoad.current) {
             // API errors loading messages are system errors
-            notifySystem('Something went wrong', 'Try again', result.error, loadMessages);
+            notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error, loadMessages);
           }
         }
         return;
@@ -615,11 +617,11 @@ export default function ChatScreen() {
 
       const validation = DisplayMessageSchema.array().safeParse(result.data.messages);
       if (!validation.success) {
-        setError('Invalid messages received from server.');
+        setError(t('errors.invalidMessages'));
         console.warn('Invalid messages payload', validation.error);
         if (isInitialLoad.current) {
           // Validation errors from server are system errors (server bug)
-          notifySystem('Something went wrong', 'Try again', validation.error, loadMessages);
+          notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), validation.error, loadMessages);
         }
         return;
       }
@@ -747,10 +749,10 @@ export default function ChatScreen() {
       }
     } catch (error) {
       console.error('Failed to load chat messages', error);
-      setError('Network error. Please try again.');
+      setError(t('errors.networkError'));
       if (isInitialLoad.current) {
         // Network errors are system errors with retry
-        notifySystem('Something went wrong', 'Try again', error, loadMessages);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error, loadMessages);
       }
     } finally {
       isLoadingMessagesRef.current = false;
@@ -764,7 +766,7 @@ export default function ChatScreen() {
         // No hacer scroll aquí para evitar conflictos
       }
     }
-  }, []);
+  }, [t]);
 
   const loadOlderMessages = useCallback(async () => {
     if (!tokens?.accessToken || !matchId || isLoadingOlder || !oldestMessageCursorRef.current || !hasMoreMessages) {
@@ -783,13 +785,13 @@ export default function ChatScreen() {
       );
 
       if (!result.success) {
-        setError(result.error.message || 'Could not load older messages.');
+        setError(result.error.message || t('errors.loadOlderMessages'));
         return;
       }
 
       const validation = DisplayMessageSchema.array().safeParse(result.data.messages);
       if (!validation.success) {
-        setError('Invalid messages received from server.');
+        setError(t('errors.invalidMessages'));
         console.warn('Invalid messages payload', validation.error);
         return;
       }
@@ -815,11 +817,11 @@ export default function ChatScreen() {
       setHasMoreMessages(validation.data.length === 25);
     } catch (error) {
       console.error('Failed to load older messages', error);
-      setError('Network error. Please try again.');
+      setError(t('errors.networkError'));
     } finally {
       setIsLoadingOlder(false);
     }
-  }, [chatApi, clearError, matchId, prependMessages, setError, tokens?.accessToken, isLoadingOlder, hasMoreMessages]);
+  }, [t, chatApi, clearError, matchId, prependMessages, setError, tokens?.accessToken, isLoadingOlder, hasMoreMessages]);
 
   // Lightweight match-alive heartbeat: checks if match still exists (detects if blocked/closed)
   const checkMatchAlive = useCallback(async () => {
@@ -1203,7 +1205,7 @@ export default function ChatScreen() {
         const messageText = result.error.message || 'Could not send your message.';
         setError(messageText);
         // API errors sending message are system errors
-        notifySystem('Something went wrong', 'Try again', result.error);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error);
         // Restore message on error so user can retry
         setMessage(messageContent);
         return;
@@ -1213,7 +1215,7 @@ export default function ChatScreen() {
       if (!validation.success) {
         console.warn('[ChatScreen] Validation failed:', validation.error);
         // Validation errors from server are system errors (server bug)
-        notifySystem('Something went wrong', 'Try again', validation.error);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), validation.error);
         console.warn('Invalid message payload received from server', validation.error);
         return;
       }
@@ -1276,15 +1278,16 @@ export default function ChatScreen() {
       
       // Network/other errors - show error
       console.error('[ChatScreen] Failed to send message', error);
-      const fallbackMessage = 'Network error. Please try again.';
+      const fallbackMessage = t('errors.networkError');
       setError(fallbackMessage);
-      Alert.alert('Error', fallbackMessage);
+      Alert.alert(t('errors.somethingWentWrong'), fallbackMessage);
       // Restore message on network error so user can retry
       setMessage(messageContent);
     } finally {
       setSending(false);
     }
   }, [
+    t,
     addMessage,
     chatApi,
     clearError,
@@ -1350,7 +1353,7 @@ export default function ChatScreen() {
 
       if (!result.success) {
         // API errors blocking user are system errors
-        notifySystem('Something went wrong', 'Try again', result.error, handleBlockUser);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error, handleBlockUser);
         return;
       }
 
@@ -1359,11 +1362,11 @@ export default function ChatScreen() {
     } catch (error) {
       console.error('Failed to block user', error);
       // Network errors are system errors with retry
-      notifySystem('Something went wrong', 'Try again', error, handleBlockUser);
+      notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error, handleBlockUser);
     } finally {
       setIsBlocking(false);
     }
-  }, [blockApi, matchId, otherUserId, router, tokens?.accessToken]);
+  }, [t, blockApi, matchId, otherUserId, router, tokens?.accessToken]);
 
   const handleAvatarPress = useCallback(() => {
     // If it's Doc Love (bot), only show the photo
@@ -1699,7 +1702,7 @@ export default function ChatScreen() {
                       {isBuildingProfile ? (
                         <ActivityIndicator size="small" color="#fff" />
                       ) : (
-                        <Text style={styles.buildProfileButtonText}>Build my profile</Text>
+                        <Text style={styles.buildProfileButtonText}>{t('profile.buildMyProfile')}</Text>
                       )}
                     </TouchableOpacity>
                   </View>

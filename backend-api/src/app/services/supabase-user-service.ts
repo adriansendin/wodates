@@ -72,6 +72,7 @@ export type UserProfile = {
 };
 
 export type UpdateUserProfileInput = {
+  name?: string | null;
   birthDate?: string | null;
   gender?: Gender | null;
   looking_for?: LookingForValue | null;
@@ -146,6 +147,23 @@ export class SupabaseUserService {
 
       const profile = await this.ensureProfileRow(userId);
 
+      if ('name' in input) {
+        const displayName =
+          input.name !== null && input.name !== undefined
+            ? String(input.name).trim() || null
+            : null;
+        const { error: authError } = await this.client.auth.admin.updateUserById(
+          userId,
+          { user_metadata: { display_name: displayName ?? '' } }
+        );
+        if (authError) {
+          throw new InternalError(
+            `Failed to update display name: ${this.formatSupabaseError(authError)}`,
+            authError
+          );
+        }
+      }
+
       const updatePayload: Record<string, unknown> = {};
 
       if ('birthDate' in input) {
@@ -217,12 +235,12 @@ export class SupabaseUserService {
         updatePayload.bio = input.bio ?? null;
       }
       if ('city' in input) {
-        // Validar que city sea un string válido antes de guardar
-        if (input.city !== null && input.city !== undefined) {
-          if (typeof input.city !== 'string' || input.city.trim() === '') {
-            throw new InternalError('city must be a non-empty string');
-          }
-          updatePayload.city = input.city.trim();
+        if (
+          input.city !== null &&
+          input.city !== undefined &&
+          typeof input.city === 'string'
+        ) {
+          updatePayload.city = input.city.trim() || null;
         } else {
           updatePayload.city = null;
         }

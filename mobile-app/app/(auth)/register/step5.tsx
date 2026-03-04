@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
 
 export default function Step5Screen() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
   const [hasChildren, setHasChildren] = useState<boolean | null>(data.hasChildren);
@@ -45,10 +48,10 @@ export default function Step5Screen() {
         <View style={styles.content}>
           {/* Section: About you */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About you</Text>
+            <Text style={styles.sectionTitle}>{t('register.aboutYou')}</Text>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>Do you have children?</Text>
+              <Text style={styles.questionText}>{t('register.doYouHaveChildren')}</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -64,7 +67,7 @@ export default function Step5Screen() {
                     styles.optionText,
                     hasChildren === false && styles.optionTextSelected,
                   ]}>
-                    No
+                    {t('register.no')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -81,14 +84,14 @@ export default function Step5Screen() {
                     styles.optionText,
                     hasChildren === true && styles.optionTextSelected,
                   ]}>
-                    Yes
+                    {t('register.yes')}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>Do you want to have children in the future?</Text>
+              <Text style={styles.questionText}>{t('register.wantChildren')}</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -104,7 +107,7 @@ export default function Step5Screen() {
                     styles.optionText,
                     wantsChildren === 'yes' && styles.optionTextSelected,
                   ]}>
-                    Yes
+                    {t('register.yes')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -121,7 +124,7 @@ export default function Step5Screen() {
                     styles.optionText,
                     wantsChildren === 'no' && styles.optionTextSelected,
                   ]}>
-                    No
+                    {t('register.no')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -138,19 +141,18 @@ export default function Step5Screen() {
                     styles.optionText,
                     wantsChildren === 'not_sure' && styles.optionTextSelected,
                   ]}>
-                    I'm not sure
+                    {t('register.notSure')}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
 
-          {/* Section: About the person you're looking for */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About the person you're looking for</Text>
+            <Text style={styles.sectionTitle}>{t('register.aboutPartner')}</Text>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>Do you care if the other person has children?</Text>
+              <Text style={styles.questionText}>{t('register.carePartnerChildren')}</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -166,7 +168,7 @@ export default function Step5Screen() {
                     styles.optionText,
                     caresAboutPartnerChildren === 'yes' && styles.optionTextSelected,
                   ]}>
-                    Yes, I don't want them to have children
+                    {t('register.partnerNoChildren')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -183,16 +185,14 @@ export default function Step5Screen() {
                     styles.optionText,
                     caresAboutPartnerChildren === 'no' && styles.optionTextSelected,
                   ]}>
-                    I don't mind
+                    {t('register.partnerChildrenDontCare')}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
 
-          <Text style={styles.infoText}>
-            You can change these preferences later.
-          </Text>
+          <Text style={styles.infoText}>{t('register.preferencesLater')}</Text>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity 
@@ -212,11 +212,11 @@ export default function Step5Screen() {
                 styles.buttonText,
                 (hasChildren === null || wantsChildren === null || 
                  caresAboutPartnerChildren === null) && styles.buttonTextDisabled
-              ]}>Continue</Text>
+              ]}>{t('common.continue')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
           </View>
         </View>

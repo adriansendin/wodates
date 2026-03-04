@@ -8,27 +8,13 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface BirthDatePickerProps {
   value: Date;
   onChange: (date: Date) => void;
   onError?: (error: string | null) => void;
 }
-
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
 
 const MIN_AGE = 18;
 const MAX_AGE = 99;
@@ -43,11 +29,27 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
   onChange,
   onError,
 }) => {
+  const { t } = useTranslation('common');
   const [isVisible, setIsVisible] = useState(false);
   const [tempYear, setTempYear] = useState(value.getFullYear());
   const [tempMonth, setTempMonth] = useState(value.getMonth());
   const [tempDay, setTempDay] = useState(value.getDate());
   const [error, setError] = useState<string | null>(null);
+
+  const MONTHS = [
+    t('birthDate.months.january'),
+    t('birthDate.months.february'),
+    t('birthDate.months.march'),
+    t('birthDate.months.april'),
+    t('birthDate.months.may'),
+    t('birthDate.months.june'),
+    t('birthDate.months.july'),
+    t('birthDate.months.august'),
+    t('birthDate.months.september'),
+    t('birthDate.months.october'),
+    t('birthDate.months.november'),
+    t('birthDate.months.december'),
+  ];
 
   // Generar rango de años válidos
   const currentYear = new Date().getFullYear();
@@ -94,15 +96,15 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
     const age = calculateAge(date);
 
     if (age < MIN_AGE) {
-      return `You must be at least ${MIN_AGE} years old to sign up`;
+      return t('register.minAgeError', { min: MIN_AGE });
     }
 
     if (age > MAX_AGE) {
-      return `The maximum allowed age is ${MAX_AGE} years`;
+      return t('register.maxAgeError', { max: MAX_AGE });
     }
 
     if (date > new Date()) {
-      return 'You can’t select a future date';
+      return t('register.futureDateError');
     }
 
     return null;
@@ -172,16 +174,16 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
       <TouchableOpacity
         style={[styles.triggerButton, !isValidAge && styles.triggerButtonError]}
         onPress={handleOpen}
-        accessibilityLabel="Select birth date"
-        accessibilityHint="Tap to open date picker"
+        accessibilityLabel={t('common.selectBirthDate')}
+        accessibilityHint={t('common.selectBirthDateHint')}
       >
         <Text style={styles.triggerText}>{formatDate(value)}</Text>
-        <Text style={styles.triggerHint}>Tap to change</Text>
+        <Text style={styles.triggerHint}>{t('common.tapToChange')}</Text>
       </TouchableOpacity>
 
       <View style={styles.ageContainer}>
         <Text style={[styles.ageText, !isValidAge && styles.ageTextError]}>
-          {age} years old
+          {t('common.yearsOld', { count: age })}
         </Text>
       </View>
 
@@ -193,7 +195,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>When were you born?</Text>
+            <Text style={styles.modalTitle}>{t('register.whenBorn')}</Text>
 
             {error && (
               <View style={styles.errorContainer}>
@@ -204,7 +206,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
             <View style={styles.pickerContainer}>
               {/* Selector de Día */}
               <View style={styles.pickerColumn}>
-                <Text style={styles.pickerLabel}>Day</Text>
+                <Text style={styles.pickerLabel}>{t('birthDate.day')}</Text>
                 <ScrollView
                   style={styles.pickerScroll}
                   showsVerticalScrollIndicator={Platform.OS === 'web'}
@@ -233,7 +235,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
 
               {/* Selector de Mes */}
               <View style={styles.pickerColumn}>
-                <Text style={styles.pickerLabel}>Month</Text>
+                <Text style={styles.pickerLabel}>{t('birthDate.month')}</Text>
                 <ScrollView
                   style={styles.pickerScroll}
                   showsVerticalScrollIndicator={Platform.OS === 'web'}
@@ -263,7 +265,7 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
 
               {/* Selector de Año */}
               <View style={styles.pickerColumn}>
-                <Text style={styles.pickerLabel}>Year</Text>
+                <Text style={styles.pickerLabel}>{t('birthDate.year')}</Text>
                 <ScrollView
                   style={styles.pickerScroll}
                   showsVerticalScrollIndicator={Platform.OS === 'web'}
@@ -296,14 +298,16 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
                 style={styles.cancelButton}
                 onPress={handleCancel}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>
+                  {t('common.cancel')}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.confirmButton}
                 onPress={handleConfirm}
               >
-                <Text style={styles.confirmButtonText}>Confirm</Text>
+                <Text style={styles.confirmButtonText}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

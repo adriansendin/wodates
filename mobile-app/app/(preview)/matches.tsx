@@ -207,12 +207,12 @@ export default function PreviewMatchesScreen() {
   const handleRegister = () => {
     setShowRegistrationModal(false);
     exitPreview();
-    router.push('/(auth)/register/step3');
+    router.push('/(auth)/register/step1');
   };
 
   const handleDirectRegister = () => {
     exitPreview();
-    router.push('/(auth)/register/step3');
+    router.push('/(auth)/register/step1');
   };
 
   const renderMessage = (message: Message) => {

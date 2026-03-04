@@ -41,7 +41,8 @@ export class AuthController {
       if (this.systemUserService) {
         try {
           const matchResult = await this.systemUserService.createWelcomeMatch(
-            user.id
+            user.id,
+            userData.locale
           );
           if (matchResult.success) {
             request.log.info(

@@ -4,8 +4,12 @@ import { MessageRepository } from '../../domain/repositories/MessageRepository';
 import { SupabaseUserService } from './supabase-user-service';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/DomainError';
 
-const WELCOME_LAST_MESSAGE =
+/** Last welcome message (EN) – used to detect end of onboarding and show CTA. */
+const WELCOME_LAST_MESSAGE_EN =
   "When you're done, tap the button below to generate your profile.";
+/** Last welcome message (ES) – same meaning, for Spanish locale. */
+const WELCOME_LAST_MESSAGE_ES =
+  "Cuando termines, pulsa el botón de abajo y generaré tu perfil.";
 
 /**
  * Service for the "Build my profile" CTA in Doc Love chat.
@@ -49,7 +53,10 @@ export class BuildProfileCtaService {
       return false;
     }
     const hasWelcomeEnd = messagesResult.data.some(
-      (m) => m.content && m.content.includes(WELCOME_LAST_MESSAGE)
+      (m) =>
+        m.content &&
+        (m.content.includes(WELCOME_LAST_MESSAGE_EN) ||
+          m.content.includes(WELCOME_LAST_MESSAGE_ES))
     );
     return hasWelcomeEnd;
   }

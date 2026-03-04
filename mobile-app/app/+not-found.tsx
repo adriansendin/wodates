@@ -1,12 +1,14 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 export default function NotFound() {
+  const { t } = useTranslation('common');
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>404 — Not found</Text>
+      <Text style={styles.title}>{t('notFound.title')}</Text>
       <Link href="/" style={styles.link}>
-        Return to Home
+        {t('notFound.returnHome')}
       </Link>
     </View>
   );

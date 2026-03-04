@@ -98,6 +98,7 @@ export async function userRoutes(fastify: FastifyInstance) {
         body: {
           type: 'object',
           properties: {
+            name: { type: ['string', 'null'], maxLength: 100 },
             birthDate: { type: ['string', 'null'], format: 'date' },
             gender: { type: ['string', 'null'], enum: genderEnum },
             looking_for: { type: ['string', 'null'], enum: lookingForEnum },

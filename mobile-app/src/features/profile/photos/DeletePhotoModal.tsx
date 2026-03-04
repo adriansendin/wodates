@@ -8,6 +8,7 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   visible: boolean;
@@ -22,6 +23,7 @@ export function DeletePhotoModal({
   onConfirm,
   isDeleting = false,
 }: Props) {
+  const { t } = useTranslation('common');
   return (
     <Modal
       visible={visible}
@@ -31,15 +33,15 @@ export function DeletePhotoModal({
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.content}>
-          <Text style={styles.title}>Delete photo?</Text>
-          <Text style={styles.message}>This photo will be deleted.</Text>
+          <Text style={styles.title}>{t('modals.deletePhotoTitle')}</Text>
+          <Text style={styles.message}>{t('modals.deletePhotoMessage')}</Text>
           <View style={styles.buttons}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={onClose}
               disabled={isDeleting}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -53,7 +55,9 @@ export function DeletePhotoModal({
               {isDeleting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.confirmButtonText}>Delete</Text>
+                <Text style={styles.confirmButtonText}>
+                  {t('common.delete')}
+                </Text>
               )}
             </TouchableOpacity>
           </View>

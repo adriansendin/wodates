@@ -2,10 +2,13 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useAuthStore } from '../src/domain/stores/authStore';
 
 export default function Home() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -14,8 +17,8 @@ export default function Home() {
     }
   }, [user, router]);
 
-  const handleJoinLondonDrop = () => {
-    router.push('/(auth)/register');
+  const handleCreateAccount = () => {
+    router.push('/(auth)/register/step1');
   };
 
   return (
@@ -33,31 +36,30 @@ export default function Home() {
             style={styles.logoIcon}
             resizeMode="contain"
           />
-          <Text style={styles.logoText}>Wodates</Text>
+          <Text style={styles.logoText}>{t('app.title')}</Text>
         </View>
 
         {/* Headline + subheadline */}
         <View style={styles.sloganBlock}>
-          <Text style={styles.headline}>Designed for people who are done with swipe culture.</Text>
-          <Text style={styles.subheadline}>One conversation. Real depth.</Text>
+          <Text style={styles.headline}>{t('app.tagline')}</Text>
+          <Text style={styles.subheadline}>{t('app.taglineSub')}</Text>
         </View>
 
-        {/* Primary CTA: Join London Drop */}
+        {/* Primary CTA: Create account */}
         <View style={styles.buttonsContainer}>
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={handleJoinLondonDrop}
+            onPress={handleCreateAccount}
             activeOpacity={0.8}
           >
-            <Text style={styles.primaryButtonText}>Join London Drop</Text>
+            <Text style={styles.primaryButtonText}>{t('app.cta.join')}</Text>
           </TouchableOpacity>
-          <Text style={styles.caption}>London only · Drop #1 · March 8</Text>
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => router.push('/(auth)/login')}
             activeOpacity={0.8}
           >
-            <Text style={styles.secondaryButtonText}>Sign in</Text>
+            <Text style={styles.secondaryButtonText}>{t('app.cta.signIn')}</Text>
           </TouchableOpacity>
         </View>
       </View>

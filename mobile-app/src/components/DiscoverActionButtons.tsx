@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { X, Check } from 'lucide-react-native';
 
 interface DiscoverActionButtonsProps {
@@ -14,6 +15,7 @@ const DiscoverActionButtons: React.FC<DiscoverActionButtonsProps> = ({
   onReject,
   onAccept,
 }) => {
+  const { t } = useTranslation('common');
   return (
     <View style={styles.container}>
       <View style={styles.buttonsContainer}>
@@ -22,8 +24,8 @@ const DiscoverActionButtons: React.FC<DiscoverActionButtonsProps> = ({
           onPress={onReject}
           disabled={disabled}
           accessibilityRole="button"
-          accessibilityLabel="Not for me"
-          accessibilityHint="Dismiss this suggested profile"
+          accessibilityLabel={t('feed.notForMe')}
+          accessibilityHint={t('feed.notForMeHint')}
         >
           <X size={24} color="#ef4444" />
         </TouchableOpacity>
@@ -35,8 +37,8 @@ const DiscoverActionButtons: React.FC<DiscoverActionButtonsProps> = ({
           onPress={onAccept}
           disabled={disabled}
           accessibilityRole="button"
-          accessibilityLabel="I want to meet them"
-          accessibilityHint="Show interest in this person"
+          accessibilityLabel={t('feed.wantToMeet')}
+          accessibilityHint={t('feed.wantToMeetHint')}
         >
           <Check size={24} color="#10b981" />
         </TouchableOpacity>

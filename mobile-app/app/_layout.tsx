@@ -1,9 +1,26 @@
+import '../src/i18n/init';
+
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Text, View, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+import i18n from '../src/i18n/i18n';
+import { normalizeLanguage } from '../src/i18n/normalizeLanguage';
 import { useAuthStore } from '../src/domain/stores/authStore';
-import { useEffect } from 'react';
+
+function HeaderTitle() {
+  const { t } = useTranslation('common');
+  return (
+    <View style={{ marginLeft: 16 }}>
+      <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#e91e63' }}>
+        {t('app.title')}
+      </Text>
+    </View>
+  );
+}
 import { registerServiceWorker } from '../src/utils/pwa';
 import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +48,20 @@ function PWAInitializer() {
   return null;
 }
 
+// Sync i18n with browser language after mount (web only; init can run before navigator is ready)
+function BrowserLanguageSync() {
+  useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    const browserLang =
+      navigator.languages?.[0] ?? navigator.language ?? '';
+    const normalized = normalizeLanguage(browserLang);
+    if (normalized !== i18n.language) {
+      i18n.changeLanguage(normalized);
+    }
+  }, []);
+  return null;
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts(Ionicons.font);
 
@@ -42,6 +73,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthInitializer />
       <PWAInitializer />
+      <BrowserLanguageSync />
       <StatusBar style="auto" />
       <Stack
         screenOptions={({ route }: { route: { name?: string | null } }) => ({
@@ -55,13 +87,7 @@ export default function RootLayout() {
           },
           headerTitle: '',
           headerShown: !route.name?.includes('chat') && !route.name?.includes('(auth)') && !route.name?.includes('(app)') && !route.name?.includes('(preview)'),
-          headerLeft: () => (
-            <View style={{ marginLeft: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#e91e63' }}>
-                Wodates
-              </Text>
-            </View>
-          ),
+          headerLeft: () => <HeaderTitle />,
           headerBackVisible: false,
           contentStyle: {
             backgroundColor: '#f8f9fa',

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 interface MatchNotificationBannerProps {
   visible: boolean;
@@ -18,6 +19,7 @@ interface MatchNotificationBannerProps {
 export const MatchNotificationBanner: React.FC<
   MatchNotificationBannerProps
 > = ({ visible, otherUserName, onDismiss, onPress }) => {
+  const { t } = useTranslation('common');
   const slideAnim = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {
@@ -59,10 +61,9 @@ export const MatchNotificationBanner: React.FC<
           <View style={styles.content}>
             <Text style={styles.emoji}>💕</Text>
             <View style={styles.textContainer}>
-              <Text style={styles.title}>Match confirmed</Text>
+              <Text style={styles.title}>{t('matches.matchConfirmed')}</Text>
               <Text style={styles.message}>
-                You have a new exclusive chat with {otherUserName}. Discover has
-                been paused so you can get to know each other.
+                {t('matches.notificationMessage', { name: otherUserName })}
               </Text>
             </View>
             <TouchableOpacity

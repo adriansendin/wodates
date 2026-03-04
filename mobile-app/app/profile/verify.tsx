@@ -19,8 +19,10 @@ import { ApiClient } from '../../src/data/api/apiClient';
 import { ProfileApi } from '../../src/data/api/profileApi';
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { notifySystem } from '../../src/utils/notificationService';
+import { useTranslation } from 'react-i18next';
 
 export default function VerifyProfileScreen() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const { user, tokens } = useAuthStore();
   const [profileGender, setProfileGender] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export default function VerifyProfileScreen() {
 
       if (!pickResult.success) {
         // Image picker errors are system errors
-        notifySystem('Something went wrong', 'Try again', pickResult.error);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), pickResult.error);
         return;
       }
 
@@ -84,20 +86,20 @@ export default function VerifyProfileScreen() {
       const uploadResult = await uploadVerificationSelfie(pickResult.data);
       if (!uploadResult.success) {
         // Upload errors are system errors
-        notifySystem('Something went wrong', 'Try again', uploadResult.error);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), uploadResult.error);
         return;
       }
 
       Alert.alert(
-        'Selfie received!',
-        "We've received your selfie. Our team will review your verification shortly."
+        t('profile.selfieReceivedTitle'),
+        t('profile.selfieReceivedBody')
       );
 
       router.replace('/profile');
     } catch (error) {
       console.error('[VerifyProfile] Error in handleSubmit:', error);
       // Network/unexpected errors are system errors
-      notifySystem('Something went wrong', 'Try again', error, handleSubmit);
+      notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error, handleSubmit);
     }
   };
 
@@ -113,7 +115,7 @@ export default function VerifyProfileScreen() {
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <ArrowLeft size={22} color="#e91e63" />
-              <Text style={styles.headerBrandText}>Wodates</Text>
+              <Text style={styles.headerBrandText}>{t('app.title')}</Text>
             </TouchableOpacity>
           ),
         }}
@@ -140,10 +142,10 @@ export default function VerifyProfileScreen() {
             onPress={handleSubmit}
             activeOpacity={0.85}
           >
-            <Text style={styles.submitButtonText}>Upload selfie</Text>
+            <Text style={styles.submitButtonText}>{t('profile.uploadSelfie')}</Text>
           </TouchableOpacity>
           <Text style={styles.helperText}>
-            Use a clear photo, with good lighting and your full face visible.
+            {t('profile.verifySelfieHint')}
           </Text>
         </View>
       </ScrollView>

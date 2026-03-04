@@ -10,6 +10,7 @@ import {
   Alert,
   Text,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import {
   pickImageFromGallery,
@@ -33,6 +34,7 @@ export function AvatarPicker({
   showHelperText = true,
   helperText,
 }: Props) {
+  const { t } = useTranslation('common');
   const [busy, setBusy] = React.useState(false);
 
   const handlePick = async () => {
@@ -63,7 +65,11 @@ export function AvatarPicker({
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancel', 'Take photo', 'Choose from gallery'],
+          options: [
+            t('common.cancel'),
+            t('common.takePhoto'),
+            t('common.chooseFromGallery'),
+          ],
           cancelButtonIndex: 0,
         },
         async (idx) => {
@@ -74,15 +80,11 @@ export function AvatarPicker({
       return;
     }
 
-    Alert.alert(
-      'Select photo',
-      'Where would you like to get your photo from?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Take photo', onPress: takePhoto },
-        { text: 'Choose from gallery', onPress: pickFromGallery },
-      ]
-    );
+    Alert.alert(t('common.selectPhoto'), t('common.selectPhotoFrom'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.takePhoto'), onPress: takePhoto },
+      { text: t('common.chooseFromGallery'), onPress: pickFromGallery },
+    ]);
   };
 
   return (
@@ -116,7 +118,7 @@ export function AvatarPicker({
             },
           ]}
           disabled={disabled || busy}
-          accessibilityLabel="Change profile photo"
+          accessibilityLabel={t('common.changeProfilePhoto')}
         >
           {busy ? (
             <ActivityIndicator color="#F45C5C" />
@@ -128,9 +130,7 @@ export function AvatarPicker({
       {showHelperText ? (
         <Text style={styles.helperText}>
           {helperText ??
-            (uri
-              ? 'Tap the button to change the photo'
-              : 'Add your profile photo')}
+            (uri ? t('common.tapToChangePhoto') : t('common.addProfilePhoto'))}
         </Text>
       ) : null}
     </View>

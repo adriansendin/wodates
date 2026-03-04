@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
 import { BirthDatePicker } from '../../../src/components/BirthDatePicker';
@@ -8,6 +10,7 @@ import { AgeRangePicker } from '../../../src/components/AgeRangePicker';
 
 export default function Step2Screen() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
   const [date, setDate] = useState<Date>(data.birthDate || new Date(2000, 0, 1));
@@ -45,10 +48,7 @@ export default function Step2Screen() {
     const age = calculateAge(date);
     
     if (age < 18 || age > 99) {
-      setError(age < 18 
-        ? 'You must be at least 18 years old to sign up'
-        : 'The maximum allowed age is 99 years'
-      );
+      setError(age < 18 ? t('register.minAgeError', { min: 18 }) : t('register.maxAge99'));
       return;
     }
 
@@ -74,8 +74,8 @@ export default function Step2Screen() {
         <View style={styles.content}>
           {/* Sección de Fecha de Nacimiento */}
           <View style={styles.section}>
-            <Text style={styles.title}>When were you born?</Text>
-            <Text style={styles.subtitle}>Your age will be visible on your profile</Text>
+            <Text style={styles.title}>{t('register.whenBorn')}</Text>
+            <Text style={styles.subtitle}>{t('register.ageVisible')}</Text>
 
             <View style={styles.dateContainer}>
               <BirthDatePicker
@@ -94,7 +94,7 @@ export default function Step2Screen() {
 
           {/* Sección de Rango de Edad */}
           <View style={styles.section}>
-            <Text style={styles.title}>What age range are you looking for?</Text>
+            <Text style={styles.title}>{t('register.ageRangeTitle')}</Text>
 
             <View style={styles.pickerContainer}>
               <AgeRangePicker
@@ -104,9 +104,7 @@ export default function Step2Screen() {
               />
             </View>
 
-            <Text style={styles.infoText}>
-              You can change this preference later.
-            </Text>
+            <Text style={styles.infoText}>{t('register.changeLater')}</Text>
           </View>
 
           <View style={styles.buttonContainer}>
@@ -116,11 +114,11 @@ export default function Step2Screen() {
               onPress={handleNext}
               disabled={!!error}
             >
-              <Text style={styles.buttonText}>Continue</Text>
+              <Text style={styles.buttonText}>{t('common.continue')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity testID="volver-step2-button" style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
           </View>
         </View>

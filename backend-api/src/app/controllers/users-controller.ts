@@ -98,6 +98,7 @@ const nullableInt = (min: number, max: number) =>
 
 const UpdateProfileSchema = z
   .object({
+    name: z.string().max(100).nullable().optional(),
     birthDate: dateSchema.optional(),
     gender: nullableEnum(GENDER_VALUES).optional(),
     looking_for: nullableEnum(LOOKING_FOR_VALUES).optional(),
@@ -182,6 +183,9 @@ export class UsersController {
 
       const updateInput: UpdateUserProfileInput = {};
 
+      if ('name' in payload) {
+        updateInput.name = payload.name ?? null;
+      }
       if ('birthDate' in payload) {
         updateInput.birthDate = payload.birthDate ?? null;
       }

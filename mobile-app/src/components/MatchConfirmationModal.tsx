@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import FALLBACK_PHOTO from '../../assets/placeholder.png';
 
 interface MatchConfirmationModalProps {
@@ -28,6 +29,7 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
   onCancel,
   isConfirming = false,
 }) => {
+  const { t } = useTranslation('common');
   const photoSource = otherUserPhotoUrl
     ? { uri: otherUserPhotoUrl }
     : FALLBACK_PHOTO;
@@ -48,7 +50,9 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
             <View style={styles.content}>
               {/* Header */}
               <View style={styles.header}>
-                <Text style={styles.title}>Connection confirmed</Text>
+                <Text style={styles.title}>
+                  {t('modals.connectionConfirmed')}
+                </Text>
               </View>
 
               {/* User photo */}
@@ -62,12 +66,10 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
               {/* Explanation text */}
               <View style={styles.explanationContainer}>
                 <Text style={styles.explanationText}>
-                  Do you want to start an exclusive conversation with{' '}
-                  {otherUserName}?
+                  {t('modals.startExclusiveWith', { name: otherUserName })}
                 </Text>
                 <Text style={styles.explanationSubtext}>
-                  If you continue, Discover will pause so you can focus on this
-                  exclusive conversation.
+                  {t('modals.discoverPauseExplanation')}
                 </Text>
               </View>
 
@@ -78,7 +80,9 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
                   onPress={onCancel}
                   disabled={isConfirming}
                 >
-                  <Text style={styles.cancelButtonText}>Not now</Text>
+                  <Text style={styles.cancelButtonText}>
+                    {t('common.notNow')}
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -90,7 +94,7 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <Text style={styles.confirmButtonText}>
-                      Enter exclusive chat
+                      {t('modals.enterExclusiveChat')}
                     </Text>
                   )}
                 </TouchableOpacity>

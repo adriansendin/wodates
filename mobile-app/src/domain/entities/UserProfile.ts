@@ -31,6 +31,7 @@ export const UserProfileSchema = z.object({
 });
 
 export const UpdateUserProfileSchema = z.object({
+  name: z.string().max(100).nullable().optional(),
   birthDate: z.string().nullable().optional(),
   gender: GenderSchema.nullable().optional(),
   looking_for: LookingForSchema.nullable().optional(),

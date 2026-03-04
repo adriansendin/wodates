@@ -1,30 +1,32 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
 import { GENDER_OPTIONS, GenderOption } from '../../../src/domain/entities/Gender';
 import { LOOKING_FOR_OPTIONS, LookingForOption } from '../../../src/domain/entities/LookingFor';
 
-const GENDER_LABELS: Record<GenderOption, string> = {
-  male: 'Man',
-  female: 'Woman',
-  non_binary: 'Non-binary',
-};
-
-const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
-  both: 'Everyone',
-  male: 'Men',
-  female: 'Women',
-};
-
 export default function Step4Screen() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
-  
-  // No usar valor por defecto para gender - debe ser seleccionado explícitamente
+
   const [gender, setGender] = useState<GenderOption | ''>(data.gender || '');
   const [lookingFor, setLookingFor] = useState<LookingForOption | ''>(data.lookingFor || '');
+
+  const GENDER_LABELS: Record<GenderOption, string> = {
+    male: t('profile.genderMale'),
+    female: t('profile.genderFemale'),
+    non_binary: t('profile.genderNonBinary'),
+  };
+
+  const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
+    both: t('profile.lookingForBoth'),
+    male: t('profile.lookingForMen'),
+    female: t('profile.lookingForWomen'),
+  };
 
   const handleNext = () => {
     // Validación estricta: ambos campos deben ser valores válidos (no cadenas vacías, no undefined)
@@ -65,7 +67,7 @@ export default function Step4Screen() {
         <View style={styles.content}>
           {/* Sección de Género */}
           <View style={styles.section}>
-            <Text style={styles.title}>What is your gender?</Text>
+            <Text style={styles.title}>{t('register.genderTitle')}</Text>
 
             <View style={styles.optionsContainer}>
               {GENDER_OPTIONS.map((option) => (
@@ -93,7 +95,7 @@ export default function Step4Screen() {
 
           {/* Sección de A quién buscas */}
           <View style={styles.section}>
-            <Text style={styles.title}>Who are you looking for?</Text>
+            <Text style={styles.title}>{t('register.lookingForTitle')}</Text>
 
             <View style={styles.optionsContainer}>
               {LOOKING_FOR_OPTIONS.map((option) => (
@@ -119,9 +121,7 @@ export default function Step4Screen() {
             </View>
           </View>
 
-          <Text style={styles.infoText}>
-            You can change these preferences later.
-          </Text>
+          <Text style={styles.infoText}>{t('register.preferencesLater')}</Text>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity 
@@ -141,11 +141,11 @@ export default function Step4Screen() {
                 styles.buttonText,
                 (gender === '' || !GENDER_OPTIONS.includes(gender as GenderOption) ||
                  lookingFor === '' || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) && styles.buttonTextDisabled
-              ]}>Continue</Text>
+              ]}>{t('common.continue')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
           </View>
         </View>

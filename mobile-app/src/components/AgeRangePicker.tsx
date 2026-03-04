@@ -7,7 +7,7 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
-// Only used on native platforms (ios/android)
+import { useTranslation } from 'react-i18next';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 
 interface AgeRangePickerProps {
@@ -28,7 +28,7 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
   disabled = false,
   style,
 }) => {
-  // Estado local para el slider (móvil) - permite interacción fluida
+  const { t } = useTranslation('common');
   const [localMinAge, setLocalMinAge] = useState(minAge);
   const [localMaxAge, setLocalMaxAge] = useState(maxAge);
 
@@ -92,9 +92,9 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
         </View>
 
         <View style={styles.rangeDisplay}>
-          <Text
-            style={styles.rangeText}
-          >{`Range: ${localMinAge}–${localMaxAge}`}</Text>
+          <Text style={styles.rangeText}>
+            {t('common.rangeLabel', { min: localMinAge, max: localMaxAge })}
+          </Text>
         </View>
       </View>
     );
@@ -119,7 +119,7 @@ export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
 
       <View style={styles.rangeDisplay}>
         <Text style={styles.rangeText}>
-          {`Range: ${localMinAge}–${localMaxAge}`}
+          {t('common.rangeLabel', { min: localMinAge, max: localMaxAge })}
         </Text>
       </View>
     </View>

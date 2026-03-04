@@ -123,7 +123,7 @@ export default function PreviewFeedScreen() {
   const handleRegister = () => {
     setShowRegistrationModal(false);
     exitPreview();
-    router.push('/(auth)/register/step3');
+    router.push('/(auth)/register/step1');
   };
 
   const handleSignIn = () => {

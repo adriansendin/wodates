@@ -56,13 +56,11 @@ const completeRegistrationSteps = () => {
   // Birth date and age range are already set to defaults, so we can continue
   cy.get('[data-testid="continuar-step2-button"]').click({ force: true });
   cy.location('pathname', { timeout: 10000 }).should('include', 'step1');
-  cy.contains('Comencemos creando tu cuenta').should('be.visible');
+  cy.contains('Email').should('be.visible');
 
-  // Step 4: Basic credentials (final step - registration happens here)
-  cy.get('input[placeholder="Tu nombre"]').type(registerResponse.user.name);
-  cy.get('input[placeholder="tu@email.com"]').clear().type(registerResponse.user.email);
-  cy.get('input[placeholder="Confirma tu email"]').clear().type(registerResponse.user.email);
-  cy.get('input[type="password"]').type('Password1!');
+  // Step 4: Basic credentials (final step - registration happens here; only email and password)
+  cy.get('input[placeholder="you@email.com"]').clear().type(registerResponse.user.email);
+  cy.get('input[placeholder="Password"]').type('Password1!');
 };
 
 describe('Registration', () => {
@@ -91,8 +89,8 @@ describe('Registration', () => {
 
     completeRegistrationSteps();
 
-    // Click "Finalizar registro" button to complete registration
-    cy.contains('Finalizar registro').click({ force: true });
+    // Click "Enter Wodates" button to complete registration
+    cy.contains('Enter Wodates').click({ force: true });
 
     cy.wait('@register');
     cy.wait('@updateProfile');
@@ -111,8 +109,8 @@ describe('Registration', () => {
 
     completeRegistrationSteps();
 
-    // Click "Finalizar registro" button to attempt registration
-    cy.contains('Finalizar registro').click({ force: true });
+    // Click "Enter Wodates" button to attempt registration
+    cy.contains('Enter Wodates').click({ force: true });
     cy.wait('@register');
 
     cy.contains(errorMessage).should('be.visible');

@@ -16,6 +16,7 @@ export const RegisterSchema = z.object({
   location: z.string().min(1), // REQUERIDO - debe coincidir con el backend
   country: z.string().optional(),
   lookingFor: LookingForSchema, // REQUERIDO - debe coincidir con el backend
+  locale: z.enum(['en', 'es']).optional(), // Idioma para mensajes de bienvenida de Doc Love
 });
 
 export const AuthTokensSchema = z.object({

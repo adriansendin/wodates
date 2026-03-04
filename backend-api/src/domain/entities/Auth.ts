@@ -13,9 +13,10 @@ export const RegisterSchema = z.object({
   name: z.string().min(1).max(100),
   birthDate: z.string().datetime(),
   gender: z.enum(GENDER_VALUES), // REQUERIDO - no puede ser opcional
-  location: z.string().min(1), // REQUERIDO - no puede ser opcional ni vacío
+  location: z.string(), // puede ir en blanco (ciudad por defecto en perfil)
   country: z.string().optional(),
   lookingFor: z.enum(LOOKING_FOR_VALUES), // REQUERIDO - no puede ser opcional
+  locale: z.enum(['en', 'es']).optional(), // Language for Doc Love welcome messages
 });
 
 export const RefreshTokenSchema = z.object({

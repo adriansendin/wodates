@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Pressable,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   visible: boolean;
@@ -23,6 +24,7 @@ export function PhotoMenuModal({
   onSetMain,
   onDelete,
 }: Props) {
+  const { t } = useTranslation('common');
   return (
     <Modal
       visible={visible}
@@ -32,10 +34,8 @@ export function PhotoMenuModal({
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.content} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Photo options</Text>
-          <Text style={styles.message}>
-            What would you like to do with this photo?
-          </Text>
+          <Text style={styles.title}>{t('modals.photoOptions')}</Text>
+          <Text style={styles.message}>{t('modals.photoOptionsMessage')}</Text>
 
           <View style={styles.options}>
             {!isMain && (
@@ -46,7 +46,9 @@ export function PhotoMenuModal({
                   onClose();
                 }}
               >
-                <Text style={styles.optionText}>Set as main photo</Text>
+                <Text style={styles.optionText}>
+                  {t('modals.setAsMainPhoto')}
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -58,13 +60,13 @@ export function PhotoMenuModal({
               }}
             >
               <Text style={[styles.optionText, styles.deleteOptionText]}>
-                Delete photo
+                {t('modals.deletePhoto')}
               </Text>
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </Pressable>
       </Pressable>

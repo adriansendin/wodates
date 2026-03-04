@@ -8,6 +8,7 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react-native';
 
 interface AffinityModalProps {
@@ -21,6 +22,7 @@ export const AffinityModal: React.FC<AffinityModalProps> = ({
   affinitySentences,
   onClose,
 }) => {
+  const { t } = useTranslation('common');
   return (
     <Modal
       visible={visible}
@@ -33,12 +35,12 @@ export const AffinityModal: React.FC<AffinityModalProps> = ({
           <TouchableWithoutFeedback>
             <View style={styles.modalContainer}>
               <View style={styles.header}>
-                <Text style={styles.title}>Affinity</Text>
+                <Text style={styles.title}>{t('feed.affinity')}</Text>
                 <TouchableOpacity
                   onPress={onClose}
                   style={styles.closeButton}
                   accessibilityRole="button"
-                  accessibilityLabel="Close"
+                  accessibilityLabel={t('accessibility.close')}
                 >
                   <X size={24} color="#666" />
                 </TouchableOpacity>
@@ -55,12 +57,12 @@ export const AffinityModal: React.FC<AffinityModalProps> = ({
                       </Text>
                     ))}
                     <Text style={styles.basedOnLabel}>
-                      Based on conversations
+                      {t('feed.basedOnConversations')}
                     </Text>
                   </>
                 ) : (
                   <Text style={styles.emptyText}>
-                    No affinity information available
+                    {t('feed.noAffinityAvailable')}
                   </Text>
                 )}
               </ScrollView>

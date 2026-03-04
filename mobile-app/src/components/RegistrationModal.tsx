@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type RegistrationSource = 'discover' | 'chats' | 'profile';
 
@@ -11,39 +12,6 @@ interface RegistrationModalProps {
   onSignIn?: () => void;
 }
 
-const getModalContent = (source: RegistrationSource) => {
-  switch (source) {
-    case 'discover':
-      return {
-        title: 'Create your free account',
-        body: 'To like or pass on real profiles, you need an account. It takes less than 1 minute.',
-        primaryButton: 'Create free account',
-        secondaryButton: 'Not now',
-      };
-    case 'chats':
-      return {
-        title: 'Create your free account',
-        body: 'To keep chatting with Doc Love, you need an account. It takes less than 1 minute.',
-        primaryButton: 'Create free account',
-        secondaryButton: 'Not now',
-      };
-    case 'profile':
-      return {
-        title: 'Create your free account',
-        body: 'To set your preferences and unlock your profile, you need an account. It takes less than 1 minute.',
-        primaryButton: 'Create free account',
-        secondaryButton: 'Not now',
-      };
-    default:
-      return {
-        title: 'Create your free account',
-        body: 'To like or pass on real profiles, you need an account. It takes less than 1 minute.',
-        primaryButton: 'Create free account',
-        secondaryButton: 'Not now',
-      };
-  }
-};
-
 export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   visible,
   onClose,
@@ -51,7 +19,18 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   source,
   onSignIn,
 }) => {
-  const content = getModalContent(source);
+  const { t } = useTranslation('common');
+  const content = {
+    title: t('common.createAccountTitle'),
+    body:
+      source === 'chats'
+        ? t('common.createAccountBodyChats')
+        : source === 'profile'
+          ? t('common.createAccountBodyProfile')
+          : t('common.createAccountBodyDiscover'),
+    primaryButton: t('common.createFreeAccount'),
+    secondaryButton: t('common.notNow'),
+  };
 
   return (
     <Modal
@@ -74,7 +53,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
             {onSignIn && (
               <TouchableOpacity style={styles.signInButton} onPress={onSignIn}>
-                <Text style={styles.signInButtonText}>Sign in</Text>
+                <Text style={styles.signInButtonText}>{t('auth.login')}</Text>
               </TouchableOpacity>
             )}
 

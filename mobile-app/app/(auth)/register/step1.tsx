@@ -1,11 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,9 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { useAuthStore } from '../../../src/domain/stores/authStore';
-import { ProgressBar } from '../../../src/components/ProgressBar';
 import { FeedbackBanner } from '../../../src/components/FeedbackBanner';
 import { ApiClient } from '../../../src/data/api/apiClient';
 import { AuthApi } from '../../../src/data/api/authApi';
@@ -25,6 +25,7 @@ import { AuthTokens } from '../../../src/domain/entities/Auth';
 import { User, Gender } from '../../../src/domain/entities/User';
 import { getApiUrl } from '../../../src/utils/apiConfig';
 import { GENDER_OPTIONS, GenderOption } from '../../../src/domain/entities/Gender';
+import { LOOKING_FOR_OPTIONS, LookingForOption } from '../../../src/domain/entities/LookingFor';
 import { trackSignupComplete, trackLoginSuccess } from '../../../src/analytics/ga4';
 
 const API_URL = getApiUrl();
@@ -59,21 +60,64 @@ const normalizeUser = (rawUser: Record<string, unknown>): User => {
 
 export default function Step1Screen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation('common');
   const { data, updateData, resetRegistration } = useRegistrationStore();
   const { login } = useAuthStore();
 
-  const [name, setName] = useState(data.name);
   const [email, setEmail] = useState(data.email);
-  const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState(data.password);
+  const [gender, setGender] = useState<GenderOption | ''>((data.gender as GenderOption) || '');
+  const [lookingFor, setLookingFor] = useState<LookingForOption | ''>((data.lookingFor as LookingForOption) || '');
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
+  const GENDER_LABELS: Record<GenderOption, string> = useMemo(
+    () => ({
+      male: t('profile.genderMale'),
+      female: t('profile.genderFemale'),
+      non_binary: t('profile.genderNonBinary'),
+    }),
+    [t]
+  );
+  const LOOKING_FOR_LABELS: Record<LookingForOption, string> = useMemo(
+    () => ({
+      both: t('profile.lookingForBoth'),
+      male: t('profile.lookingForMen'),
+      female: t('profile.lookingForWomen'),
+    }),
+    [t]
+  );
+
   const apiClient = useMemo(() => new ApiClient(getApiUrl()), []);
   const authApi = useMemo(() => new AuthApi(apiClient), [apiClient]);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
+
+  // Si el usuario llega directo a esta pantalla (p. ej. desde la página de inicio),
+  // rellenar valores por defecto para que el registro sea válido sin pasar por los pasos previos.
+  useEffect(() => {
+    const needsDefaults =
+      !data.birthDate ||
+      !data.location?.trim() ||
+      !data.gender ||
+      !data.lookingFor;
+    if (needsDefaults) {
+      updateData({
+        birthDate: data.birthDate || new Date(1996, 0, 1),
+        location: data.location?.trim() || '',
+        country: data.country || '',
+        gender: (data.gender || 'male') as GenderOption,
+        lookingFor: (data.lookingFor || 'both') as LookingForOption,
+      });
+    }
+  }, []);
+
+  // Sincronizar género y looking for desde el store cuando se aplican defaults (para que el formulario los muestre)
+  useEffect(() => {
+    if (data.gender && !gender) setGender(data.gender as GenderOption);
+    if (data.lookingFor && !lookingFor) setLookingFor(data.lookingFor as LookingForOption);
+  }, [data.gender, data.lookingFor]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -86,33 +130,18 @@ export default function Step1Screen() {
     setFeedback(null);
 
     // Validaciones básicas del formulario
-    if (!name.trim()) {
-      setFeedback({ type: 'error', message: 'Please enter your name' });
-      return;
-    }
-
     if (!email.trim()) {
-      setFeedback({ type: 'error', message: 'Please enter your email' });
+      setFeedback({ type: 'error', message: t('register.emailRequired') });
       return;
     }
 
     if (!validateEmail(email)) {
-      setFeedback({ type: 'error', message: 'Please enter a valid email' });
-      return;
-    }
-
-    if (!confirmEmail.trim()) {
-      setFeedback({ type: 'error', message: 'Please confirm your email' });
-      return;
-    }
-
-    if (email !== confirmEmail) {
-      setErrorMessage('Emails don\'t match');
+      setFeedback({ type: 'error', message: t('register.emailInvalid') });
       return;
     }
 
     if (!password || password.length < 6) {
-      setFeedback({ type: 'error', message: 'Password must be at least 6 characters' });
+      setFeedback({ type: 'error', message: t('register.passwordMinLength') });
       return;
     }
 
@@ -125,7 +154,7 @@ export default function Step1Screen() {
       if (result.success) {
         if (result.data.exists) {
           setIsCheckingEmail(false);
-          setErrorMessage('This email is already registered');
+          setErrorMessage(t('register.emailAlreadyRegistered'));
           return;
         }
       } else {
@@ -148,89 +177,93 @@ export default function Step1Screen() {
       setIsCheckingEmail(false);
     }
 
-    // Actualizar datos del formulario en el store
-    updateData({ name, email, password });
+    if (!gender || !GENDER_OPTIONS.includes(gender as GenderOption)) {
+      setFeedback({ type: 'error', message: t('register.selectGender') });
+      return;
+    }
+    if (!lookingFor || !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) {
+      setFeedback({ type: 'error', message: t('register.selectLookingFor') });
+      return;
+    }
+
+    // Actualizar datos del formulario en el store (incl. género y looking for para el payload)
+    updateData({
+      email,
+      password,
+      gender: gender as GenderOption,
+      lookingFor: lookingFor as LookingForOption,
+    });
 
     // Ahora ejecutar el registro completo
     setIsLoading(true);
     setFeedback(null);
 
     try {
-      // VALIDACIÓN ESTRICTA: Verificar que TODOS los campos requeridos estén presentes
-      const registrationData = { ...data, name, email, password };
-
-      if (!registrationData.name || registrationData.name.trim() === '') {
-        setFeedback({ type: 'error', message: 'Name is required' });
-        setIsLoading(false);
-        return;
-      }
+      // Nombre derivado del email (parte antes de @) para cumplir con el backend; el usuario puede cambiarlo en el perfil
+      const nameFromEmail = (email.trim().split('@')[0] || 'User').trim() || 'User';
+      const registrationData = { ...data, email, password };
 
       if (!registrationData.email || registrationData.email.trim() === '') {
-        setFeedback({ type: 'error', message: 'Email is required' });
+        setFeedback({ type: 'error', message: t('register.emailRequiredShort') });
         setIsLoading(false);
         return;
       }
 
       if (!registrationData.password || registrationData.password.length < 6) {
-        setFeedback({ type: 'error', message: 'Password must be at least 6 characters' });
+        setFeedback({ type: 'error', message: t('register.passwordMinLength') });
         setIsLoading(false);
         return;
       }
 
       if (!registrationData.birthDate || !(registrationData.birthDate instanceof Date) || isNaN(registrationData.birthDate.getTime())) {
-        setFeedback({ type: 'error', message: 'Birthdate is required and must be valid' });
+        setFeedback({ type: 'error', message: t('register.birthdateRequired') });
         setIsLoading(false);
         return;
       }
 
-      // Validar que min_age y max_age sean números válidos
       if (typeof registrationData.minAge !== 'number' || isNaN(registrationData.minAge) || registrationData.minAge < 18 || registrationData.minAge > 100) {
-        setFeedback({ type: 'error', message: 'Minimum age must be valid (18–100)' });
+        setFeedback({ type: 'error', message: t('register.minAgeValid') });
         setIsLoading(false);
         return;
       }
 
       if (typeof registrationData.maxAge !== 'number' || isNaN(registrationData.maxAge) || registrationData.maxAge < 18 || registrationData.maxAge > 100) {
-        setFeedback({ type: 'error', message: 'Maximum age must be valid (18–100)' });
+        setFeedback({ type: 'error', message: t('register.maxAgeValid') });
         setIsLoading(false);
         return;
       }
 
       if (registrationData.minAge > registrationData.maxAge) {
-        setFeedback({ type: 'error', message: 'Minimum age can\'t be greater than maximum age' });
+        setFeedback({ type: 'error', message: t('register.minAgeGreaterThanMax') });
         setIsLoading(false);
         return;
       }
 
-      if (!registrationData.location || registrationData.location.trim() === '') {
-        setFeedback({ type: 'error', message: 'Location is required' });
-        setIsLoading(false);
-        return;
-      }
-
-      // VALIDACIÓN CRÍTICA: gender y lookingFor son REQUERIDOS y deben ser valores válidos
       if (!registrationData.gender || !GENDER_OPTIONS.includes(registrationData.gender as GenderOption)) {
-        setFeedback({ type: 'error', message: 'Please select your gender' });
+        setFeedback({ type: 'error', message: t('register.selectGender') });
         setIsLoading(false);
         return;
       }
 
       if (!registrationData.lookingFor) {
-        setFeedback({ type: 'error', message: 'Please select who you\'re looking for' });
+        setFeedback({ type: 'error', message: t('register.selectLookingFor') });
         setIsLoading(false);
         return;
       }
 
-      // Preparar los datos para el registro - TODOS los campos son requeridos
+      // Preparar los datos para el registro. Usar gender y lookingFor del estado local del formulario,
+      // no de registrationData (data del store puede no estar actualizado en esta misma ejecución).
+      const locale = i18n.language?.toLowerCase().startsWith('es') ? 'es' : 'en';
       const registerData = {
         email: registrationData.email.trim(),
         password: registrationData.password,
-        name: registrationData.name.trim(),
+        name: nameFromEmail,
         birthDate: registrationData.birthDate.toISOString(),
-        gender: registrationData.gender as Gender, // REQUERIDO - ya validado arriba
-        location: registrationData.location.trim(), // REQUERIDO - ya validado arriba
-        country: registrationData.country || 'Spain',
-        lookingFor: registrationData.lookingFor, // REQUERIDO - ya validado arriba
+        gender: gender as Gender,
+        location: registrationData.location?.trim() ?? '',
+        country: registrationData.country?.trim() ?? '',
+        lookingFor: lookingFor as LookingForOption,
+        locale,
       };
 
       console.log('[Register] Sending registration data:', registerData);
@@ -239,7 +272,7 @@ export default function Step1Screen() {
       const result = await authApi.register(registerData);
 
       if (!result.success) {
-        const message = result.error.message ?? 'Couldn\'t create your account. Please try again.';
+        const message = result.error.message ?? t('register.createAccountError');
         setFeedback({ type: 'error', message });
         setIsLoading(false);
         return;
@@ -303,7 +336,7 @@ export default function Step1Screen() {
       // Validar que min_age y max_age sean números válidos
       if (typeof profileUpdates.min_age !== 'number' || typeof profileUpdates.max_age !== 'number') {
         console.error('[Register] ERROR: min_age or max_age are not numbers!', profileUpdates);
-        setFeedback({ type: 'error', message: 'Error: Age range is not valid' });
+        setFeedback({ type: 'error', message: t('register.ageRangeInvalid') });
         setIsLoading(false);
         return;
       }
@@ -313,7 +346,7 @@ export default function Step1Screen() {
       if (!updateResult.success) {
         console.error('[Register] Failed to update profile:', updateResult.error);
         console.error('[Register] Profile updates that failed:', profileUpdates);
-        setFeedback({ type: 'error', message: 'Couldn\'t save your preferences. You can update them later in your profile.' });
+        setFeedback({ type: 'error', message: t('register.savePreferencesError') });
         setIsLoading(false);
         return;
       }
@@ -324,7 +357,7 @@ export default function Step1Screen() {
       resetRegistration();
 
       // Redirigir a matches
-      setFeedback({ type: 'success', message: 'Welcome! Your account has been created.' });
+      setFeedback({ type: 'success', message: t('register.welcomeSuccess') });
       
       setTimeout(() => {
         router.replace('/(app)/matches');
@@ -332,7 +365,7 @@ export default function Step1Screen() {
 
     } catch (err) {
       console.error('Registration error:', err);
-      setFeedback({ type: 'error', message: 'Network error. Please try again.' });
+      setFeedback({ type: 'error', message: t('register.networkError') });
       setIsLoading(false);
     }
   };
@@ -350,8 +383,6 @@ export default function Step1Screen() {
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
         >
-          <ProgressBar totalSteps={5} currentStep={5} />
-
           <View style={styles.content}>
             {errorMessage && (
               <FeedbackBanner
@@ -369,30 +400,12 @@ export default function Step1Screen() {
             )}
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Name</Text>
+                <Text style={styles.label}>{t('register.labelEmail')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Your name"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="you@email.com"
+                  placeholder={t('auth.emailExample')}
                   value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    // Limpiar mensaje de error cuando el usuario empiece a escribir
-                    if (errorMessage === 'Emails don\'t match') {
-                      setErrorMessage(null);
-                    }
-                  }}
+                  onChangeText={setEmail}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   returnKeyType="next"
@@ -400,47 +413,80 @@ export default function Step1Screen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirm email</Text>
+                <Text style={styles.label}>{t('register.labelPassword')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Confirm your email"
-                  value={confirmEmail}
-                  onChangeText={(text) => {
-                    setConfirmEmail(text);
-                    // Limpiar mensaje de error cuando el usuario empiece a escribir
-                    if (errorMessage === 'Emails don\'t match') {
-                      setErrorMessage(null);
-                    }
-                  }}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  returnKeyType="next"
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
+                  placeholder={t('auth.passwordPlaceholder')}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
-                  returnKeyType="done"
-                  onSubmitEditing={handleNext}
+                  returnKeyType="next"
                 />
+              </View>
+
+              {/* Género */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('register.genderTitle')}</Text>
+                <View style={styles.optionsRow}>
+                  {GENDER_OPTIONS.map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[styles.option, gender === option && styles.optionSelected]}
+                      onPress={() => setGender(option)}
+                    >
+                      <View style={styles.radio}>
+                        {gender === option && <View style={styles.radioInner} />}
+                      </View>
+                      <Text style={[styles.optionText, gender === option && styles.optionTextSelected]}>
+                        {GENDER_LABELS[option]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* A quién buscas */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('register.lookingForTitle')}</Text>
+                <View style={styles.optionsRow}>
+                  {LOOKING_FOR_OPTIONS.map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[styles.option, lookingFor === option && styles.optionSelected]}
+                      onPress={() => setLookingFor(option)}
+                    >
+                      <View style={styles.radio}>
+                        {lookingFor === option && <View style={styles.radioInner} />}
+                      </View>
+                      <Text style={[styles.optionText, lookingFor === option && styles.optionTextSelected]}>
+                        {LOOKING_FOR_LABELS[option]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             </View>
 
             <TouchableOpacity
-              style={[styles.button, (isCheckingEmail || isLoading) && styles.buttonDisabled]}
+              style={[
+                styles.button,
+                (isCheckingEmail || isLoading ||
+                  !gender || !lookingFor ||
+                  !GENDER_OPTIONS.includes(gender as GenderOption) ||
+                  !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)) && styles.buttonDisabled,
+              ]}
               onPress={handleNext}
-              disabled={isCheckingEmail || isLoading}
+              disabled={
+                isCheckingEmail || isLoading ||
+                !gender || !lookingFor ||
+                !GENDER_OPTIONS.includes(gender as GenderOption) ||
+                !LOOKING_FOR_OPTIONS.includes(lookingFor as LookingForOption)
+              }
             >
               {(isCheckingEmail || isLoading) ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.buttonText}>Enter Wodates</Text>
+                <Text style={styles.buttonText}>{t('auth.enterWodates')}</Text>
               )}
             </TouchableOpacity>
 
@@ -448,7 +494,7 @@ export default function Step1Screen() {
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('auth.back')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -491,6 +537,57 @@ const styles = StyleSheet.create({
   form: {
     gap: 20,
     marginBottom: 32,
+  },
+  section: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  optionsRow: {
+    gap: 12,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: 14,
+  },
+  optionSelected: {
+    borderColor: '#F45C5C',
+    backgroundColor: '#FFF5F5',
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#F45C5C',
+  },
+  optionText: {
+    fontSize: 15,
+    color: '#2C3E50',
+  },
+  optionTextSelected: {
+    color: '#F45C5C',
+    fontWeight: '600',
   },
   inputContainer: {
     gap: 8,

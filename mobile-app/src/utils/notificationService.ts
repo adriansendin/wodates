@@ -79,10 +79,10 @@ export const notify = (options: NotificationOptions): void => {
   let displayTitle = title;
   let displayMessage = message;
 
-  // For system errors, ensure generic messaging
+  // For system errors, use provided title/message (callers pass translated strings)
   if (kind === 'system') {
-    displayTitle = 'Something went wrong';
-    displayMessage = message || 'Try again';
+    displayTitle = title || 'Something went wrong';
+    displayMessage = message ?? 'Try again';
 
     // In dev, optionally append indicator (but keep message clean)
     if (isDev && debug !== undefined) {

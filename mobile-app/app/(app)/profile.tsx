@@ -23,9 +23,13 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useUserPhotos } from '../../src/features/profile/photos/useUserPhotos';
 import { AgeRangePicker } from '../../src/components/AgeRangePicker';
+import { BirthDatePicker } from '../../src/components/BirthDatePicker';
 import { useAuthStore } from '../../src/domain/stores/authStore';
+import { useFeedStore } from '../../src/domain/stores/feedStore';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { ProfileApi } from '../../src/data/api/profileApi';
 import {
@@ -53,6 +57,8 @@ type LookingForFormValue = LookingForOption | '';
 type GenderFormValue = GenderOption | '';
 
 type FormState = {
+  name: string;
+  birthDate: string | null;
   gender: GenderFormValue;
   looking_for: LookingForFormValue;
   min_age: number;
@@ -74,84 +80,9 @@ type Feedback = {
   message: string;
 };
 
-const LOOKING_FOR_LABELS: Record<LookingForOption, string> = {
-  male: 'Men',
-  female: 'Women',
-  both: 'Both',
-};
-
-const LOOKING_FOR_CHOICES: Array<{
-  value: LookingForFormValue;
-  label: string;
-}> = LOOKING_FOR_OPTIONS.map((value) => ({
-  value,
-  label: LOOKING_FOR_LABELS[value],
-}));
-
-const getLookingForLabel = (value: LookingForFormValue) =>
-  value ? LOOKING_FOR_LABELS[value] : 'Select';
-
-const GENDER_LABELS: Record<GenderOption, string> = {
-  male: 'Male',
-  female: 'Female',
-  non_binary: 'Non-binary',
-};
-
-const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> =
-  GENDER_OPTIONS.map((value) => ({
-    value,
-    label: GENDER_LABELS[value],
-  }));
-
-const getGenderLabel = (value: GenderFormValue) =>
-  value ? GENDER_LABELS[value] : 'Select';
-
-const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
-  pending: 'Verify profile',
-  verifying: 'Verification in progress',
-  verified: 'Verified profile',
-  rejected: 'Retry verification',
-};
-
-// Family plan labels
-const WANTS_CHILDREN_LABELS: Record<'yes' | 'no' | 'not_sure', string> = {
-  yes: 'Yes',
-  no: 'No',
-  not_sure: 'Not sure',
-};
-
-const CARES_ABOUT_PARTNER_CHILDREN_LABELS: Record<'yes' | 'no', string> = {
-  yes: 'Yes, I don\'t want them to have children',
-  no: 'I don\'t care',
-};
-
-
-// Habits labels
-const SMOKING_LABELS: Record<'no' | 'occasionally' | 'regularly', string> = {
-  no: 'No',
-  occasionally: 'Occasionally',
-  regularly: 'Regularly',
-};
-
-const CARES_ABOUT_PARTNER_SMOKING_LABELS: Record<'yes' | 'no', string> = {
-  yes: 'Yes, I don\'t want them to smoke',
-  no: 'I don\'t care',
-};
-
-const getWantsChildrenLabel = (value: 'yes' | 'no' | 'not_sure' | null) =>
-  value ? WANTS_CHILDREN_LABELS[value] : 'Select';
-
-const getCaresAboutPartnerChildrenLabel = (value: 'yes' | 'no' | null) =>
-  value ? CARES_ABOUT_PARTNER_CHILDREN_LABELS[value] : 'Select';
-
-
-const getSmokingLabel = (value: 'no' | 'occasionally' | 'regularly' | null) =>
-  value ? SMOKING_LABELS[value] : 'Select';
-
-const getCaresAboutPartnerSmokingLabel = (value: 'yes' | 'no' | null) =>
-  value ? CARES_ABOUT_PARTNER_SMOKING_LABELS[value] : 'Select';
-
 const emptyForm: FormState = {
+  name: '',
+  birthDate: null,
   gender: 'male',
   looking_for: 'both',
   min_age: 18,
@@ -168,7 +99,11 @@ const emptyForm: FormState = {
   cares_about_partner_smoking: null,
 };
 
+const DEFAULT_BIRTH_DATE = '1996-01-01';
+
 const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
+  name: nextProfile?.name ?? '',
+  birthDate: nextProfile?.birthDate ?? null,
   gender: nextProfile?.gender ?? 'male',
   looking_for: nextProfile?.looking_for ?? 'both',
   min_age: nextProfile?.min_age ?? 18,
@@ -206,8 +141,99 @@ const calculateAge = (birthDate: string): number => {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const supabase = useMemo(() => getSupabaseClient(), []);
   const { tokens, user, logout } = useAuthStore();
+
+  const LOOKING_FOR_LABELS: Record<LookingForOption, string> = useMemo(
+    () => ({
+      male: t('profile.lookingForMen'),
+      female: t('profile.lookingForWomen'),
+      both: t('profile.lookingForBoth'),
+    }),
+    [t]
+  );
+  const GENDER_LABELS: Record<GenderOption, string> = useMemo(
+    () => ({
+      male: t('profile.genderMale'),
+      female: t('profile.genderFemale'),
+      non_binary: t('profile.genderNonBinary'),
+    }),
+    [t]
+  );
+  const VERIFICATION_LABELS: Record<VerificationStatus, string> = useMemo(
+    () => ({
+      pending: t('profile.verifyProfile'),
+      verifying: t('profile.verificationInProgress'),
+      verified: t('profile.verifiedProfile'),
+      rejected: t('profile.retryVerification'),
+    }),
+    [t]
+  );
+  const WANTS_CHILDREN_LABELS: Record<'yes' | 'no' | 'not_sure', string> = useMemo(
+    () => ({
+      yes: t('register.yes'),
+      no: t('register.no'),
+      not_sure: t('register.notSure'),
+    }),
+    [t]
+  );
+  const CARES_ABOUT_PARTNER_CHILDREN_LABELS: Record<'yes' | 'no', string> = useMemo(
+    () => ({
+      yes: t('register.partnerNoChildren'),
+      no: t('register.partnerChildrenDontCare'),
+    }),
+    [t]
+  );
+  const SMOKING_LABELS: Record<'no' | 'occasionally' | 'regularly', string> = useMemo(
+    () => ({
+      no: t('register.smokingNo'),
+      occasionally: t('register.smokingOccasionally'),
+      regularly: t('register.smokingRegularly'),
+    }),
+    [t]
+  );
+  const CARES_ABOUT_PARTNER_SMOKING_LABELS: Record<'yes' | 'no', string> = useMemo(
+    () => ({
+      yes: t('register.partnerNoSmoke'),
+      no: t('register.partnerSmokeDontCare'),
+    }),
+    [t]
+  );
+
+  const getLookingForLabel = (value: LookingForFormValue) =>
+    value ? LOOKING_FOR_LABELS[value] : t('common.select');
+  const getGenderLabel = (value: GenderFormValue) =>
+    value ? GENDER_LABELS[value] : t('common.select');
+  const getWantsChildrenLabel = (value: 'yes' | 'no' | 'not_sure' | null) =>
+    value ? WANTS_CHILDREN_LABELS[value] : t('common.select');
+  const getCaresAboutPartnerChildrenLabel = (value: 'yes' | 'no' | null) =>
+    value ? CARES_ABOUT_PARTNER_CHILDREN_LABELS[value] : t('common.select');
+  const getSmokingLabel = (value: 'no' | 'occasionally' | 'regularly' | null) =>
+    value ? SMOKING_LABELS[value] : t('common.select');
+  const getCaresAboutPartnerSmokingLabel = (value: 'yes' | 'no' | null) =>
+    value ? CARES_ABOUT_PARTNER_SMOKING_LABELS[value] : t('common.select');
+
+  const GENDER_CHOICES: Array<{ value: GenderFormValue; label: string }> = useMemo(
+    () =>
+      GENDER_OPTIONS.map((value) => ({
+        value,
+        label: GENDER_LABELS[value],
+      })),
+    [GENDER_LABELS]
+  );
+  const LOOKING_FOR_CHOICES: Array<{
+    value: LookingForFormValue;
+    label: string;
+  }> = useMemo(
+    () =>
+      LOOKING_FOR_OPTIONS.map((value) => ({
+        value,
+        label: LOOKING_FOR_LABELS[value],
+      })),
+    [LOOKING_FOR_LABELS]
+  );
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [verificationStatus, setVerificationStatus] =
     useState<VerificationStatus>('pending');
@@ -260,14 +286,14 @@ export default function ProfileScreen() {
       } else {
         setFeedback({
           type: 'error',
-          message: result.error.message ?? 'Could not load profile.',
+          message: result.error.message ?? t('errors.loadProfile'),
         });
       }
     } catch (error) {
       console.error('[Profile] loadProfile error', error);
       setFeedback({
         type: 'error',
-        message: 'Could not load profile. Please try again.',
+        message: t('errors.loadProfileRetry'),
       });
     } finally {
       setIsLoading(false);
@@ -282,11 +308,17 @@ export default function ProfileScreen() {
     }, [loadProfile])
   );
 
-  // Cleanup timeout al desmontar el componente
+  // Cleanup timeouts al desmontar el componente
   useEffect(() => {
     return () => {
       if (ageRangeTimeoutRef.current) {
         clearTimeout(ageRangeTimeoutRef.current);
+      }
+      if (cityTimeoutRef.current) {
+        clearTimeout(cityTimeoutRef.current);
+      }
+      if (nameTimeoutRef.current) {
+        clearTimeout(nameTimeoutRef.current);
       }
     };
   }, []);
@@ -304,6 +336,32 @@ export default function ProfileScreen() {
       delete next[field];
       return next;
     });
+  };
+
+  const handleNameChange = (value: string) => {
+    handleChange('name')(value);
+    if (nameTimeoutRef.current) {
+      clearTimeout(nameTimeoutRef.current);
+    }
+    nameTimeoutRef.current = setTimeout(() => {
+      autoSave('name', value.trim() || null);
+    }, 800);
+  };
+
+  const handleCityChange = (value: string) => {
+    handleChange('city')(value);
+    if (cityTimeoutRef.current) {
+      clearTimeout(cityTimeoutRef.current);
+    }
+    cityTimeoutRef.current = setTimeout(() => {
+      autoSave('city', value.trim() || null);
+    }, 800);
+  };
+
+  const handleBirthDateChange = (date: Date) => {
+    const iso = date.toISOString().slice(0, 10);
+    setForm((prev) => ({ ...prev, birthDate: iso }));
+    autoSave('birthDate', iso);
   };
 
   const handleSelectGender = (value: GenderFormValue) => {
@@ -342,6 +400,8 @@ export default function ProfileScreen() {
 
   // Ref para rastrear el último auto-save de rango de edad
   const ageRangeTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const cityTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const nameTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const handleAgeRangeChange = (minAge: number, maxAge: number) => {
     // Actualizar ambos valores juntos en el formulario
@@ -418,14 +478,14 @@ export default function ProfileScreen() {
             setFeedback({
               type: 'error',
               message:
-                'Could not save age range. Please try again.',
+                t('errors.saveAgeRangeError'),
             });
           }
         } catch (error) {
           console.error('[Profile] autoSaveAgeRange error', error);
           setFeedback({
             type: 'error',
-            message: 'Error saving age range.',
+            message: t('errors.saveAgeRangeShort'),
           });
         } finally {
           setIsAutoSaving(false);
@@ -476,11 +536,11 @@ export default function ProfileScreen() {
     if (Platform.OS === 'web') {
       // For web, show options for file selection
       Alert.alert(
-        'Select profile photo',
-        'Choose a photo from your computer',
+        t('profile.selectProfilePhoto'),
+        t('profile.choosePhotoComputer'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Select file', onPress: handlePickFromGallery },
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.chooseFromGallery'), onPress: handlePickFromGallery },
         ]
       );
       return;
@@ -489,7 +549,7 @@ export default function ProfileScreen() {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancel', 'Take photo', 'Choose from gallery'],
+          options: [t('common.cancel'), t('common.takePhoto'), t('common.chooseFromGallery')],
           cancelButtonIndex: 0,
         },
         async (buttonIndex) => {
@@ -502,12 +562,12 @@ export default function ProfileScreen() {
       );
     } else {
       Alert.alert(
-        'Change profile photo',
-        'Where would you like to get your photo from?',
+        t('profile.changeProfilePhotoTitle'),
+        t('profile.whereGetPhoto'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Take photo', onPress: handleTakePhoto },
-          { text: 'Choose from gallery', onPress: handlePickFromGallery },
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.takePhoto'), onPress: handleTakePhoto },
+          { text: t('common.chooseFromGallery'), onPress: handlePickFromGallery },
         ]
       );
     }
@@ -534,6 +594,15 @@ export default function ProfileScreen() {
 
         // Map form field to API field
         switch (field) {
+          case 'name':
+            payload.name = (typeof value === 'string' ? value.trim() : value) || null;
+            break;
+          case 'birthDate':
+            payload.birthDate = (value as string) || null;
+            break;
+          case 'city':
+            payload.city = (typeof value === 'string' ? value.trim() : value) || null;
+            break;
           case 'gender':
             payload.gender = value || null;
             break;
@@ -584,19 +653,24 @@ export default function ProfileScreen() {
           // Actualizar el formulario con los valores confirmados de la BD
           setForm(mapProfileToForm(updatedProfile));
 
+          // Invalidate discover feed so it reloads with new looking_for when user returns to Discover
+          if (field === 'looking_for') {
+            useFeedStore.getState().reset();
+          }
+
           console.log(`[Profile] ${field} saved successfully`);
         } else {
           console.error('[Profile] autoSave failed', result.error);
           setFeedback({
             type: 'error',
-            message: 'Could not save change. Please try again.',
+            message: t('errors.saveChangeError'),
           });
         }
       } catch (error) {
         console.error('[Profile] autoSave error', error);
         setFeedback({
           type: 'error',
-          message: "Couldn't save changes.",
+          message: t('errors.saveChangesError'),
         });
       } finally {
         setIsAutoSaving(false);
@@ -649,9 +723,9 @@ export default function ProfileScreen() {
 
       if (!result.success) {
         const message =
-          result.error.message ?? 'Could not deactivate your account.';
+          result.error.message ?? t('errors.deactivateError');
         // API errors deactivating account are system errors
-        notifySystem('Something went wrong', 'Try again', result.error, handleDeleteConfirm);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error, handleDeleteConfirm);
         setFeedback({
           type: 'error',
           message,
@@ -669,16 +743,15 @@ export default function ProfileScreen() {
       setIsDeleteModalVisible(false);
 
       Alert.alert(
-        'Account deactivated',
-        'Your account has been deactivated. Contact support if you want to reactivate it.'
+        t('errors.accountDeactivated'),
+        t('errors.accountDeactivatedBody')
       );
 
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('[Profile] handleDeleteConfirm error', error);
-      const message = 'Could not deactivate account. Please try again.';
-      // Network errors are system errors with retry
-      notifySystem('Something went wrong', 'Try again', error, handleDeleteConfirm);
+      const message = t('errors.deactivateError');
+      notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error, handleDeleteConfirm);
       setFeedback({
         type: 'error',
         message,
@@ -714,7 +787,7 @@ export default function ProfileScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.infoText}>
-          Your session is not valid. Please sign in again to view your profile.
+          {t('profile.sessionInvalid')}
         </Text>
       </View>
     );
@@ -730,7 +803,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select your gender</Text>
+            <Text style={styles.modalTitle}>{t('profile.selectGenderTitle')}</Text>
             {GENDER_CHOICES.map((option) => {
               const isActive = form.gender === option.value;
               return (
@@ -760,7 +833,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsGenderModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancel</Text>
+              <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -773,7 +846,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select who you're looking for</Text>
+            <Text style={styles.modalTitle}>{t('profile.selectLookingForTitle')}</Text>
             {LOOKING_FOR_CHOICES.map((option) => {
               const isActive = form.looking_for === option.value;
               return (
@@ -803,7 +876,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsLookingForModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancel</Text>
+              <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -817,13 +890,13 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Do you have children?</Text>
+            <Text style={styles.modalTitle}>{t('profile.labelHasChildren')}</Text>
             {[
-              { value: false, label: 'No' },
-              { value: true, label: 'Yes' },
+              { value: false, label: t('register.no') },
+              { value: true, label: t('register.yes') },
             ].map((option) => {
               const isActive = form.has_children === option.value;
-              const label = option.value ? 'Yes' : 'No';
+              const label = option.value ? t('register.yes') : t('register.no');
               return (
                 <TouchableOpacity
                   key={String(option.value)}
@@ -851,7 +924,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsHasChildrenModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancel</Text>
+              <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -864,7 +937,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Do you want to have children in the future?</Text>
+            <Text style={styles.modalTitle}>{t('profile.labelWantsChildren')}</Text>
             {(['yes', 'no', 'not_sure'] as const).map((value) => {
               const isActive = form.wants_children === value;
               return (
@@ -894,7 +967,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsWantsChildrenModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancel</Text>
+              <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -907,7 +980,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Does it matter to you if the other person has children?</Text>
+            <Text style={styles.modalTitle}>{t('profile.labelCarePartnerChildren')}</Text>
             {(['yes', 'no'] as const).map((value) => {
               const isActive = form.cares_about_partner_children === value;
               return (
@@ -937,7 +1010,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsCaresAboutPartnerChildrenModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancel</Text>
+              <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -951,7 +1024,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Do you smoke?</Text>
+            <Text style={styles.modalTitle}>{t('profile.labelSmoking')}</Text>
             {(['no', 'occasionally', 'regularly'] as const).map((value) => {
               const isActive = form.smoking === value;
               return (
@@ -981,7 +1054,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsSmokingModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancel</Text>
+              <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -994,7 +1067,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Does it matter to you if the other person smokes?</Text>
+            <Text style={styles.modalTitle}>{t('profile.labelCarePartnerSmoking')}</Text>
             {(['yes', 'no'] as const).map((value) => {
               const isActive = form.cares_about_partner_smoking === value;
               return (
@@ -1024,7 +1097,7 @@ export default function ProfileScreen() {
               style={styles.modalClose}
               onPress={() => setIsCaresAboutPartnerSmokingModalVisible(false)}
             >
-              <Text style={styles.modalCloseText}>Cancel</Text>
+              <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1072,7 +1145,7 @@ export default function ProfileScreen() {
                 </View>
               )}
               <View style={styles.avatarEditBadge}>
-                <Text style={styles.avatarEditText}>Edit</Text>
+                <Text style={styles.avatarEditText}>{t('profile.edit')}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -1093,25 +1166,56 @@ export default function ProfileScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Mostrar nombre y edad de forma natural */}
-          <View style={styles.nameAgeContainer}>
-            <Text style={styles.nameAgeText}>
-              {profile?.name ?? user?.name ?? 'User'}
-              {profile?.birthDate && calculateAge(profile.birthDate) > 0
-                ? `, ${calculateAge(profile.birthDate)}`
-                : null}
-            </Text>
-            {form.city ? (
-              <View style={styles.locationContainer}>
-                <Text style={styles.locationText}>{`📍 ${form.city}`}</Text>
-              </View>
+          <Text style={styles.sectionTitle}>{t('profile.sectionBasicInfo')}</Text>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>{t('profile.labelName')}</Text>
+            <TextInput
+              style={[styles.input, formErrors.name ? styles.inputError : null]}
+              placeholder={t('profile.namePlaceholder')}
+              placeholderTextColor="#999"
+              value={form.name}
+              onChangeText={handleNameChange}
+              autoCapitalize="words"
+              maxLength={100}
+            />
+            {formErrors.name ? (
+              <Text style={styles.errorText}>{formErrors.name}</Text>
             ) : null}
           </View>
 
-          <Text style={styles.sectionTitle}>Basic information</Text>
+          <View style={styles.field}>
+            <Text style={styles.label}>{t('profile.labelCity')}</Text>
+            <TextInput
+              style={[styles.input, formErrors.city ? styles.inputError : null]}
+              placeholder={t('profile.cityPlaceholder')}
+              placeholderTextColor="#999"
+              value={form.city}
+              onChangeText={handleCityChange}
+              autoCapitalize="words"
+              maxLength={100}
+            />
+            {formErrors.city ? (
+              <Text style={styles.errorText}>{formErrors.city}</Text>
+            ) : null}
+          </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Gender</Text>
+            <Text style={styles.label}>{t('profile.labelBirthDate')}</Text>
+            <View style={styles.dateContainer}>
+              <BirthDatePicker
+                value={
+                  form.birthDate
+                    ? new Date(form.birthDate + 'T12:00:00')
+                    : new Date(1996, 0, 1)
+                }
+                onChange={handleBirthDateChange}
+              />
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>{t('profile.labelGender')}</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1135,7 +1239,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Looking for</Text>
+            <Text style={styles.label}>{t('profile.labelLookingFor')}</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1161,7 +1265,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Preferred age range</Text>
+            <Text style={styles.label}>{t('profile.labelPreferredAgeRange')}</Text>
             <AgeRangePicker
               minAge={form.min_age}
               maxAge={form.max_age}
@@ -1175,10 +1279,10 @@ export default function ProfileScreen() {
           </View>
 
           {/* Plan familiar */}
-          <Text style={styles.sectionTitle}>Family plans</Text>
+          <Text style={styles.sectionTitle}>{t('profile.sectionFamilyPlans')}</Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Do you have children?</Text>
+            <Text style={styles.label}>{t('profile.labelHasChildren')}</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1192,13 +1296,13 @@ export default function ProfileScreen() {
                   form.has_children !== null ? styles.selectValue : styles.selectPlaceholder
                 }
               >
-                {form.has_children === null ? 'Select' : form.has_children ? 'Yes' : 'No'}
+                {form.has_children === null ? t('common.select') : form.has_children ? t('register.yes') : t('register.no')}
               </Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Do you want to have children in the future?</Text>
+            <Text style={styles.label}>{t('profile.labelWantsChildren')}</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1218,7 +1322,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Does it matter to you if the other person has children?</Text>
+            <Text style={styles.label}>{t('profile.labelCarePartnerChildren')}</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1237,10 +1341,10 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.sectionTitle}>Important habits</Text>
+          <Text style={styles.sectionTitle}>{t('profile.sectionHabits')}</Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Do you smoke?</Text>
+            <Text style={styles.label}>{t('profile.labelSmoking')}</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1260,7 +1364,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Does it matter to you if the other person smokes?</Text>
+            <Text style={styles.label}>{t('profile.labelCarePartnerSmoking')}</Text>
             <TouchableOpacity
               style={[
                 styles.input,
@@ -1279,10 +1383,10 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.sectionTitle}>Bio</Text>
+          <Text style={styles.sectionTitle}>{t('profile.sectionBio')}</Text>
 
           <View style={styles.field}>
-            <Text style={styles.helperText}>Based on conversations</Text>
+            <Text style={styles.helperText}>{t('profile.bioBasedOnConversations')}</Text>
             <TextInput
               style={[
                 styles.input,
@@ -1290,7 +1394,7 @@ export default function ProfileScreen() {
                 styles.inputDisabled,
                 formErrors.bio ? styles.inputError : null,
               ]}
-              placeholder="Your profile will grow as you connect with other people."
+              placeholder={t('profile.bioPlaceholder')}
               value={form.bio}
               onChangeText={handleChange('bio')}
               multiline
@@ -1303,7 +1407,7 @@ export default function ProfileScreen() {
           <View style={styles.field}>
             <View style={styles.toggleContainer}>
               <Text style={styles.toggleLabel}>
-                Show my profile to others
+                {t('profile.showProfileToOthers')}
               </Text>
               <TouchableOpacity
                 style={[
@@ -1326,12 +1430,12 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
             <Text style={styles.toggleHelperText}>
-              If you turn this off, your bio won't be visible to others and you won't be able to see theirs.
+              {t('profile.showBioInFeedOff')}
             </Text>
           </View>
 
           <Text style={styles.autoSaveMessage}>
-            Changes are saved automatically.
+            {t('profile.autoSaveMessage')}
           </Text>
 
           <TouchableOpacity
@@ -1339,25 +1443,16 @@ export default function ProfileScreen() {
             onPress={() => router.push('/manifesto')}
             activeOpacity={0.7}
           >
-            <Text style={styles.manifestoLink}>Read the Wodates Manifesto</Text>
+            <Text style={styles.manifestoLink}>{t('profile.readManifesto')}</Text>
           </TouchableOpacity>
 
-          {/* Contact and Delete options */}
+          {/* Contact option */}
           <View style={styles.actionButtonsContainer}>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleContactUs}
             >
-              <Text style={styles.actionButtonText}>Contact us</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionButton, styles.deleteButton]}
-              onPress={handleDeleteAccount}
-            >
-              <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
-                Delete account
-              </Text>
+              <Text style={styles.actionButtonText}>{t('profile.contactUs')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1365,7 +1460,7 @@ export default function ProfileScreen() {
         {isLoading && (
           <View style={styles.overlay}>
             <ActivityIndicator size="large" color="#e91e63" />
-            <Text style={styles.loadingText}>Loading profile...</Text>
+            <Text style={styles.loadingText}>{t('profile.loadingProfile')}</Text>
           </View>
         )}
       </ScrollView>
@@ -1387,13 +1482,13 @@ export default function ProfileScreen() {
           >
             <Pressable style={styles.contactModalContent}>
               <Text style={styles.contactModalTitle}>
-                How can we help you?
+                {t('profile.contactModalTitle')}
               </Text>
 
               <View style={styles.textInputContainer}>
                 <TextInput
                   style={styles.contactTextInput}
-                  placeholder="Write your message here..."
+                  placeholder={t('profile.messagePlaceholder')}
                   value={contactMessage}
                   onChangeText={setContactMessage}
                   multiline
@@ -1402,18 +1497,18 @@ export default function ProfileScreen() {
                   maxLength={300}
                 />
                 <Text style={styles.characterCounter}>
-                  {contactMessage.length} / 300
+                  {t('profile.characterCount', { count: contactMessage.length })}
                 </Text>
                 {showValidationError && (
                   <Text style={styles.validationError}>
-                    The message must be at least 10 characters
+                    {t('profile.messageMinLength')}
                   </Text>
                 )}
               </View>
 
               {showToast && (
                 <Text style={styles.successMessage}>
-                  Your message has been sent successfully.
+                  {t('profile.messageSentSuccess')}
                 </Text>
               )}
 
@@ -1422,7 +1517,7 @@ export default function ProfileScreen() {
                   style={styles.contactCancelButton}
                   onPress={() => setIsContactModalVisible(false)}
                 >
-                  <Text style={styles.contactCancelButtonText}>Cancelar</Text>
+                  <Text style={styles.contactCancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -1442,7 +1537,7 @@ export default function ProfileScreen() {
                         : null,
                     ]}
                   >
-                    {isSubmitting ? 'Sending...' : 'Send'}
+                    {isSubmitting ? t('common.sending') : t('common.send')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1464,18 +1559,17 @@ export default function ProfileScreen() {
         >
           <Pressable style={styles.deleteModalContent}>
             <Text style={styles.deleteModalTitle}>
-              Are you sure you want to delete your account?
+              {t('profile.deleteAccountTitle')}
             </Text>
             <Text style={styles.deleteModalSubtext}>
-              This action cannot be undone. You will lose your profile, your matches
-              and your messages.
+              {t('profile.deleteAccountBody')}
             </Text>
             <View style={styles.deleteButtonContainer}>
               <TouchableOpacity
                 style={styles.deleteCancelButton}
                 onPress={() => setIsDeleteModalVisible(false)}
               >
-                <Text style={styles.deleteCancelButtonText}>No</Text>
+                <Text style={styles.deleteCancelButtonText}>{t('register.no')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -1486,7 +1580,7 @@ export default function ProfileScreen() {
                 disabled={isDeletingAccount}
               >
                 <Text style={styles.deleteConfirmButtonText}>
-                  {isDeletingAccount ? 'Deactivating...' : 'Yes'}
+                  {isDeletingAccount ? t('profile.deactivating') : t('profile.confirmDeactivate')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1653,6 +1747,9 @@ const styles = StyleSheet.create({
   multiline: {
     minHeight: 100,
     textAlignVertical: 'top',
+  },
+  dateContainer: {
+    marginBottom: 8,
   },
   button: {
     backgroundColor: '#e91e63',

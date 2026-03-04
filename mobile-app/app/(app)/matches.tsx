@@ -7,9 +7,10 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useMatchesStore, MatchWithUser } from '../../src/domain/stores/matchesStore';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
@@ -22,6 +23,7 @@ const API_URL = getApiUrl();
 
 export default function MatchesScreen() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const {
     matches,
     activeChatsCount,
@@ -81,7 +83,7 @@ export default function MatchesScreen() {
         setError(result.error.message);
         if (shouldShowLoader) {
           // API errors loading matches are system errors
-          notifySystem('Something went wrong', 'Try again', result.error, loadMatches);
+          notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), result.error, loadMatches);
         }
         // Don't return here - let finally block execute
         return;
@@ -113,7 +115,7 @@ export default function MatchesScreen() {
             }
           : {
               id: otherUserId,
-              name: 'User',
+              name: t('common.someone'),
             };
 
         return {
@@ -149,7 +151,7 @@ export default function MatchesScreen() {
           // Match is less than 30 seconds old
           setNewMatchNotification({
             matchId: newestMatch.id,
-            otherUserName: newestMatch.otherUser?.name ?? 'Someone',
+            otherUserName: newestMatch.otherUser?.name ?? t('common.someone'),
           });
           setShowMatchNotification(true);
         }
@@ -162,11 +164,10 @@ export default function MatchesScreen() {
       console.log('[MatchesScreen] Matches loaded successfully');
     } catch (error) {
       console.error('[MatchesScreen] Failed to load matches:', error);
-      const message = 'Network error. Please try again.';
+      const message = t('errors.networkError');
       setError(message);
       if (shouldShowLoader) {
-        // Network errors are system errors with retry
-        notifySystem('Something went wrong', 'Try again', error, loadMatches);
+        notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), error, loadMatches);
       }
     } finally {
       console.log('[MatchesScreen] Finally block executing, resetting loading state');
@@ -225,7 +226,7 @@ export default function MatchesScreen() {
       </View>
       <View style={styles.matchInfo}>
         <View style={styles.nameContainer}>
-          <Text style={styles.matchName}>{item.otherUser?.name ?? 'Unknown user'}</Text>
+          <Text style={styles.matchName}>{item.otherUser?.name ?? t('feed.unknownUser')}</Text>
           {item.unreadCount > 0 && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadText}>{item.unreadCount}</Text>
@@ -233,7 +234,7 @@ export default function MatchesScreen() {
           )}
         </View>
         <Text style={styles.lastMessage} numberOfLines={2}>
-          {item.lastMessage?.content || 'Start a conversation...'}
+          {item.lastMessage?.content || t('matches.startConversation')}
         </Text>
         <Text style={styles.timestamp}>
           {item.lastMessage?.createdAt 
@@ -257,7 +258,7 @@ export default function MatchesScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#e91e63" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>{t('matches.loading')}</Text>
       </View>
     );
   }
@@ -289,7 +290,7 @@ export default function MatchesScreen() {
       {matches.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#e91e63" />
-          <Text style={styles.loadingText}>Loading ...</Text>
+          <Text style={styles.loadingText}>{t('matches.loading')}</Text>
         </View>
       ) : (
         <FlatList 

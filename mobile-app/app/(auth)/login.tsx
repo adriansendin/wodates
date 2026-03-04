@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { ApiClient } from '../../src/data/api/apiClient';
 import { AuthApi } from '../../src/data/api/authApi';
@@ -38,6 +40,7 @@ const normalizeUser = (rawUser: Record<string, unknown>): User => {
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, setLoading, setError, isLoading, error } = useAuthStore();
@@ -61,10 +64,9 @@ export default function LoginScreen() {
       console.log('[Login] API response', result);
 
       if (!result.success) {
-        const message = result.error.message ?? "Couldn't sign in. Please check your credentials.";
+        const message = result.error.message ?? t('errors.signInError');
         setError(message);
-        // Credential errors are actionable - user can fix them
-        notifyActionable("Couldn't sign in", message, result.error);
+        notifyActionable(t('errors.somethingWentWrong'), message, result.error);
         return;
       }
 
@@ -84,10 +86,9 @@ export default function LoginScreen() {
       router.replace('/(app)/matches');
     } catch (err) {
       console.error('Login error', err);
-      const message = 'Network error. Please try again.';
+      const message = t('errors.networkError');
       setError(message);
-      // Network errors are system errors - user can only retry
-      notifySystem('Something went wrong', 'Try again', err, handleLogin);
+      notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), err, handleLogin);
     } finally {
       setLoading(false);
     }
@@ -115,20 +116,17 @@ export default function LoginScreen() {
                 style={styles.logoIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.logoText}>Wodates</Text>
+              <Text style={styles.logoText}>{t('app.title')}</Text>
             </View>
 
-            {/* Contextual copy: London Drop positioning */}
             <View style={styles.contextualBlock}>
-              <Text style={styles.contextualText}>London Drop</Text>
-              <Text style={styles.contextualText}>For people who are done with swipe culture.</Text>
+              <Text style={styles.contextualText}>{t('manifesto.taglineAffinity')}</Text>
             </View>
-
 
             <View style={styles.form}>
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -138,7 +136,7 @@ export default function LoginScreen() {
 
               <TextInput
                 style={styles.input}
-                placeholder="Password"
+                placeholder={t('auth.passwordPlaceholder')}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -151,10 +149,8 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 disabled={isLoading}
               >
-                <Text style={styles.primaryButtonText}>{isLoading ? 'Signing in...' : 'Sign in'}</Text>
+                <Text style={styles.primaryButtonText}>{isLoading ? t('auth.signingIn') : t('auth.login')}</Text>
               </TouchableOpacity>
-
-              <Text style={styles.caption}>London only · Drop #1 · March 8</Text>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
               

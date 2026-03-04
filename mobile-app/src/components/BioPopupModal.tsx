@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   View,
@@ -21,6 +22,7 @@ export const BioPopupModal: React.FC<BioPopupModalProps> = ({
   bio,
   onClose,
 }) => {
+  const { t } = useTranslation('common');
   return (
     <Modal
       visible={visible}
@@ -33,12 +35,12 @@ export const BioPopupModal: React.FC<BioPopupModalProps> = ({
           <TouchableWithoutFeedback>
             <View style={styles.modalContainer}>
               <View style={styles.header}>
-                <Text style={styles.title}>Bio</Text>
+                <Text style={styles.title}>{t('feed.bio')}</Text>
                 <TouchableOpacity
                   onPress={onClose}
                   style={styles.closeButton}
                   accessibilityRole="button"
-                  accessibilityLabel="Close"
+                  accessibilityLabel={t('accessibility.close')}
                 >
                   <X size={24} color="#666" />
                 </TouchableOpacity>
@@ -51,11 +53,11 @@ export const BioPopupModal: React.FC<BioPopupModalProps> = ({
                   <>
                     <Text style={styles.bioText}>{bio}</Text>
                     <Text style={styles.aiGeneratedLabel}>
-                      Based on conversations
+                      {t('feed.basedOnConversations')}
                     </Text>
                   </>
                 ) : (
-                  <Text style={styles.emptyText}>No bio available</Text>
+                  <Text style={styles.emptyText}>{t('feed.noBioAvailable')}</Text>
                 )}
               </ScrollView>
             </View>

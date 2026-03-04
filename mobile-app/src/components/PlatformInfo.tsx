@@ -7,20 +7,19 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface PlatformInfoProps {
   message?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Componente que muestra información específica de plataforma
- * Útil para indicar cuando ciertas funcionalidades no están disponibles en web
- */
 export const PlatformInfo: React.FC<PlatformInfoProps> = ({
-  message = 'You can select a photo from your computer',
+  message,
   style,
 }) => {
+  const { t } = useTranslation('common');
+  const displayMessage = message ?? t('common.photoFromComputer');
   if (Platform.OS !== 'web') {
     return null; // No mostrar nada en móvil
   }
@@ -28,7 +27,7 @@ export const PlatformInfo: React.FC<PlatformInfoProps> = ({
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.icon}>💡</Text>
-      <Text style={styles.text}>{message}</Text>
+      <Text style={styles.text}>{displayMessage}</Text>
     </View>
   );
 };

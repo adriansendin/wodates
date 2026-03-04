@@ -138,20 +138,11 @@ export class SupabaseAuthService implements AuthService {
         );
       }
 
-      // Validar que location sea un string válido y no esté vacío
-      if (
-        !registerRequest.location ||
-        typeof registerRequest.location !== 'string' ||
-        registerRequest.location.trim() === ''
-      ) {
-        console.error(
-          '[SupabaseAuthService] Invalid location:',
-          registerRequest.location
-        );
-        throw new InternalError(
-          'Location is required and must be a valid non-empty string'
-        );
-      }
+      // location es opcional; si viene vacío, city se guarda como null (ciudad en blanco por defecto)
+      const locationTrimmed =
+        typeof registerRequest.location === 'string'
+          ? registerRequest.location.trim()
+          : '';
 
       // Validar formato de birthDate
       if (
@@ -174,7 +165,7 @@ export class SupabaseAuthService implements AuthService {
       // Preparar valores validados (asegurar que son strings válidos)
       const validatedGender = registerRequest.gender.trim();
       const validatedLookingFor = registerRequest.lookingFor.trim();
-      const validatedCity = registerRequest.location.trim();
+      const validatedCity = locationTrimmed || null; // ciudad en blanco por defecto si no se envía
       const validatedBirthDate = registerRequest.birthDate;
 
       // Log para debugging
@@ -190,8 +181,7 @@ export class SupabaseAuthService implements AuthService {
       );
 
       // Create profile in public.users without name and email (those are in auth.users)
-      // Explicitly set show_bio_in_feed to true (boolean, not null)
-      // gender, looking_for, city y birthDate son REQUERIDOS - usar valores validados
+      // city puede ser null (ciudad en blanco por defecto para cuentas nuevas)
       const { data, error } = await this.adminClient
         .from('users')
         .insert({
@@ -199,8 +189,8 @@ export class SupabaseAuthService implements AuthService {
           // email and name are no longer stored in public.users
           birthDate: validatedBirthDate, // REQUERIDO - ya validado arriba (ISO datetime string)
           gender: validatedGender, // REQUERIDO - ya validado arriba (string no vacío)
-          city: validatedCity, // REQUERIDO - ya validado arriba (string no vacío)
-          country: registerRequest.country || 'Spain', // Default to Spain
+          city: validatedCity, // null si no se indicó ciudad (en blanco por defecto)
+          country: registerRequest.country?.trim() || null,
           looking_for: validatedLookingFor, // REQUERIDO - ya validado arriba (string no vacío)
           show_bio_in_feed: true, // New users should show bio in feed by default
         })

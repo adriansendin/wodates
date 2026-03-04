@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
 import { useRegistrationStore } from '../../../src/domain/stores/registrationStore';
 import { ProgressBar } from '../../../src/components/ProgressBar';
 
 export default function Step6Screen() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const { data, updateData, nextStep, previousStep } = useRegistrationStore();
   
   const [smoking, setSmoking] = useState<'no' | 'occasionally' | 'regularly' | null>(data.smoking);
@@ -41,15 +44,13 @@ export default function Step6Screen() {
         <ProgressBar totalSteps={5} currentStep={4} />
 
         <View style={styles.content}>
-          <Text style={styles.introText}>
-            Some habits matter in a relationship.
-          </Text>
+          <Text style={styles.introText}>{t('register.habitsIntro')}</Text>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About you</Text>
+            <Text style={styles.sectionTitle}>{t('register.aboutYou')}</Text>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>Do you smoke?</Text>
+              <Text style={styles.questionText}>{t('register.doYouSmoke')}</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -65,7 +66,7 @@ export default function Step6Screen() {
                     styles.optionText,
                     smoking === 'no' && styles.optionTextSelected,
                   ]}>
-                    No
+                    {t('register.smokingNo')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -82,7 +83,7 @@ export default function Step6Screen() {
                     styles.optionText,
                     smoking === 'occasionally' && styles.optionTextSelected,
                   ]}>
-                    Occasionally
+                    {t('register.smokingOccasionally')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -99,7 +100,7 @@ export default function Step6Screen() {
                     styles.optionText,
                     smoking === 'regularly' && styles.optionTextSelected,
                   ]}>
-                    Yes, regularly
+                    {t('register.smokingRegularly')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -107,10 +108,10 @@ export default function Step6Screen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About the person you're looking for</Text>
+            <Text style={styles.sectionTitle}>{t('register.aboutPartner')}</Text>
 
             <View style={styles.questionContainer}>
-              <Text style={styles.questionText}>Does it matter to you if the other person smokes?</Text>
+              <Text style={styles.questionText}>{t('register.carePartnerSmoke')}</Text>
               <View style={styles.optionsContainer}>
                 <TouchableOpacity
                   style={[
@@ -126,7 +127,7 @@ export default function Step6Screen() {
                     styles.optionText,
                     caresAboutPartnerSmoking === 'yes' && styles.optionTextSelected,
                   ]}>
-                    Yes, I prefer they don't smoke
+                    {t('register.partnerNoSmoke')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -143,16 +144,14 @@ export default function Step6Screen() {
                     styles.optionText,
                     caresAboutPartnerSmoking === 'no' && styles.optionTextSelected,
                   ]}>
-                    It doesn't matter to me
+                    {t('register.partnerSmokeDontCare')}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
 
-          <Text style={styles.infoText}>
-            You can change these preferences later.
-          </Text>
+          <Text style={styles.infoText}>{t('register.preferencesLater')}</Text>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity 
@@ -169,11 +168,11 @@ export default function Step6Screen() {
               <Text style={[
                 styles.buttonText,
                 (smoking === null || caresAboutPartnerSmoking === null) && styles.buttonTextDisabled
-              ]}>Continue</Text>
+              ]}>{t('common.continue')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
           </View>
         </View>
