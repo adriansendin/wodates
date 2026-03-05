@@ -6,26 +6,19 @@ import { MessageRepository } from '../../domain/repositories/MessageRepository';
 import { DocLoveHelper } from './doc-love-helper';
 import { Match } from '../../domain/entities/Match';
 
-/** Welcome messages from Doc Love (EN). */
 const WELCOME_MESSAGES_EN: string[] = [
   "Hi — I'm Doc Love.",
-  'Wodates is for intentional dating — real compatibility, not noise. You\'ll have one active human chat at a time.',
-  "Let's build your profile. 3 quick questions:",
-  "1. What do you do for work — and do you enjoy it?",
-  "2. What does a great weekend look like for you?",
-  "3. What do you enjoy doing regularly — not once a year, but often?",
-  "When you're done, tap the button below to generate your profile.",
+  "Wodates is for intentional dating — real compatibility, not noise. You'll have one active human chat at a time.",
+  "Let's build your profile. You could start by telling me what you do for work and whether you enjoy it, or for example what a great weekend looks like for you, or the kind of things you genuinely enjoy doing regularly in your day-to-day life.",
+  "Answer however you like, short or long — I'll process everything just fine. When you're done, tap the button below and I'll generate your profile.",
 ];
 
 /** Welcome messages from Doc Love (ES). */
 const WELCOME_MESSAGES_ES: string[] = [
   "Hola — soy Doc Love.",
   "Wodates es para conocer gente con intención: compatibilidad real, sin ruido. Solo tendrás un chat humano activo a la vez.",
-  "Vamos a preparar tu perfil con 3 preguntas rápidas:",
-  "1. ¿A qué te dedicas? ¿Lo disfrutas?",
-  "2. ¿Qué sería para ti un fin de semana perfecto?",
-  "3. ¿Qué cosas te gusta hacer a menudo, en tu día a día?",
-  "Cuando termines, pulsa el botón de abajo y generaré tu perfil.",
+  "Vamos a preparar tu perfil. Puedes empezar contándome a qué te dedicas y si te gusta, o por ejemplo cómo sería para ti un fin de semana perfecto, o qué cosas disfrutas hacer con frecuencia en tu día a día.",
+  "Respóndeme como quieras, corto o largo — yo lo procesaré todo sin problema. Cuando termines, pulsa el botón de abajo y generaré tu perfil.",
 ];
 
 /**

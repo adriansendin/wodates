@@ -14,8 +14,8 @@
  *   # Delete a specific user by ID
  *   npx tsx scripts/testing_afinnity/delete-test-users.ts --id <user-id>
  * 
- *      # Delete a specific user by email (deletes everything: messages, interactions, user, etc.)
-   *   npx tsx scripts/testing_afinnity/delete-test-users.ts user@example.com
+ *   # Delete users by email list (emails are defined in EMAILS_TO_DELETE array below)
+ *   npx tsx scripts/testing_afinnity/delete-test-users.ts --from-list
  * 
  * Environment variables required:
  *   - SUPABASE_URL
@@ -24,6 +24,55 @@
 
 import 'dotenv/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Paste emails below (one per line). No quotes or commas needed.
+ * You can paste from a table (e.g. with |) — pipes and extra spaces are stripped.
+ * Then run: npx tsx scripts/testing_afinnity/delete-test-users.ts --from-list
+ */
+const EMAILS_TO_DELETE_RAW = `
+leo@example.com
+daniel@example.com
+fran@example.com
+marco@example.com
+sophie@example.com
+noah@example.com
+chloe@example.com
+nadim@example.com
+arjun@example.com
+maya@example.com
+jordan@example.com
+peter@example.com
+elin@example.com
+ibrahim@example.com
+samira@example.com
+owena@example.com
+leila@example.com
+tomasa@example.com
+martin@example.com
+amin@example.com
+test1@example.com
+test0@example.com
+testa1@example.com
+tetsmarzo1@example.com
+testmarzoespanol@example.com
+testmarzoingles@example.com
+testmarzoespanol2@example.com
+testmarzo2@example.com
+test200@example.com
+tets201@example.com
+test5marzo1sp@example.com
+`;
+
+/** Parses raw pasted text into email list: split by newline, trim, strip table pipes, keep lines with @ */
+function parseEmailsFromRaw(raw: string): string[] {
+  return raw
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*\|?\s*|\s*\|?\s*$/g, '').trim())
+    .filter((line) => line.length > 0 && line.includes('@'));
+}
+
+const EMAILS_TO_DELETE = parseEmailsFromRaw(EMAILS_TO_DELETE_RAW);
 
 type SupabaseConfig = {
   url: string;
@@ -386,16 +435,10 @@ async function deleteUserData(
   };
 }
 
-function isEmail(str: string): boolean {
-  // Simple email validation: contains @ and has at least one character before and after
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
-}
-
 function parseArguments(): {
-  mode: 'all' | 'byName' | 'byId' | 'byEmail';
+  mode: 'all' | 'byName' | 'byId' | 'byEmailFromList';
   name?: string;
   id?: string;
-  email?: string;
 } {
   const args = process.argv.slice(2);
 
@@ -403,23 +446,25 @@ function parseArguments(): {
     return { mode: 'all' };
   }
 
-  // Check for --id flag
-  const idIndex = args.indexOf('--id');
-  if (idIndex !== -1 && args[idIndex + 1]) {
-    return { mode: 'byId', id: args[idIndex + 1] };
+  // Use email list defined in EMAILS_TO_DELETE array in this file
+  if (args.includes('--from-list')) {
+    return { mode: 'byEmailFromList' };
   }
 
-  // Check if first argument is an email
-  if (isEmail(args[0])) {
-    return { mode: 'byEmail', email: args[0] };
+  // Check for --id flag
+  const idIndex = args.indexOf('--id');
+  const idVal = idIndex !== -1 ? args[idIndex + 1] : undefined;
+  if (idVal) {
+    return { mode: 'byId', id: idVal };
   }
 
   // Otherwise, treat first argument as name
-  return { mode: 'byName', name: args[0] };
+  const nameVal = args[0];
+  return { mode: 'byName', name: nameVal ?? '' };
 }
 
 async function deleteTestUsers() {
-  const { mode, name, id, email } = parseArguments();
+  const { mode, name, id } = parseArguments();
 
   const config = getSupabaseConfig();
   const client = createClient(config.url, config.serviceRoleKey, {
@@ -435,17 +480,27 @@ async function deleteTestUsers() {
     let testUsers: TestUser[] = [];
 
     // Find users based on mode
-    if (mode === 'byEmail') {
-      if (!email) {
-        throw new Error('Email is required when using email mode');
-      }
-      console.log(`🔍 Searching for user by email: ${email}...`);
-      const user = await findUserByEmail(client, email);
-      if (!user) {
-        console.log(`❌ User with email "${email}" not found.\n`);
+    if (mode === 'byEmailFromList') {
+      const emails = EMAILS_TO_DELETE.filter((e) => typeof e === 'string' && e.trim().length > 0);
+      if (emails.length === 0) {
+        console.log('❌ EMAILS_TO_DELETE is empty. Add emails to the array in this file and run with --from-list.\n');
         return;
       }
-      testUsers = [user];
+      const seenIds = new Set<string>();
+      for (const email of emails) {
+        const user = await findUserByEmail(client, email.trim());
+        if (!user) {
+          console.log(`⚠️  User with email "${email}" not found, skipping.\n`);
+          continue;
+        }
+        if (seenIds.has(user.id)) {
+          console.log(`⚠️  Duplicate user ${user.email} (ID: ${user.id}), skipping.\n`);
+          continue;
+        }
+        seenIds.add(user.id);
+        testUsers.push(user);
+      }
+      console.log(`🔍 Resolved ${testUsers.length}/${emails.length} user(s) from EMAILS_TO_DELETE.\n`);
     } else if (mode === 'byId') {
       if (!id) {
         throw new Error('User ID is required when using --id flag');
@@ -492,11 +547,12 @@ async function deleteTestUsers() {
       error?: string;
     }> = [];
 
-    for (let i = 0; i < testUsers.length; i++) {
-      const user = testUsers[i];
+    let index = 0;
+    for (const user of testUsers) {
+      index++;
       try {
         console.log(
-          `Deleting user ${i + 1}/${testUsers.length}: ${user.displayName} (${user.email})...`,
+          `Deleting user ${index}/${testUsers.length}: ${user.displayName} (${user.email})...`,
         );
 
         // Step 1: Delete user-related data (messages, interactions, blocked users, AI profiles)

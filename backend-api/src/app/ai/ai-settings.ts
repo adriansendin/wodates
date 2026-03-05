@@ -104,7 +104,7 @@ export const AIConfig = {
    * This avoids useless LLM calls and ensures stable UX for users with incomplete profiles
    */
   affinitySentencesFallback: [
-    'Initial affinity is low—conversation will sharpen recommendations.',
+    'La afinidad inicial es baja—la conversación afinará las recomendaciones.',
   ],
 
   /**
@@ -121,22 +121,22 @@ export const AIConfig = {
        * Base prompt template for affinity sentences
        * The backend will inject the user profiles into this template
        */
-      basePrompt: `Write EXACTLY 1 sentence (max 30 words) explaining why they might align.
+      basePrompt: `Escribe EXACTAMENTE 1 frase (máx. 30 palabras) explicando por qué podrían encajar.
 
-RULE #1: Do NOT invent anything. Use ONLY information explicitly supported by BOTH profiles.
+REGLA #1: NO inventes nada. Usa SOLO información explícitamente respaldada por AMBOS perfiles.
 
-CRITICAL PRIORITY:
-- If shared CONCRETE habits, routines, activities, or lifestyle patterns exist (e.g. reading, walking, daily rhythms, social intensity), you MUST prioritize them over abstract traits or values.
-- Use abstract values (e.g. emotional maturity, honesty, seriousness) ONLY if no concrete shared behaviors exist, or to complement them briefly.
+PRIORIDAD CRÍTICA:
+- Si existen hábitos, rutinas, actividades o patrones de estilo de vida CONCRETOS compartidos (p. ej., leer, caminar, ritmos diarios, intensidad social), DEBES priorizarlos frente a rasgos o valores abstractos.
+- Usa valores abstractos (p. ej., madurez emocional, honestidad, seriedad) SOLO si no hay conductas compartidas concretas, o para complementarlas muy brevemente.
 
-Other rules:
-- NEVER mention shared location, city, neighborhood, or geographic proximity, even if both profiles clearly match on it.
-- A shared point may be the same theme expressed differently ONLY if clearly supported by BOTH.
-- Avoid vague summaries such as “they are similar” or “they share values” without specifying how.
-- Avoid names, companies, exact places, or sensitive details.
-- If fewer than 2 clear shared points exist, output EXACTLY:
-Initial affinity is low—conversation will sharpen recommendations.
-- Output ONLY the sentence. No extra text. No explanation.
+Otras reglas:
+- NUNCA menciones ubicación compartida, ciudad, barrio o proximidad geográfica, incluso si ambos perfiles coinciden claramente.
+- Un punto compartido puede ser el mismo tema expresado de forma distinta SOLO si está claramente respaldado por AMBOS.
+- Evita resúmenes vagos como “son similares” o “comparten valores” sin especificar cómo.
+- Evita nombres, empresas, lugares exactos o detalles sensibles.
+- Si hay menos de 2 puntos claros en común, escribe EXACTAMENTE:
+La afinidad inicial es baja—la conversación afinará las recomendaciones.
+- Devuelve SOLO la frase. Sin texto extra. Sin explicación.
 `,
 
       /**
@@ -149,17 +149,17 @@ Initial affinity is low—conversation will sharpen recommendations.
       ): string => {
         return `${AIConfig.prompt.affinitySentences.basePrompt}
 
-CURRENT USER PROFILE (the one viewing the feed):
+PERFIL DEL USUARIO ACTUAL (quien está viendo el feed):
 """
 ${currentUserProfile}
 """
 
-CANDIDATE PROFILE (the one shown in the feed):
+PERFIL DEL CANDIDATO (el mostrado en el feed):
 """
 ${candidateUserProfile}
 """
 
-Now generate the sentence based strictly on these profiles.`;
+Ahora genera la frase basándote estrictamente en estos perfiles.`;
       },
     },
 
@@ -170,148 +170,147 @@ Now generate the sentence based strictly on these profiles.`;
     systemInstructions: (): string => {
       const seedTopics = [
         // Culture & curiosity
-        'books, series, films, podcasts, or content you enjoy lately',
-        'the last thing that really grabbed your attention (topic, book, series, channel)',
-        'a cultural plan you genuinely enjoy (concerts, museums, cinema, live shows)',
-        'a “different” plan you’d like to do soon, outside your usual routine',
-        'a niche interest you could talk about for hours',
-        'how curious you are day to day: learning vs comfort',
-        'your relationship with trying new things vs sticking to favourites',
-      
+        'libros, series, pelis, podcasts o contenido que te haya gustado últimamente',
+        'lo último que te enganchó de verdad (tema, libro, serie, canal)',
+        'un plan cultural que disfrutes de verdad (conciertos, museos, cine, espectáculos)',
+        'un plan “diferente” que te gustaría hacer pronto, fuera de tu rutina',
+        'un interés de nicho del que podrías hablar durante horas',
+        'cuánta curiosidad tienes en el día a día: aprender vs comodidad',
+        'tu relación con probar cosas nuevas vs quedarte con tus favoritos',
+
         // Current life context
-        'what season of life you’re in right now (calm, intense, changing things)',
-        'what’s been taking most of your headspace lately (in a good way)',
-        'what gives your days meaning these months',
-        'what a normal week looks like for you right now',
-        'what you’d want someone to understand about your current pace',
-        'what kind of relationship pace realistically fits your life right now',
-        'what you want to change in your day-to-day over the next year',
-      
+        'en qué etapa de vida estás ahora (calma, intensidad, cambios)',
+        'qué te ocupa más la cabeza últimamente (en el buen sentido)',
+        'qué da sentido a tus días estos meses',
+        'cómo es una semana normal para ti ahora mismo',
+        'qué te gustaría que alguien entendiera sobre tu ritmo actual',
+        'qué ritmo de relación encaja de forma realista con tu vida ahora',
+        'qué quieres cambiar en tu día a día durante el próximo año',
+
         // Work & life direction
-        'what role work plays in your life (medium vs major)',
-        'what you enjoy most about your work or daily tasks',
-        'how you like to balance ambition and personal life',
-        'whether you prefer stability or change in life',
-        'what “good progress” looks like for you in the next year',
-        'what kind of life you picture in 2–3 years (pace, home, priorities)',
-        'how you handle busy periods vs quieter periods',
-      
+        'qué papel juega el trabajo en tu vida (medio vs principal)',
+        'qué es lo que más disfrutas de tu trabajo o tareas diarias',
+        'cómo equilibras ambición y vida personal',
+        'si prefieres estabilidad o cambio en la vida',
+        'qué es “progreso” para ti durante el próximo año',
+        'cómo te imaginas tu vida en 2–3 años (ritmo, hogar, prioridades)',
+        'cómo llevas épocas muy ocupadas vs más tranquilas',
+
         // Friends & real social life
-        'your typical plan with friends (home, bar, activity, something different)',
-        'your social rhythm (often vs less often but meaningful)',
-        'how wide vs deep your circle is (inner circle vs many acquaintances)',
-        'what you value most in friendships (loyalty, humour, honesty, support)',
-        'your “role” in groups (organiser vs joiner vs glue)',
-        'how you feel after social plans (energised vs need to recharge)',
-      
+        'tu plan típico con amigos (casa, bar, actividad, algo distinto)',
+        'tu ritmo social (a menudo vs menos pero con significado)',
+        'si tu círculo es más amplio o más profundo (íntimos vs muchos conocidos)',
+        'qué valoras más en amistades (lealtad, humor, honestidad, apoyo)',
+        'tu “rol” en grupos (organizador, te sumas, pegamento)',
+        'cómo te sientes después de planes sociales (energía vs recargar)',
+
         // Family & close bonds
-        'who you feel closest to in your family',
-        'what family meals feel like (calm, intense, funny, quiet)',
-        'how your family handles closeness (talk it out vs each to their own)',
-        'a family tradition you’d want to keep long-term',
-        'how often you like seeing family (often vs sometimes but quality time)',
-        'what you learned from your family dynamics about relationships',
-      
+        'con quién te sientes más cercano en tu familia',
+        'cómo son las comidas familiares (calmas, intensas, divertidas, silenciosas)',
+        'cómo maneja tu familia la cercanía (hablarlo vs cada uno a lo suyo)',
+        'una tradición familiar que te gustaría mantener a largo plazo',
+        'cada cuánto te gusta ver a tu familia (a menudo vs a veces pero con calidad)',
+        'qué aprendiste de tu familia sobre las relaciones',
+
         // Home & living together
-        'your ideal home vibe (calm refuge vs lively and social)',
-        'your natural level of tidiness (tidy, organised chaos, depends)',
-        'your non-negotiables at home (quiet, cleanliness, cooking, music, routines)',
-        'your “cosy corner” at home and how you unwind',
-        'what would slowly annoy you when sharing a space',
-        'how you feel about living together (exciting vs big step)',
-        'how you like to share space (together but independent vs very blended)',
-      
+        'tu ambiente ideal de hogar (refugio tranquilo vs vivo y social)',
+        'tu nivel natural de orden (ordenado, caos organizado, depende)',
+        'tus no-negociables en casa (silencio, limpieza, cocinar, música, rutinas)',
+        'tu “rincón” en casa y cómo desconectas',
+        'qué te iría molestando poco a poco al compartir espacio',
+        'cómo te sientes con vivir juntos (emocionante vs gran paso)',
+        'cómo te gusta compartir espacio (juntos pero independientes vs muy integrados)',
+
         // Everyday habits at home
-        'your night routine (screens, reading, sleep habits)',
-        'your minimum standard of order/cleanliness to feel comfortable',
-        'small daily rituals that make you feel settled',
-        'how you like mornings and evenings to feel',
-        'how you recharge after a long day',
-        'how you handle chores and responsibilities day to day',
-      
+        'tu rutina de noche (pantallas, lectura, hábitos de sueño)',
+        'tu estándar mínimo de orden/limpieza para sentirte cómodo',
+        'pequeños rituales diarios que te asientan',
+        'cómo te gusta que se sientan mañanas y noches',
+        'cómo recargas después de un día largo',
+        'cómo llevas tareas y responsabilidades en el día a día',
+
         // Health & self-care
-        'a habit you’d like to improve this year',
-        'what self-care looks like for you (realistic, not ideal)',
-        'how you handle stress in practice (what actually helps)',
-        'your natural energy style (active vs slower pace)',
-        'whether you’re more of an early riser or night owl',
-        'what helps you feel grounded when life is chaotic',
-        'how you relate to health routines (easy vs effortful)',
-      
+        'un hábito que te gustaría mejorar este año',
+        'qué es el autocuidado para ti (realista, no ideal)',
+        'cómo gestionas el estrés en la práctica (qué te funciona)',
+        'tu estilo natural de energía (activo vs ritmo más lento)',
+        'si eres más de madrugar o trasnochar',
+        'qué te ayuda a sentirte centrado cuando la vida está caótica',
+        'cómo te llevas con las rutinas de salud (fácil vs esfuerzo)',
+
         // Humour & how you enjoy life
-        'what reliably makes you laugh even when tired',
-        'your humour style (absurd, sarcastic, dark, silly, smart)',
-        'whether you warm up slowly or joke around quickly',
-        'playful teasing: enjoyable or annoying for you',
-        'a plan you always enjoy, no matter what',
-        'how you like to have fun without it feeling forced',
-      
+        'qué te hace reír incluso cuando estás cansado',
+        'tu estilo de humor (absurdo, sarcástico, negro, tonto, inteligente)',
+        'si te sueltas rápido o tardas en bromear',
+        'teasing juguetón: ¿te gusta o te molesta?',
+        'un plan que siempre disfrutas, pase lo que pase',
+        'cómo te gusta divertirte sin que se sienta forzado',
+
         // Communication
-        'your ideal messaging rhythm (daily vs more space)',
-        'what annoys you in chats (slow replies, one-word answers, too many messages)',
-        'your preference for texts vs voice notes vs calls',
-        'how you feel about small rituals like “good morning” texts',
-        'your pace preference: meet soon vs chat for a while first',
-        'how you like to resolve misunderstandings (fast vs need time)',
-        'what good communication feels like to you day to day',
-      
+        'tu ritmo ideal de mensajes (a diario vs más espacio)',
+        'qué te molesta en los chats (respuestas lentas, monosílabos, exceso)',
+        'preferencia por texto vs notas de voz vs llamadas',
+        'qué opinas de rituales como el “buenos días” por mensaje',
+        'tu ritmo: quedar pronto vs chatear un tiempo antes',
+        'cómo te gusta resolver malentendidos (rápido vs necesitas tiempo)',
+        'qué es buena comunicación para ti en el día a día',
+
         // Conflict & repair
-        'how you prefer to handle tension (talk now vs cool off first)',
-        'your “hard no’s” in conflict (raised voices, silence, sarcasm, blame)',
-        'what helps you feel safe during disagreements',
-        'how you repair after a bad moment (apology, space, action)',
-        'what you need from someone when you’re stressed or upset',
-      
+        'cómo prefieres manejar tensión (hablar ya vs enfriar antes)',
+        'tus “no” en conflicto (gritos, silencio, sarcasmo, culpar)',
+        'qué te hace sentir seguro durante un desacuerdo',
+        'cómo reparas después de un mal momento (disculpa, espacio, acción)',
+        'qué necesitas de alguien cuando estás estresado o mal',
+
         // Boundaries & deal-breakers
-        'two behaviours that feel disrespectful to you in a relationship',
-        'what you need day to day to feel at ease (clarity, space, plans, messages)',
-        'a dynamic you never want to repeat from the past',
-        'what turns you off quickly when getting to know someone',
-        'a habit in someone else that would be hard to live with',
-        'your personal boundaries around time, space, and independence',
-      
+        'dos comportamientos que te parecen irrespetuosos en pareja',
+        'qué necesitas día a día para estar a gusto (claridad, espacio, planes, mensajes)',
+        'una dinámica que no quieres repetir del pasado',
+        'qué te corta el interés rápido al conocer a alguien',
+        'un hábito en otra persona que te costaría convivir',
+        'tus límites personales sobre tiempo, espacio e independencia',
+
         // Commitment & long-term
-        'what “being serious” means to you after a few months',
-        'how you imagine building a life together (shared home vs separate homes)',
-        'your comfort with closeness vs independence long-term',
-        'what commitment looks like in practice for you (time, priorities, consistency)',
-      
+        'qué significa para ti “ser serio” después de unos meses',
+        'cómo imaginas construir una vida juntos (hogar compartido vs separado)',
+        'tu comodidad con cercanía vs independencia a largo plazo',
+        'qué es compromiso en la práctica para ti (tiempo, prioridades, constancia)',
+
         // Dates & first impressions
-        'your ideal first date vibe (coffee, walk, dinner, something fun)',
-        'quick vibe-check vs longer first date: what suits you',
-        'whether you go deep early or keep it light at first',
-        'what you like to happen after a great first date',
-        'small signals that make you think “there’s something here”',
-      
+        'tu primera cita ideal (café, paseo, cena, algo divertido)',
+        'vibe-check rápido vs primera cita larga: qué te va mejor',
+        'si sueles ir profundo pronto o mantenerlo ligero al principio',
+        'qué te gusta que pase después de una gran primera cita',
+        'señales pequeñas que te hacen pensar “aquí hay algo”',
+
         // Nights out & downtime
-        'your default relaxed plan (quiet, outdoors, drinks, staying in)',
-        'going out dancing vs quiet conversation: what you prefer',
-        'your relationship with alcohol in social life (a lot vs almost none)',
-        'how you like to spend downtime when you’re low-energy',
-        'what a good weekend feels like for you (recharge vs plans)',
-      
+        'tu plan relajado por defecto (tranquilo, aire libre, algo de beber, quedarse en casa)',
+        'salir a bailar vs conversación tranquila: qué prefieres',
+        'tu relación con el alcohol en tu vida social (mucho vs casi nada)',
+        'cómo te gusta pasar el rato cuando tienes poca energía',
+        'qué es un buen fin de semana para ti (recargar vs planes)',
+
         // Money & spending style
-        'your spending style (saver, experiences, balanced)',
-        'how you like to plan spending (structured vs spontaneous)',
-        'simple plans vs treating yourself often: what feels natural',
-        'what you happily spend on without guilt',
-        'what you’d do with extra money tomorrow (save vs turn it into a plan)',
-      
+        'tu estilo de gasto (ahorrador, experiencias, equilibrado)',
+        'cómo te gusta planificar gastos (estructurado vs espontáneo)',
+        'planes sencillos vs caprichos frecuentes: qué te sale natural',
+        'en qué gastas sin culpa',
+        'qué harías con dinero extra mañana (ahorrar vs convertirlo en un plan)',
+
         // Pets & animals
-        'pets in your life (have, want, not for you)',
-        'dog person vs cat person vs neither',
-        'how you feel about living in a home with pets (plus vs hassle)',
-        'a funny or sweet animal story (if you have one)',
-        'whether someone being very into pets is a plus for you',
-      
+        'mascotas en tu vida (tienes, quieres, no te encajan)',
+        'más de perros, de gatos o ninguno',
+        'cómo te sientes viviendo en una casa con mascotas (plus vs engorro)',
+        'una historia graciosa o tierna con animales (si tienes)',
+        'si que alguien sea muy de mascotas es un plus para ti',
+
         // Relationship logistics & pace
-        'your ideal closeness rhythm (how many days a week you’d like to see a partner)',
-        'how local vs city-wide you like to live your life (neighbourhood vs whole city)',
-        'weekday plans vs mostly keeping plans for weekends',
-        'what travel time feels reasonable for meeting up',
-        'how you like to balance independence with togetherness',
+        'tu ritmo ideal de cercanía (cuántos días a la semana te gustaría ver a tu pareja)',
+        'si vives la vida más “local” o te mueves por toda la ciudad',
+        'planes entre semana vs reservar planes para el finde',
+        'qué tiempo de desplazamiento te parece razonable para quedar',
+        'cómo equilibras independencia y estar juntos',
       ];
-      
 
       const getDocLoveSeedTopic = (): string => {
         const randomIndex = Math.floor(Math.random() * seedTopics.length);
@@ -320,21 +319,21 @@ Now generate the sentence based strictly on these profiles.`;
 
       const seedTopic = getDocLoveSeedTopic();
 
-      return `You are Doc Love, a tool that helps understand the user to find a compatible, serious long-term relationship.
-You are not a person and you do not have personal experiences.
+      return `Eres Doc Love, una herramienta que ayuda a entender al usuario para encontrar una relación compatible y seria a largo plazo.
+No eres una persona y no tienes experiencias personales.
 
-For this turn, if the user message contains a clear topic, stay on that topic and ask one deeper follow-up question.
-If the user message is just a greeting, very short, or asks to change the question, start a new topic inspired by: ${seedTopic}.
+En este turno, si el mensaje del usuario contiene un tema claro, mantente en ese tema y haz una pregunta de seguimiento más profunda.
+Si el mensaje del usuario es solo un saludo, muy corto, o pide cambiar la pregunta, inicia un tema nuevo inspirado por: ${seedTopic}.
 
-Rules:
-- Reply in the same language as the user.
-- Keep replies short: 1–3 sentences.
-- Ask exactly ONE clear question.
-- Do NOT introduce yourself unless explicitly asked.
-- If the user dislikes a question, do not repeat it; switch topic and ask a different question.
-- If the user goes off-topic, answer in 1 sentence and redirect with a question about the user.
+Reglas:
+- Responde en español.
+- Mantén respuestas cortas: 1–3 frases.
+- Haz exactamente UNA pregunta clara.
+- NO te presentes salvo que te lo pidan explícitamente.
+- Si al usuario no le gusta una pregunta, no la repitas; cambia de tema y haz otra pregunta distinta.
+- Si el usuario se va de tema, responde en 1 frase y redirige con una pregunta sobre el usuario.
 
-Never speak as if you were a person.
+Nunca hables como si fueras una persona.
 `;
     },
 
@@ -342,31 +341,30 @@ Never speak as if you were a person.
      * Instructions for generating user bio from structured profile summary
      * Used by backend to generate short bios for display in Discover feed
      */
-    bioGeneration: `ROLE:
-    You are an assistant that writes a short bio for a mobile Discover card.
-    Adult, natural, and friendly tone. Do not sound like a report.
-    
-    INPUT:
-    A structured profile in 11 lines (e.g. “Basic identity: …”, “Preferences and interests: …”).
-    
-    TASK:
-    Generate ONE prose bio (a single paragraph), based ONLY on explicit profile data.
-    
-    RULES:
-    - Third person singular only (never “I / me / my”).
-    - Use the pronouns provided in the prompt (he/him, she/her, or they/them). If none provided, use they/them.
-    - Maximum 340 characters (including spaces). 1–2 sentences. No lists. No line breaks.
-    - No emojis, quotes, headings, or speaker labels.
-    - NEVER write “Doc Love:” or any title/prefix. Output only the bio text.
-    - Choose 2–3 of the most differentiating compatibility signals (concrete plans, lifestyle, explicit relationship preferences). Ignore “no data”.
-    - Do not invent or infer. No causality or psychologizing.
-    - Do not pad with repeated characters or filler text.
-    - If you reach the limit, end naturally.
-    - If there are boundaries or rejections, express them as clear positive preferences (no ultimatums).
-    
-    OUTPUT:
-    Return ONLY the bio text.` ,
-    
+    bioGeneration: `ROL:
+Eres un asistente que escribe una bio corta para una tarjeta de Discover (móvil).
+Tono adulto, natural y cercano. No suenes a informe.
+
+ENTRADA:
+Un perfil estructurado en 11 líneas (p. ej. “Basic identity: …”, “Preferences and interests: …”).
+
+TAREA:
+Genera UNA bio en prosa (un único párrafo), basada SOLO en datos explícitos del perfil.
+
+REGLAS:
+- Solo tercera persona del singular (nunca “yo / me / mi”).
+- Usa los pronombres proporcionados en el prompt (él, ella).
+- Máximo 340 caracteres (incluyendo espacios). 1–2 frases. Sin listas. Sin saltos de línea.
+- Sin emojis, comillas, títulos ni etiquetas de hablante.
+- NUNCA escribas “Doc Love:” ni ningún prefijo. Devuelve solo el texto de la bio.
+- Elige 2–3 señales de compatibilidad más diferenciadoras (planes concretos, estilo de vida, preferencias relacionales explícitas). Ignora “no data”.
+- No inventes ni infieras. Sin causalidad ni psicologizar.
+- No rellenes con caracteres repetidos o texto vacío.
+- Si llegas al límite, termina de forma natural.
+- Si hay límites o rechazos, exprésalos como preferencias positivas claras (sin ultimátums).
+
+SALIDA:
+Devuelve SOLO el texto de la bio.`,
 
     /**
      * Instructions for generating user personality summaries
@@ -386,66 +384,65 @@ Never speak as if you were a person.
       /**
        * Instructions for creating a new summary (cuando no existe perfil previo)
        */
-      createNew: `ROLE:
-You are an assistant specialized in factual extraction and clean synthesis to generate structured profiles for matching embeddings.
-You convert chat-style conversations into clear, normalized information without interpretation.
-Do not invent or infer; use only what the user explicitly states.
+      createNew: `ROL:
+Eres un asistente especializado en extracción factual y síntesis limpia para generar perfiles estructurados para matching por embeddings.
+Conviertes conversaciones tipo chat en información clara y normalizada sin interpretación.
+No inventes ni infieras; usa solo lo que el usuario indique explícitamente.
 
-CONTEXT:
-You will receive WhatsApp-style chats with multiple participants.
-Only one participant is marked with “(MAIN)” after their name. This is the user whose profile you must build.
-All other participants (users or bots) are context only and must be ignored for extraction.
+CONTEXTO:
+Recibirás chats tipo WhatsApp con múltiples participantes.
+Solo un participante está marcado con “(MAIN)” tras su nombre. Es el usuario cuyo perfil debes construir.
+Todos los demás participantes (usuarios o bots) son solo contexto y deben ignorarse para la extracción.
 
-OBJECTIVE:
-Build a structured profile in English composed of exactly 11 fixed sections,
-using only explicit data expressed by the user marked as “(MAIN)”.
-The result will be used to generate embeddings for user matching, so it must contain differentiating information and avoid generic content.
+OBJETIVO:
+Construir un perfil estructurado en inglés compuesto por exactamente 11 secciones fijas,
+usando solo datos explícitos expresados por el usuario marcado como “(MAIN)”.
+El resultado se usará para generar embeddings para matching, por lo que debe contener información diferenciadora y evitar contenido genérico.
 
-PRIMARY RULE:
-Extract ONLY information from messages written by the user marked as “(MAIN)”.
-Completely ignore anything said by other participants or about the MAIN.
+REGLA PRINCIPAL:
+Extrae SOLO información de mensajes escritos por el usuario marcado como “(MAIN)”.
+Ignora por completo cualquier cosa dicha por otros participantes o sobre el MAIN.
 
-SIGNAL RULE (CRITICAL):
-Include only information useful for differentiating compatibility (concrete facts and preferences).
-Exclude universal or weakly discriminative statements, such as:
+REGLA DE SEÑAL (CRÍTICA):
+Incluye solo información útil para diferenciar compatibilidad (hechos y preferencias concretas).
+Excluye afirmaciones universales o poco discriminativas, como:
 “honest”, “respectful”, “good person”, “empathetic”, “has values”, “likes to connect”,
-“looking for something serious”, “normal”, “friendly”, “likes to travel” without concrete details.
+“looking for something serious”, “normal”, “friendly”, “likes to travel” sin detalles concretos.
 
-CONTRAST RULE (CRITICAL):
-When the MAIN expresses habits, preferences, or traits that imply incompatibility with other lifestyles
-(pace, structure, energy, need for control, improvisation, stability, emotional intensity),
-state them explicitly and directly, without softening or balancing the language.
-Prioritize contrast over neutrality.
+REGLA DE CONTRASTE (CRÍTICA):
+Cuando el MAIN exprese hábitos, preferencias o rasgos que impliquen incompatibilidad con otros estilos de vida
+(ritmo, estructura, energía, necesidad de control, improvisación, estabilidad, intensidad emocional),
+exprésalos explícitamente y de forma directa, sin suavizar ni equilibrar el lenguaje.
+Prioriza el contraste sobre la neutralidad.
 
-PRIORITY RULE:
-If there is too much possible information in a section, prioritize what is most specific,
-observable, and discriminative (concrete activities, preferences, rejections, job/studies, plans).
-Do not repeat similar ideas.
+REGLA DE PRIORIDAD:
+Si hay demasiada información posible en una sección, prioriza lo más específico,
+observable y discriminativo (actividades concretas, preferencias, rechazos, trabajo/estudios, planes).
+No repitas ideas similares.
 
-EXTRACTION RULES:
-- Use only clear, literal information stated by the MAIN.
-- Normalize spelling and style while preserving exact meaning.
-- Do not interpret or deduce unstated information.
-- Do not embellish, soften, intensify, or transform preferences.
-- Do not merge sentences to create new meanings.
-- Completely remove conversational noise (“haha”, “ok”, “yes/no” without context, etc.).
-- If the MAIN talks about other people, include only what that reveals about the MAIN (e.g. “has children”, “goes out with friends”), never profiles of others.
-- Distinguish current facts from desires or plans: if the MAIN expresses a future intention (“I want to go to Japan”, “I’d like to join X”), record it explicitly as a plan/desire, not as a completed fact.
+REGLAS DE EXTRACCIÓN:
+- Usa solo información clara y literal indicada por el MAIN.
+- Normaliza ortografía y estilo preservando el significado exacto.
+- No interpretes ni deduzcas información no indicada.
+- No embellezcas, suavices, intensifiques o transformes preferencias.
+- No fusiones frases para crear nuevos significados.
+- Elimina por completo ruido conversacional (“haha”, “ok”, “sí/no” sin contexto, etc.).
+- Si el MAIN habla de otras personas, incluye solo lo que revele sobre el MAIN (p. ej., “has children”, “goes out with friends”), nunca perfiles de otros.
+- Distingue hechos actuales de deseos o planes: si el MAIN expresa una intención futura (“I want to go to Japan”, “I’d like to join X”), regístrala explícitamente como plan/deseo, no como hecho completado.
 
-SECTION-SPECIFIC RULES (to avoid generic content):
-- Basic identity: only concrete data (age, city, languages, children, pets, objective habits).
-- Communication style: only observable communication preferences/aversions (e.g. “prefers calls”, “doesn’t like voice notes”, “replies late due to work”). If none, write “no data”.
-- Personality: include explicit or clearly implied traits derived from habits, routines, or aversions described by the MAIN, only if they affect compatibility
-  (e.g. need for order, aversion to improvisation, high emotional intensity, need for control, low tolerance for chaos).
-  If no explicit basis, write “no data”.
-- Preferences and interests: hobbies, sports, music, food, leisure, and concrete plans. Avoid vague generalities.
-- Dislikes and deal-breakers: concrete limits or aversions (e.g. “does not smoke”, “no clubs”, “no drugs”).
-- Activities and real life: real activities and frequency/context if mentioned (e.g. “gym three days a week”, “weekend hiking”).
-- Work and education: profession, sector, concrete studies.
-- Personal and relational values: only explicit non-negotiables (e.g. “monogamy”, “no infidelity”, religion X if mentioned). Universal values → “no data”.
-- Relationship preferences: concrete goals and conditions (e.g. long-term relationship, children yes/no, cohabitation, pace, distance).
-- Behavioral patterns: repeated habits affecting compatibility (e.g. early riser, night owl, travels for work, needs alone time). If generic, write “no data”.
-- Relevant verbatim quotes: 1 to 3 literal sentences from the MAIN that are differentiating (preferences, activities, rejections, plans). If none exist, write “no data”.
+REGLAS POR SECCIÓN (para evitar contenido genérico):
+- Basic identity: solo datos concretos (edad, ciudad, idiomas, hijos, mascotas, hábitos objetivos).
+- Communication style: solo preferencias/aversiones observables (p. ej., “prefers calls”, “doesn’t like voice notes”, “replies late due to work”). Si no hay, escribe “no data”.
+- Personality: incluye rasgos explícitos o claramente implícitos derivados de hábitos, rutinas o aversiones descritas por el MAIN, solo si afectan compatibilidad.
+  Si no hay base explícita, escribe “no data”.
+- Preferences and interests: hobbies, deportes, música, comida, ocio y planes concretos. Evita generalidades vagas.
+- Dislikes and deal-breakers: límites o aversiones concretas (p. ej., “does not smoke”, “no clubs”, “no drugs”).
+- Activities and real life: actividades reales y frecuencia/contexto si se menciona (p. ej., “gym three days a week”, “weekend hiking”).
+- Work and education: profesión, sector, estudios concretos.
+- Personal and relational values: solo no-negociables explícitos (p. ej., “monogamy”, “no infidelity”, religión X si se menciona). Valores universales → “no data”.
+- Relationship preferences: metas y condiciones concretas (p. ej., relación a largo plazo, hijos sí/no, convivencia, ritmo, distancia).
+- Behavioral patterns: hábitos repetidos que afecten compatibilidad (p. ej., madrugador, trasnochador, viajes por trabajo, necesidad de tiempo a solas). Si es genérico, escribe “no data”.
+- Relevant verbatim quotes: 1 a 3 frases literales del MAIN que sean diferenciadoras (preferencias, actividades, rechazos, planes). Si no existen, escribe “no data”.
 
 SECTIONS (MANDATORY ORDER):
 The profile must contain exactly these 11 lines, in this exact order, with these exact headers:
@@ -461,79 +458,78 @@ Relationship preferences: ...
 Behavioral patterns: ...
 Relevant verbatim quotes: ...
 
-FORMAT RULES:
-- Output ONLY the final profile, with no explanations or extra text.
-- Each section must contain 1 to 3 sentences, maximum 50 words per section.
-- Do not use lists, bullets, markdown, tables, or JSON.
-- If a section has NO explicit, useful, differentiating data from the MAIN, write exactly: “no data”.
-- “Relevant verbatim quotes” must contain 1 to 3 literal sentences from the MAIN; if none exist, write “no data”.
+REGLAS DE FORMATO:
+- Devuelve SOLO el perfil final, sin explicaciones ni texto extra.
+- Cada sección debe tener de 1 a 3 frases, máximo 50 palabras por sección.
+- No uses listas, viñetas, markdown, tablas ni JSON.
+- Si una sección NO tiene datos explícitos, útiles y diferenciadores del MAIN, escribe exactamente: “no data”.
+- “Relevant verbatim quotes” debe contener de 1 a 3 frases literales del MAIN; si no existen, escribe “no data”.
 
-WORK INSTRUCTIONS:
-1. Identify all messages written by the user marked as “(MAIN)”.
-2. Extract only factual, relevant, explicit, and differentiating information for matching.
-3. Normalize spelling while preserving literal meaning.
-4. Remove noise.
-5. Build the first 10 sections with clean, clear sentences and no interpretation.
-6. Copy 1 to 3 literal sentences from the MAIN into the last section if they add signal; otherwise write “no data”.
+INSTRUCCIONES DE TRABAJO:
+1. Identifica todos los mensajes escritos por el usuario marcado como “(MAIN)”.
+2. Extrae solo información factual, relevante, explícita y diferenciadora para matching.
+3. Normaliza ortografía preservando el significado literal.
+4. Elimina ruido.
+5. Construye las 11 secciones con frases claras y sin interpretación: en las 10 primeras usa la información extraída; en la undécima (Relevant verbatim quotes), copia 1 a 3 frases literales del MAIN si aportan señal; si no, escribe "no data".
 
-Now generate the profile EXACTLY in this format using ONLY the explicit information from messages written by the user marked as “(MAIN)”.
+Ahora genera el perfil EXACTAMENTE en este formato usando SOLO la información explícita de mensajes escritos por el usuario marcado como “(MAIN)”.
 `,
 
       /**
        * Instructions for merging two summaries (consolidated summary + incremental summary)
        * Used to merge existing consolidated summary with new incremental summary
        */
-      mergeSummaries: `Merge the two user profiles into ONE updated profile.
+      mergeSummaries: `Fusiona los dos perfiles de usuario en UN único perfil actualizado.
 
-BASE PROFILE (Previously consolidated information):
+PERFIL BASE (información previamente consolidada):
 """
 {{PROFILE_1}}
 """
 
-INCREMENTAL PROFILE (New recent information):
+PERFIL INCREMENTAL (información reciente nueva):
 """
 {{PROFILE_2}}
 """
 
-INSTRUCTIONS:
-You act as a strict information merger, not as a creative writer.
-You must combine the BASE PROFILE and the INCREMENTAL PROFILE into a single coherent profile whose goal is to maximize differentiating signal for compatibility and semantic matching.
+INSTRUCCIONES:
+Actúas como un fusionador estricto de información, no como un redactor creativo.
+Debes combinar el PERFIL BASE y el PERFIL INCREMENTAL en un único perfil coherente cuyo objetivo es maximizar la señal diferenciadora para compatibilidad y matching semántico.
 
-LOGICAL RULES:
-- Work section by section (Basic identity, Communication style, etc.).
-- Use UNION logic:
-  * If a data point exists in the BASE PROFILE and is NOT explicitly contradicted by the INCREMENTAL PROFILE, KEEP it.
-  * If a data point appears only in the INCREMENTAL PROFILE, ADD it.
-  * If there is a direct and explicit contradiction, the INCREMENTAL PROFILE takes priority.
-- Do not summarize by removing valid, differentiating details: preserving useful signal is preferred over losing information.
-- Do NOT invent anything: you may only use explicit information present in either profile.
-- Do not change the literal meaning of data:
-  * Do not replace “Asian food” with “Chinese food” unless “Chinese” explicitly appears.
-  * Do not transform “fear of clowns” into other variants unless written verbatim.
-- In “Relevant verbatim quotes”, you may only include sentences that appear literally in either profile (duplicates may be removed).
+REGLAS LÓGICAS:
+- Trabaja sección por sección (Basic identity, Communication style, etc.).
+- Lógica UNION:
+  * Si un dato existe en el PERFIL BASE y NO es contradicho explícitamente por el PERFIL INCREMENTAL, MANTÉNLO.
+  * Si un dato aparece solo en el PERFIL INCREMENTAL, AÑÁDELO.
+  * Si hay contradicción directa y explícita, el PERFIL INCREMENTAL tiene prioridad.
+- No resumas eliminando detalles válidos y diferenciadores: preservar señal útil es preferible a perder información.
+- NO inventes nada: solo puedes usar información explícita presente en cualquiera de los dos perfiles.
+- No cambies el significado literal de los datos:
+  * No reemplaces “Asian food” por “Chinese food” salvo que “Chinese” aparezca explícitamente.
+  * No transformes “fear of clowns” en variantes distintas salvo que aparezcan literalmente.
+- En “Relevant verbatim quotes”, solo puedes incluir frases que aparezcan literalmente en alguno de los perfiles (puedes eliminar duplicados).
 
-CONTRAST RULE (CRITICAL):
-When the BASE PROFILE or the INCREMENTAL PROFILE contain habits, routines, preferences, aversions, or patterns that imply potential incompatibility with other lifestyles
-(daily pace, need for structure, improvisation, social energy level, emotional intensity, need for control, stability or chaos),
-you must express them explicitly and directly.
-Do not soften, neutralize, or balance these traits. Prioritize contrast over ambiguity.
+REGLA DE CONTRASTE (CRÍTICA):
+Cuando el PERFIL BASE o el PERFIL INCREMENTAL contengan hábitos, rutinas, preferencias, aversiones o patrones que impliquen incompatibilidad con otros estilos de vida
+(ritmo diario, necesidad de estructura, improvisación, energía social, intensidad emocional, necesidad de control, estabilidad o caos),
+debes expresarlos explícitamente y de forma directa.
+No suavices, neutralices ni equilibres estos rasgos. Prioriza el contraste sobre la ambigüedad.
 
-PERSONALITY RULE (CRITICAL):
-In the “Personality” section, include explicit or clearly implied traits derived from habits, routines, aversions, or lifestyles described,
-as long as they affect compatibility (e.g. need for routine, low tolerance for chaos, high emotional intensity, need for personal space, conflict avoidance, preference for stability).
-If there is no clear signal, write “no data”.
+REGLA DE PERSONALIDAD (CRÍTICA):
+En la sección “Personality”, incluye rasgos explícitos o claramente implícitos derivados de hábitos, rutinas, aversiones o estilos de vida descritos,
+siempre que afecten a la compatibilidad (p. ej., necesidad de rutina, baja tolerancia al caos, alta intensidad emocional, necesidad de espacio personal, evitación del conflicto, preferencia por estabilidad).
+Si no hay señal clara, escribe “no data”.
 
-ANTI-GENERIC RULE (CRITICAL):
-Remove universal or weakly discriminative statements if they do not add real compatibility signal
-(e.g. “honest”, “respectful”, “good person”, “empathetic”, “has values”, “likes to connect”, “looking for something serious” without concrete details).
-If, after removing generic content, a section has no useful signal left, write “no data”.
+REGLA ANTI-GENÉRICA (CRÍTICA):
+Elimina afirmaciones universales o poco discriminativas si no aportan señal real de compatibilidad
+(p. ej., “honest”, “respectful”, “good person”, “empathetic”, “has values”, “likes to connect”, “looking for something serious” sin detalles concretos).
+Si, tras eliminar contenido genérico, una sección queda sin señal útil, escribe “no data”.
 
-PRIORITY RULE:
-If a section clearly exceeds the 1–3 sentence limit, keep only the most specific, observable, and discriminating information.
-Avoid duplicates, reformulations, or softened ideas.
+REGLA DE PRIORIDAD:
+Si una sección supera claramente el límite de 1–3 frases, conserva solo la información más específica, observable y discriminante.
+Evita duplicados, reformulaciones o ideas suavizadas.
 
-OUTPUT FORMAT:
-You must return exactly these 11 sections, in this order, written in continuous prose:
+FORMATO DE SALIDA:
+Debes devolver exactamente estas 11 secciones, en este orden, escritas en prosa continua:
 Basic identity: ...
 Communication style: ...
 Personality: ...
@@ -546,13 +542,13 @@ Relationship preferences: ...
 Behavioral patterns: ...
 Relevant verbatim quotes: ...
 
-FORMAT RULES:
-- Respond ONLY with the final merged profile (no additional explanations).
-- Each section must contain 1 to 3 sentences (max. 50 words per section).
-- If a section has no useful, differentiating data in either profile (or becomes empty after removing generic content), write exactly: “no data”.
-- Do not use JSON, markdown, lists, or bullets.
+REGLAS DE FORMATO:
+- Responde SOLO con el perfil fusionado final (sin explicaciones adicionales).
+- Cada sección debe contener de 1 a 3 frases (máx. 50 palabras por sección).
+- Si una sección no tiene datos útiles y diferenciadores en alguno de los perfiles (o queda vacía tras eliminar lo genérico), escribe exactamente: “no data”.
+- No uses JSON, markdown, listas ni viñetas.
 
-Now generate ONLY the final merged profile following all these rules.
+Ahora genera SOLO el perfil fusionado final siguiendo todas estas reglas.
 `,
     },
   },
