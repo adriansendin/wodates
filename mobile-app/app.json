@@ -15,14 +15,22 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wodates.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.wodates"
+      "package": "com.wodates.app",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -48,6 +56,12 @@
       "expo-font",
       "expo-router"
     ],
-    "scheme": "wodates"
+    "scheme": "wodates",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "df357609-8aac-4bd2-8494-5e7a5b087310"
+      }
+    }
   }
 }
