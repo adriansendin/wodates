@@ -21,7 +21,8 @@ type DocLoveChatService = {
   generateAndSaveReply(
     matchId: string,
     userId: string,
-    userMessage: Message
+    userMessage: Message,
+    locale?: string
   ): Promise<Result<Message, DomainError>>;
 };
 
@@ -36,7 +37,8 @@ export class SendMessage {
   async execute(
     matchId: string,
     senderId: string,
-    content: string
+    content: string,
+    locale?: string
   ): Promise<Result<Message, DomainError>> {
     if (this.logger) {
       this.logger.info(
@@ -134,7 +136,7 @@ export class SendMessage {
         // This allows the user's message to be sent immediately without waiting
         // for the AI response. The frontend will receive Doc Love's reply via polling.
         this.docLoveChatService
-          .generateAndSaveReply(matchId, senderId, savedMessage)
+          .generateAndSaveReply(matchId, senderId, savedMessage, locale)
           .then((docLoveReplyResult) => {
             if (!docLoveReplyResult.success) {
               if (this.logger) {

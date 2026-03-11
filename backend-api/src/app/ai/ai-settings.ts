@@ -35,6 +35,19 @@ export const AIModelConstants = {
 } as const;
 
 /**
+ * Supported UI/prompt locales. Used to serve content in the user's language.
+ */
+export type Locale = 'en' | 'es';
+
+/**
+ * Normalizes a locale string to Locale. Defaults to 'en' when not Spanish.
+ */
+export function normalizeLocale(locale?: string | null): Locale {
+  if (locale?.toLowerCase().startsWith('es')) return 'es';
+  return 'en';
+}
+
+/**
  * AI Configuration - Single Source of Truth
  */
 export const AIConfig = {
@@ -98,30 +111,23 @@ export const AIConfig = {
    */
   affinitySentencesEnabled: process.env.AFFINITY_ENABLED === 'true',
 
-  /**
-   * Fallback sentence for affinity sentences when profiles are missing
-   * Used when either user's AI profile (or summary) is missing/empty
-   * This avoids useless LLM calls and ensures stable UX for users with incomplete profiles
-   */
-  affinitySentencesFallback: [
-    'La afinidad inicial es baja—la conversación afinará las recomendaciones.',
-  ],
+  /** Returns fallback sentence(s) for affinity when profiles are missing, in the given locale. */
+  getAffinitySentencesFallback(locale: Locale = 'en'): string[] {
+    return locale === 'es'
+      ? ['La afinidad inicial es baja—la conversación afinará las recomendaciones.']
+      : ['Initial affinity is low—conversation will refine the recommendations.'];
+  },
 
   /**
-   * Prompt configuration (shared across all providers)
+   * Prompt configuration (shared across all providers).
+   * Prompt getters accept an optional locale (default 'en').
    */
   prompt: {
     /**
      * Instructions for generating affinity sentences for feed candidates
-     * Used by backend to build complete prompt with user profiles
-     * The backend constructs the full prompt and sends it to ai-service
      */
     affinitySentences: {
-      /**
-       * Base prompt template for affinity sentences
-       * The backend will inject the user profiles into this template
-       */
-      basePrompt: `Escribe EXACTAMENTE 1 frase (máx. 30 palabras) explicando por qué podrían encajar.
+      _basePromptEs: `Escribe EXACTAMENTE 1 frase (máx. 30 palabras) explicando por qué podrían encajar.
 
 REGLA #1: NO inventes nada. Usa SOLO información explícitamente respaldada por AMBOS perfiles.
 
@@ -138,16 +144,35 @@ Otras reglas:
 La afinidad inicial es baja—la conversación afinará las recomendaciones.
 - Devuelve SOLO la frase. Sin texto extra. Sin explicación.
 `,
+      _basePromptEn: `Write EXACTLY 1 sentence (max 30 words) explaining why they might be a good match.
 
-      /**
-       * Builds the complete prompt with user profiles
-       * This function is called by the backend to construct the full prompt
-       */
-      buildPrompt: (
+RULE #1: Do NOT make anything up. Use ONLY information explicitly supported by BOTH profiles.
+
+CRITICAL PRIORITY:
+- If there are concrete shared habits, routines, activities or lifestyle patterns (e.g. reading, walking, daily rhythms, social intensity), you MUST prioritise them over abstract traits or values.
+- Use abstract values (e.g. emotional maturity, honesty, seriousness) ONLY when there are no concrete shared behaviours, or to briefly complement them.
+
+Other rules:
+- NEVER mention shared location, city, neighbourhood or geographic proximity, even if both profiles clearly match.
+- A shared point can be the same topic expressed differently ONLY if clearly supported by BOTH.
+- Avoid vague summaries like "they are similar" or "they share values" without specifying how.
+- Avoid names, companies, exact places or sensitive details.
+- If there are fewer than 2 clear points in common, write EXACTLY:
+Initial affinity is low—conversation will refine the recommendations.
+- Return ONLY the sentence. No extra text. No explanation.
+`,
+      basePrompt(locale: Locale = 'en'): string {
+        return locale === 'es' ? this._basePromptEs : this._basePromptEn;
+      },
+      /** Builds the complete prompt with user profiles. Pass locale for prompt language and fallback text. */
+      buildPrompt(
         currentUserProfile: string,
-        candidateUserProfile: string
-      ): string => {
-        return `${AIConfig.prompt.affinitySentences.basePrompt}
+        candidateUserProfile: string,
+        locale: Locale = 'en'
+      ): string {
+        const base = this.basePrompt(locale);
+        if (locale === 'es') {
+          return `${base}
 
 PERFIL DEL USUARIO ACTUAL (quien está viendo el feed):
 """
@@ -160,15 +185,28 @@ ${candidateUserProfile}
 """
 
 Ahora genera la frase basándote estrictamente en estos perfiles.`;
+        }
+        return `${base}
+
+CURRENT USER PROFILE (viewing the feed):
+"""
+${currentUserProfile}
+"""
+
+CANDIDATE PROFILE (shown in the feed):
+"""
+${candidateUserProfile}
+"""
+
+Now generate the sentence strictly based on these profiles.`;
       },
     },
 
     /**
-     * System instructions for Doc Love
-     * This is the core personality and behavior definition
+     * System instructions for Doc Love. Pass locale so Doc Love responds in the user's language.
      */
-    systemInstructions: (): string => {
-      const seedTopics = [
+    systemInstructions(locale: Locale = 'en'): string {
+      const seedTopicsEs = [
         // Culture & curiosity
         'libros, series, pelis, podcasts o contenido que te haya gustado últimamente',
         'lo último que te enganchó de verdad (tema, libro, serie, canal)',
@@ -312,14 +350,124 @@ Ahora genera la frase basándote estrictamente en estos perfiles.`;
         'cómo equilibras independencia y estar juntos',
       ];
 
+      const seedTopicsEn = [
+        'books, series, films, podcasts or content you’ve enjoyed lately',
+        'something that really hooked you recently (topic, book, series, channel)',
+        'a cultural plan you genuinely enjoy (concerts, museums, cinema, shows)',
+        'a “different” plan you’d like to do soon, outside your routine',
+        'a niche interest you could talk about for hours',
+        'how curious you are day to day: learning vs comfort',
+        'trying new things vs sticking with favourites',
+        'what life stage you’re in now (calm, intensity, change)',
+        'what’s on your mind lately (in a good way)',
+        'what gives your days meaning these months',
+        'what a normal week looks like for you right now',
+        'what you’d want someone to understand about your current pace',
+        'what relationship pace fits realistically with your life now',
+        'what you want to change in your day-to-day over the next year',
+        'what role work plays in your life (means vs main focus)',
+        'what you enjoy most about your job or daily tasks',
+        'how you balance ambition and personal life',
+        'whether you prefer stability or change in life',
+        'what “progress” means to you over the next year',
+        'how you imagine your life in 2–3 years (pace, home, priorities)',
+        'how you handle very busy vs quieter periods',
+        'your typical plan with friends (home, bar, activity, something different)',
+        'your social pace (often vs less but meaningful)',
+        'whether your circle is wider or deeper (close vs many acquaintances)',
+        'what you value most in friendships (loyalty, humour, honesty, support)',
+        'your “role” in groups (organiser, joiner, glue)',
+        'how you feel after social plans (energy vs recharge)',
+        'who you feel closest to in your family',
+        'what family meals are like (calm, intense, fun, quiet)',
+        'how your family handles closeness (talking vs each to their own)',
+        'a family tradition you’d like to keep long term',
+        'how often you like seeing family (often vs sometimes but quality)',
+        'what you learned from your family about relationships',
+        'your ideal home vibe (quiet refuge vs lively and social)',
+        'your natural level of order (tidy, organised chaos, depends)',
+        'non-negotiables at home (quiet, cleanliness, cooking, music, routines)',
+        'your “corner” at home and how you unwind',
+        'what would bother you gradually when sharing space',
+        'how you feel about living together (exciting vs big step)',
+        'how you like sharing space (together but independent vs very integrated)',
+        'your evening routine (screens, reading, sleep habits)',
+        'your minimum standard of order/cleanliness to feel comfortable',
+        'small daily rituals that ground you',
+        'how you like mornings and evenings to feel',
+        'how you recharge after a long day',
+        'how you handle tasks and responsibilities day to day',
+        'a habit you’d like to improve this year',
+        'what self-care means to you (realistic, not ideal)',
+        'how you manage stress in practice (what works for you)',
+        'your natural energy style (active vs slower pace)',
+        'whether you’re more a morning or night person',
+        'what helps you feel centred when life is chaotic',
+        'how you get on with health routines (easy vs effort)',
+        'what makes you laugh even when you’re tired',
+        'your humour style (absurd, sarcastic, dark, silly, witty)',
+        'whether you loosen up quickly or take time to joke',
+        'playful teasing: do you like it or find it annoying?',
+        'a plan you always enjoy, no matter what',
+        'how you like to have fun without it feeling forced',
+        'your ideal message pace (daily vs more space)',
+        'what bothers you in chats (slow replies, one-word answers, excess)',
+        'preference for text vs voice notes vs calls',
+        'your view on rituals like “good morning” by message',
+        'your pace: meeting soon vs chatting a while first',
+        'how you like to resolve misunderstandings (quick vs need time)',
+        'what good communication means to you day to day',
+        'how you prefer to handle tension (talk now vs cool off first)',
+        'your “no”s in conflict (shouting, silence, sarcasm, blaming)',
+        'what makes you feel safe during a disagreement',
+        'how you repair after a bad moment (apology, space, action)',
+        'what you need from someone when you’re stressed or low',
+        'two behaviours you find disrespectful in a partner',
+        'what you need day to day to feel good (clarity, space, plans, messages)',
+        'a dynamic you don’t want to repeat from the past',
+        'what kills your interest quickly when meeting someone',
+        'a habit in someone else you’d find hard to live with',
+        'your boundaries around time, space and independence',
+        'what “being serious” means to you after a few months',
+        'how you imagine building a life together (shared home vs separate)',
+        'your comfort with closeness vs independence long term',
+        'what commitment means in practice for you (time, priorities, consistency)',
+        'your ideal first date (coffee, walk, dinner, something fun)',
+        'quick vibe-check vs longer first date: what works better for you',
+        'whether you go deep soon or keep it light at first',
+        'what you like to happen after a great first date',
+        'small signs that make you think “there’s something here”',
+        'your default relaxed plan (chill, outdoors, a drink, staying in)',
+        'going dancing vs quiet conversation: what you prefer',
+        'your relationship with alcohol in social life (a lot vs almost none)',
+        'how you like to spend time when you have low energy',
+        'what a good weekend looks like for you (recharge vs plans)',
+        'your spending style (saver, experiences, balanced)',
+        'how you like to plan spending (structured vs spontaneous)',
+        'simple plans vs frequent treats: what comes naturally',
+        'what you spend on without guilt',
+        'what you’d do with extra money tomorrow (save vs turn it into a plan)',
+        'pets in your life (have them, want them, not for you)',
+        'more of a dog person, cat person or neither',
+        'how you feel about living in a home with pets (plus vs hassle)',
+        'a funny or sweet animal story (if you have one)',
+        'whether someone being very into pets is a plus for you',
+        'your ideal closeness pace (how many days a week you’d like to see a partner)',
+        'whether you live more “local” or move around the whole city',
+        'weekday plans vs saving plans for the weekend',
+        'what travel time to meet up feels reasonable to you',
+        'how you balance independence and being together',
+      ];
+
+      const seedTopics = locale === 'es' ? seedTopicsEs : seedTopicsEn;
       const getDocLoveSeedTopic = (): string => {
         const randomIndex = Math.floor(Math.random() * seedTopics.length);
         return seedTopics[randomIndex]!;
       };
-
       const seedTopic = getDocLoveSeedTopic();
 
-      return `Eres Doc Love, una herramienta que ayuda a entender al usuario para encontrar una relación compatible y seria a largo plazo.
+      if (locale === 'es') {
+        return `Eres Doc Love, una herramienta que ayuda a entender al usuario para encontrar una relación compatible y seria a largo plazo.
 No eres una persona y no tienes experiencias personales.
 
 En este turno, si el mensaje del usuario contiene un tema claro, mantente en ese tema y haz una pregunta de seguimiento más profunda.
@@ -335,13 +483,57 @@ Reglas:
 
 Nunca hables como si fueras una persona.
 `;
+      }
+      return `You are Doc Love, a tool that helps understand the user to find a compatible, serious long-term relationship.
+You are not a person and have no personal experiences.
+
+This turn: if the user's message has a clear topic, stay on that topic and ask a deeper follow-up question.
+If the user's message is just a greeting, very short, or asks to change the question, start a new topic inspired by: ${seedTopic}.
+
+Rules:
+- Respond in English.
+- Keep answers short: 1–3 sentences.
+- Ask exactly ONE clear question.
+- Do NOT introduce yourself unless explicitly asked.
+- If the user doesn't like a question, don't repeat it; change topic and ask a different question.
+- If the user goes off-topic, reply in 1 sentence and redirect with a question about the user.
+
+Never speak as if you were a person.
+`;
     },
 
     /**
      * Instructions for generating user bio from structured profile summary
      * Used by backend to generate short bios for display in Discover feed
      */
-    bioGeneration: `ROL:
+    bioGeneration(locale: Locale = 'en'): string {
+      if (locale !== 'es') {
+        return `ROLE:
+You are an assistant that writes a short bio for a Discover card (mobile).
+Adult, natural and approachable tone. Do not sound like a report.
+
+INPUT:
+A structured profile in 11 lines (e.g. "Basic identity: …", "Preferences and interests: …").
+
+TASK:
+Generate ONE bio in prose (a single paragraph), based ONLY on explicit data from the profile.
+
+RULES:
+- Third person singular only (never "I / me / my").
+- Use the pronouns given in the prompt (he, she).
+- Maximum 340 characters (including spaces). 1–2 sentences. No lists. No line breaks.
+- No emojis, quotes, titles or speaker labels.
+- NEVER write "Doc Love:" or any prefix. Return only the bio text.
+- Pick 2–3 most differentiating compatibility signals (concrete plans, lifestyle, explicit relationship preferences). Ignore "no data".
+- Do not invent or infer. No causality or psychologising.
+- Do not pad with repeated characters or empty text.
+- If you hit the limit, end naturally.
+- If there are boundaries or deal-breakers, express them as clear positive preferences (no ultimatums).
+
+OUTPUT:
+Return ONLY the bio text.`;
+      }
+      return `ROL:
 Eres un asistente que escribe una bio corta para una tarjeta de Discover (móvil).
 Tono adulto, natural y cercano. No suenes a informe.
 
@@ -364,7 +556,8 @@ REGLAS:
 - Si hay límites o rechazos, exprésalos como preferencias positivas claras (sin ultimátums).
 
 SALIDA:
-Devuelve SOLO el texto de la bio.`,
+Devuelve SOLO el texto de la bio.`;
+    },
 
     /**
      * Instructions for generating user personality summaries

@@ -248,13 +248,17 @@ async function buildApp() {
     );
   }
 
+  // Shared user repository (used by ConfirmMatch and AI services)
+  const userRepository = new SupabaseUserRepository();
+
   // Initialize use cases
   const likeUser = new LikeUser(likeRepository, matchRepository);
   const passUser = new PassUser(passRepository);
   const confirmMatch = new ConfirmMatch(
     likeRepository,
     matchRepository,
-    affinitySentenceService // Pass affinity sentence generator for match creation
+    affinitySentenceService,
+    userRepository
   );
   const sendMessage = new SendMessage(
     messageRepository,
@@ -279,7 +283,6 @@ async function buildApp() {
   let processUserProfileService: ProcessUserProfileService | undefined;
   try {
     if (docLoveChatService && userAIProfileEmbeddingService) {
-      const userRepository = new SupabaseUserRepository();
       const userAIProfileRepository = new SupabaseUserAIProfileRepository();
       const docLoveHelper = new DocLoveHelper();
       const getUnprocessedMessages = new GetUnprocessedMessages(

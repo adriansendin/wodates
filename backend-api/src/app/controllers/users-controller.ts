@@ -20,6 +20,7 @@ import {
 } from '../services/supabase-user-service';
 import { GenerateUserProfileFromChats } from '../../domain/use-cases/chat/GenerateUserProfileFromChats';
 import { ProcessUserProfileService } from '../services/process-user-profile-service';
+import { getLocaleFromRequest } from '../utils/locale';
 
 const dateSchema = z.preprocess(
   (value) => {
@@ -346,7 +347,8 @@ export class UsersController {
       );
 
       if ('run' in this.profileBuilder) {
-        const result = await (this.profileBuilder as ProcessUserProfileService).run(authUser.id);
+        const locale = getLocaleFromRequest(request);
+        const result = await (this.profileBuilder as ProcessUserProfileService).run(authUser.id, locale);
         if (!result.success) {
           return this.handleError(reply, result.error);
         }

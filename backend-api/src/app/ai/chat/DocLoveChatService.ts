@@ -6,7 +6,7 @@ import { MatchRepository } from '../../../domain/repositories/MatchRepository';
 import { UserRepository } from '../../../domain/repositories/UserRepository';
 import { DocLoveHelper } from '../../services/doc-love-helper';
 import { ChatMessage } from '../core/ChatModel';
-import { AIConfig } from '../ai-settings';
+import { AIConfig, Locale, normalizeLocale } from '../ai-settings';
 import { AiServiceChatClient } from '../clients/AiServiceChatClient';
 
 /**
@@ -159,8 +159,10 @@ export class DocLoveChatService {
   async generateAndSaveReply(
     matchId: string,
     userId: string,
-    userMessage: Message
+    userMessage: Message,
+    localeOrUndefined?: string
   ): Promise<Result<Message, DomainError>> {
+    const locale: Locale = normalizeLocale(localeOrUndefined);
     try {
       if (this.logger) {
         this.logger.debug(
@@ -223,7 +225,11 @@ export class DocLoveChatService {
       }
 
       // Use ai-service HTTP client
-      const systemPrompt = this.buildSystemPrompt(userContext, activeMatches);
+      const systemPrompt = this.buildSystemPrompt(
+        userContext,
+        activeMatches,
+        locale
+      );
       const messages = this.buildMessages(
         conversationHistory,
         userMessage.content
@@ -231,7 +237,7 @@ export class DocLoveChatService {
 
       // Log system prompt to verify it's being built correctly
       if (this.logger) {
-        const systemInstructions = AIConfig.prompt.systemInstructions();
+        const systemInstructions = AIConfig.prompt.systemInstructions(locale);
         this.logger.info(
           {
             systemPromptLength: systemPrompt.length,
@@ -462,10 +468,11 @@ export class DocLoveChatService {
       matchId: string;
       otherUserName: string;
       lastMessage?: string;
-    }>
+    }>,
+    locale: Locale = 'en'
   ): string {
     // Verify systemInstructions exists and is not empty
-    const systemInstructions = AIConfig.prompt.systemInstructions();
+    const systemInstructions = AIConfig.prompt.systemInstructions(locale);
     if (
       !systemInstructions ||
       systemInstructions.trim().length === 0
@@ -480,22 +487,39 @@ export class DocLoveChatService {
 
     let systemPrompt = `${systemInstructions}\n\n`;
 
-    if (userContext?.name) {
-      systemPrompt += `The user's name is ${userContext.name}.\n`;
-    }
-
-    if (userContext?.bio) {
-      systemPrompt += `Their bio says: "${userContext.bio}"\n`;
-    }
-
-    if (activeMatches && activeMatches.length > 0) {
-      systemPrompt += `\nThey currently have ${activeMatches.length} active conversation(s):\n`;
-      for (const match of activeMatches.slice(0, 3)) {
-        systemPrompt += `- With ${match.otherUserName}`;
-        if (match.lastMessage) {
-          systemPrompt += `: last message about "${match.lastMessage.substring(0, 50)}..."`;
+    if (locale === 'es') {
+      if (userContext?.name) {
+        systemPrompt += `El nombre del usuario es ${userContext.name}.\n`;
+      }
+      if (userContext?.bio) {
+        systemPrompt += `Su bio dice: "${userContext.bio}"\n`;
+      }
+      if (activeMatches && activeMatches.length > 0) {
+        systemPrompt += `\nActualmente tiene ${activeMatches.length} conversación(es) activa(s):\n`;
+        for (const match of activeMatches.slice(0, 3)) {
+          systemPrompt += `- Con ${match.otherUserName}`;
+          if (match.lastMessage) {
+            systemPrompt += `: último mensaje sobre "${match.lastMessage.substring(0, 50)}..."`;
+          }
+          systemPrompt += '\n';
         }
-        systemPrompt += '\n';
+      }
+    } else {
+      if (userContext?.name) {
+        systemPrompt += `The user's name is ${userContext.name}.\n`;
+      }
+      if (userContext?.bio) {
+        systemPrompt += `Their bio says: "${userContext.bio}"\n`;
+      }
+      if (activeMatches && activeMatches.length > 0) {
+        systemPrompt += `\nThey currently have ${activeMatches.length} active conversation(s):\n`;
+        for (const match of activeMatches.slice(0, 3)) {
+          systemPrompt += `- With ${match.otherUserName}`;
+          if (match.lastMessage) {
+            systemPrompt += `: last message about "${match.lastMessage.substring(0, 50)}..."`;
+          }
+          systemPrompt += '\n';
+        }
       }
     }
 

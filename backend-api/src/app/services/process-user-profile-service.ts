@@ -22,7 +22,7 @@ export class ProcessUserProfileService {
     private readonly logger?: { info: (msg: string) => void; warn: (msg: string) => void }
   ) {}
 
-  async run(userId: string): Promise<ProcessUserProfileResult> {
+  async run(userId: string, locale?: string): Promise<ProcessUserProfileResult> {
     const profileBeforeResult = await this.userAIProfileRepository.findByUserId(userId);
     const summaryBefore =
       profileBeforeResult.success && profileBeforeResult.data
@@ -65,7 +65,7 @@ export class ProcessUserProfileService {
 
     if (hasSummary) {
       try {
-        await this.bioService.generateBioFromSummary(userId);
+        await this.bioService.generateBioFromSummary(userId, locale);
         this.logger?.info?.(`Bio generated for user ${userId}`);
       } catch (err) {
         this.logger?.warn?.(

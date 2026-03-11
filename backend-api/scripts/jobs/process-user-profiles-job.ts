@@ -1229,9 +1229,18 @@ async function main() {
           if (!hasConsolidatedSummary) {
             writeToLog(`User ${userId}: No consolidated summary available, skipping bio generation`, 'INFO');
           } else {
-            // Always generate bio if summary exists (independent of whether it changed)
-            writeToLog(`User ${userId}: Generating bio from summary...`, 'INFO');
-            await bioGenerationService.generateBioFromSummary(userId);
+            // Read user's preferred locale for bio language
+            let userLocale: string | undefined;
+            try {
+              const userResult = await userRepository.findById(userId);
+              if (userResult.success && userResult.data.appLocale) {
+                userLocale = userResult.data.appLocale;
+              }
+            } catch {
+              // default to 'en' if lookup fails
+            }
+            writeToLog(`User ${userId}: Generating bio from summary (locale=${userLocale ?? 'en'})...`, 'INFO');
+            await bioGenerationService.generateBioFromSummary(userId, userLocale);
             writeToLog(`Bio generated successfully for user ${userId}`, 'INFO');
           }
         } catch (bioError) {

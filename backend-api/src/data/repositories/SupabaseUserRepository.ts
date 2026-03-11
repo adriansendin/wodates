@@ -105,6 +105,7 @@ export class SupabaseUserRepository implements UserRepository {
     bio: string | null;
     city: string | null;
     show_bio_in_feed: boolean | null;
+    app_locale: string | null;
   }): User {
     // Map to User entity schema
     // User entity requires: id, email, name, birthDate (datetime string), gender, createdAt, updatedAt
@@ -125,7 +126,8 @@ export class SupabaseUserRepository implements UserRepository {
       birthDate: profile.birthDate || now, // Required field, use now as fallback
       gender: validGender, // Required field
       bio: profile.bio || undefined,
-      photoUrl: undefined, // Photo URL now comes from user_photos, not profile
+      appLocale: (profile.app_locale === 'es' ? 'es' : 'en') as 'en' | 'es',
+      photoUrl: undefined,
       location: profile.city
         ? {
             city: profile.city,

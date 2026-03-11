@@ -13,9 +13,12 @@ import { MessageRepository } from '../../domain/repositories/MessageRepository';
 import { AffinitySentenceService } from '../services/affinity-sentence-service';
 import { BuildProfileCtaService } from '../services/build-profile-cta-service';
 import { z } from 'zod';
+import { getLocaleFromRequest } from '../utils/locale';
+import { AIConfig } from '../ai/ai-settings';
 
 const SendMessageSchema = z.object({
   content: z.string().min(1).max(500),
+  locale: z.enum(['en', 'es']).optional(),
 });
 
 const GetMessagesQuerySchema = z.object({
@@ -55,17 +58,20 @@ export class ChatController {
     try {
       const userId = request.user!.id;
       const { matchId } = request.params as { matchId: string };
-      const { content } = SendMessageSchema.parse(request.body);
+      const body = SendMessageSchema.parse(request.body);
+      const { content, locale: bodyLocale } = body;
+      const locale = getLocaleFromRequest(request, bodyLocale);
 
       request.log.info(
-        { matchId, userId, contentLength: content.length },
+        { matchId, userId, contentLength: content.length, locale },
         '1. Usuario escribe mensaje - Recibido en controller'
       );
 
       const result = await this.sendMessageUseCase.execute(
         matchId,
         userId,
-        content
+        content,
+        locale
       );
 
       if (result.success) {
@@ -164,6 +170,11 @@ export class ChatController {
         );
       }
 
+      const locale = getLocaleFromRequest(request);
+      const fallbackArr = AIConfig.getAffinitySentencesFallback(locale);
+      const fallbackSentence: string =
+        fallbackArr[0] ?? 'Initial affinity is low—conversation will refine the recommendations.';
+
       // Get affinity sentence from chat
       const affinityResult =
         await this.matchRepository.getAffinitySentence(matchId);
@@ -171,14 +182,15 @@ export class ChatController {
         return this.handleError(reply, affinityResult.error);
       }
 
-      let sentence = affinityResult.data;
+      let sentence: string | null = affinityResult.data;
 
       // If null (legacy chat), generate on-demand and store
       if (!sentence && this.affinitySentenceService) {
         const generateResult =
           await this.affinitySentenceService.generateAffinitySentence(
             match.userId1,
-            match.userId2
+            match.userId2,
+            locale
           );
 
         if (generateResult.success) {
@@ -186,16 +198,13 @@ export class ChatController {
           // Store it for future requests
           await this.matchRepository.updateAffinitySentence(matchId, sentence);
         } else {
-          // Use fallback if generation fails
-          sentence =
-            'Initial affinity is low—conversation will sharpen recommendations.';
+          sentence = fallbackSentence;
         }
       }
 
       // If still null (service not available), use fallback
       if (!sentence) {
-        sentence =
-          'Initial affinity is low—conversation will sharpen recommendations.';
+        sentence = fallbackSentence;
       }
 
       return reply.send({ sentence });

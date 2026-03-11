@@ -1,7 +1,7 @@
 import { UserAIProfileRepository } from '../../../domain/repositories/UserAIProfileRepository';
 import { UserRepository } from '../../../domain/repositories/UserRepository';
 import { AiServiceChatClient } from '../clients/AiServiceChatClient';
-import { AIConfig } from '../ai-settings';
+import { AIConfig, Locale, normalizeLocale } from '../ai-settings';
 
 /**
  * UserBioGenerationService - Generates user bios from AI profile summaries
@@ -49,8 +49,13 @@ export class UserBioGenerationService {
    * 6. On error: logs to console and preserves existing bio state
    *
    * @param userId - The user ID to process
+   * @param localeOrUndefined - Optional locale for bio language; defaults to 'en'
    */
-  async generateBioFromSummary(userId: string): Promise<void> {
+  async generateBioFromSummary(
+    userId: string,
+    localeOrUndefined?: string
+  ): Promise<void> {
+    const locale: Locale = normalizeLocale(localeOrUndefined);
     try {
       if (this.logger) {
         this.logger.debug({ userId }, 'Starting bio generation from summary');
@@ -108,7 +113,7 @@ export class UserBioGenerationService {
         }
 
         // Build the prompt with the summary (+ pronouns + format rules)
-        const prompt = `${AIConfig.prompt.bioGeneration}
+        const prompt = `${AIConfig.prompt.bioGeneration(locale)}
 
 RULES:
 - ${pronounLine}

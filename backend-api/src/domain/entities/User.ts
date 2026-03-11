@@ -21,6 +21,7 @@ export const UserSchema = z.object({
       country: z.string(),
     })
     .optional(),
+  appLocale: z.enum(['en', 'es']).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

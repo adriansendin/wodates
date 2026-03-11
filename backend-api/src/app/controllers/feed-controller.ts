@@ -7,6 +7,7 @@ import { SupabaseFeedService } from '../services/supabase-feed-service';
 import { AiServiceChatClient } from '../ai/clients/AiServiceChatClient';
 import { SupabaseUserAIProfileRepository } from '../../data/repositories/SupabaseUserAIProfileRepository';
 import { AIConfig } from '../ai/ai-settings';
+import { getLocaleFromRequest } from '../utils/locale';
 
 const LikeSchema = z.object({
   targetUserId: z.string().uuid(),
@@ -139,6 +140,7 @@ export class FeedController {
       }
 
       const userId = request.user!.id;
+      const locale = getLocaleFromRequest(request);
       const { candidateId } = z
         .object({ candidateId: z.string().uuid() })
         .parse(request.params);
@@ -181,7 +183,7 @@ export class FeedController {
           );
         }
         return reply.send({
-          sentences: AIConfig.affinitySentencesFallback,
+          sentences: AIConfig.getAffinitySentencesFallback(locale),
         });
       }
 
@@ -191,7 +193,8 @@ export class FeedController {
       // Build complete prompt in backend (following chat pattern)
       const fullPrompt = AIConfig.prompt.affinitySentences.buildPrompt(
         currentUserProfile,
-        candidateProfile
+        candidateProfile,
+        locale
       );
 
       // Debug: log full prompt sent to AI (sum of both "fichas") for affinity conclusion
@@ -260,7 +263,7 @@ export class FeedController {
             );
           }
           return reply.send({
-            sentences: AIConfig.affinitySentencesFallback,
+            sentences: AIConfig.getAffinitySentencesFallback(locale),
           });
         }
       } catch (error) {
@@ -283,7 +286,7 @@ export class FeedController {
           );
         }
         return reply.send({
-          sentences: AIConfig.affinitySentencesFallback,
+          sentences: AIConfig.getAffinitySentencesFallback(locale),
         });
       }
     } catch (error) {
@@ -307,7 +310,7 @@ export class FeedController {
       
       // Always return fallback sentence instead of error response
       return reply.send({
-        sentences: AIConfig.affinitySentencesFallback,
+        sentences: AIConfig.getAffinitySentencesFallback(getLocaleFromRequest(request)),
       });
     }
   }

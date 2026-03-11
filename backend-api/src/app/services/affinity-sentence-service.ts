@@ -2,7 +2,7 @@ import { Result, success } from '../../domain/Result';
 import { DomainError } from '../../domain/errors/DomainError';
 import { UserAIProfileRepository } from '../../domain/repositories/UserAIProfileRepository';
 import { AiServiceChatClient } from '../ai/clients/AiServiceChatClient';
-import { AIConfig } from '../ai/ai-settings';
+import { AIConfig, Locale, normalizeLocale } from '../ai/ai-settings';
 import { AffinitySentenceGenerator } from '../../domain/services/AffinitySentenceGenerator';
 
 /**
@@ -23,16 +23,22 @@ export class AffinitySentenceService implements AffinitySentenceGenerator {
    *
    * @param userId1 - First user ID
    * @param userId2 - Second user ID
+   * @param localeOrUndefined - Optional locale for sentence language; defaults to 'en'
    * @returns Result containing the affinity sentence (or fallback if generation fails)
    */
   async generateAffinitySentence(
     userId1: string,
-    userId2: string
+    userId2: string,
+    localeOrUndefined?: string
   ): Promise<Result<string, DomainError>> {
+    const locale: Locale = normalizeLocale(localeOrUndefined);
     // Check if affinity sentences feature is enabled
     if (!AIConfig.affinitySentencesEnabled) {
       // Feature disabled: return fallback sentence
-      return success(AIConfig.affinitySentencesFallback[0]);
+      return success(
+        AIConfig.getAffinitySentencesFallback(locale)[0] ??
+          'Initial affinity is low—conversation will refine the recommendations.'
+      );
     }
 
     // Get AI profiles for both users
@@ -64,7 +70,10 @@ export class AffinitySentenceService implements AffinitySentenceGenerator {
           'Missing AI profiles for affinity sentences, returning fallback sentence'
         );
       }
-      return success(AIConfig.affinitySentencesFallback[0]);
+      return success(
+        AIConfig.getAffinitySentencesFallback(locale)[0] ??
+          'Initial affinity is low—conversation will refine the recommendations.'
+      );
     }
 
     const user1Profile = user1ProfileResult.data.summary ?? '';
@@ -73,7 +82,8 @@ export class AffinitySentenceService implements AffinitySentenceGenerator {
     // Build complete prompt in backend (following chat pattern)
     const fullPrompt = AIConfig.prompt.affinitySentences.buildPrompt(
       user1Profile,
-      user2Profile
+      user2Profile,
+      locale
     );
 
     // Call ai-service chat endpoint with the complete prompt
@@ -131,7 +141,10 @@ export class AffinitySentenceService implements AffinitySentenceGenerator {
           'Parsed no valid sentences, returning fallback sentence'
         );
       }
-      return success(AIConfig.affinitySentencesFallback[0]);
+      return success(
+        AIConfig.getAffinitySentencesFallback(locale)[0] ??
+          'Initial affinity is low—conversation will refine the recommendations.'
+      );
     } catch (error) {
       // If ai-service fails, return fallback sentence (non-blocking)
       // Log error with full details for debugging
@@ -147,7 +160,10 @@ export class AffinitySentenceService implements AffinitySentenceGenerator {
           'Failed to generate affinity sentence, returning fallback sentence'
         );
       }
-      return success(AIConfig.affinitySentencesFallback[0]);
+      return success(
+        AIConfig.getAffinitySentencesFallback(locale)[0] ??
+          'Initial affinity is low—conversation will refine the recommendations.'
+      );
     }
   }
 

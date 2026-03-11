@@ -37,6 +37,17 @@ export class AuthController {
       const user = await this.authService.registerUser(userData);
       const token = this.generateToken(user.id, user.email);
 
+      // Persist user's locale preference for bio/affinity generation
+      if (userData.locale) {
+        try {
+          const { SupabaseUserService } = await import('../services/supabase-user-service');
+          const userService = new SupabaseUserService();
+          await userService.updateProfile(user.id, { app_locale: userData.locale });
+        } catch {
+          request.log.warn({ userId: user.id }, 'Failed to save app_locale during registration');
+        }
+      }
+
       // Create welcome match with Doc Love (blocking to ensure proper onboarding)
       if (this.systemUserService) {
         try {

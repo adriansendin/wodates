@@ -13,10 +13,12 @@ export interface AffinitySentenceGenerator {
    *
    * @param userId1 - First user ID
    * @param userId2 - Second user ID
+   * @param locale - Optional locale ('en' | 'es') for language of the sentence; defaults to 'en'
    * @returns Result containing the affinity sentence (or fallback if generation fails)
    */
   generateAffinitySentence(
     userId1: string,
-    userId2: string
+    userId2: string,
+    locale?: string
   ): Promise<Result<string, DomainError>>;
 }

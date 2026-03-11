@@ -44,6 +44,7 @@ type UserProfileRow = {
   cares_about_partner_smoking: CaresAboutPartnerSmoking | null;
   // Doc Love onboarding: set when user taps "Build my profile" (button hidden forever)
   build_profile_cta_tapped_at: string | null;
+  app_locale: string | null;
 };
 
 export type UserProfile = {
@@ -69,6 +70,7 @@ export type UserProfile = {
   cares_about_partner_smoking: CaresAboutPartnerSmoking | null;
   /** Set when user taps "Build my profile" in Doc Love chat (CTA hidden forever) */
   build_profile_cta_tapped_at: string | null;
+  app_locale: string | null;
 };
 
 export type UpdateUserProfileInput = {
@@ -90,6 +92,7 @@ export type UpdateUserProfileInput = {
   smoking?: Smoking | null;
   cares_about_partner_smoking?: CaresAboutPartnerSmoking | null;
   build_profile_cta_tapped_at?: string | null;
+  app_locale?: string | null;
 };
 
 /**
@@ -319,6 +322,9 @@ export class SupabaseUserService {
         updatePayload.build_profile_cta_tapped_at =
           input.build_profile_cta_tapped_at ?? null;
       }
+      if ('app_locale' in input) {
+        updatePayload.app_locale = input.app_locale ?? 'en';
+      }
 
       console.log('[SupabaseUserService] Final updatePayload:', updatePayload);
       console.log(
@@ -482,7 +488,7 @@ export class SupabaseUserService {
       .from('users')
       .insert(defaults)
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at, app_locale'
       )
       .single();
 
@@ -546,7 +552,7 @@ export class SupabaseUserService {
     const { data, error } = await this.client
       .from('users')
       .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at'
+        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at, app_locale'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -696,6 +702,7 @@ export class SupabaseUserService {
       smoking: row.smoking ?? null,
       cares_about_partner_smoking: row.cares_about_partner_smoking ?? null,
       build_profile_cta_tapped_at: row.build_profile_cta_tapped_at ?? null,
+      app_locale: row.app_locale ?? null,
     };
   }
 
