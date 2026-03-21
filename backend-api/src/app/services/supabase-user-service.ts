@@ -16,6 +16,23 @@ type SupabaseConfig = {
   serviceRoleKey: string;
 };
 
+/** Base columns for public.users profile rows (see scripts/migrations/add-app-locale.sql). */
+const USER_PROFILE_COLUMNS =
+  'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at';
+
+const USER_PROFILE_COLUMNS_WITH_LOCALE = `${USER_PROFILE_COLUMNS}, app_locale`;
+
+function isMissingColumnError(
+  error: { message?: string; details?: string; hint?: string },
+  columnName: string
+): boolean {
+  const text = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`;
+  return (
+    text.includes(columnName) &&
+    (text.includes('does not exist') || text.includes('undefined column'))
+  );
+}
+
 export type VerificationStatus =
   | 'pending'
   | 'verifying'
@@ -44,7 +61,8 @@ type UserProfileRow = {
   cares_about_partner_smoking: CaresAboutPartnerSmoking | null;
   // Doc Love onboarding: set when user taps "Build my profile" (button hidden forever)
   build_profile_cta_tapped_at: string | null;
-  app_locale: string | null;
+  /** Present when DB has run scripts/migrations/add-app-locale.sql */
+  app_locale?: string | null;
 };
 
 export type UserProfile = {
@@ -484,13 +502,19 @@ export class SupabaseUserService {
     // Use insert instead of upsert to avoid overwriting existing fields
     // If the profile already exists, we would have returned it above
     // This insert should only happen if the profile truly doesn't exist
-    const { data, error } = await this.client
+    let { data, error } = await this.client
       .from('users')
       .insert(defaults)
-      .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at, app_locale'
-      )
+      .select(USER_PROFILE_COLUMNS_WITH_LOCALE)
       .single();
+
+    if (error && isMissingColumnError(error, 'app_locale')) {
+      ({ data, error } = await this.client
+        .from('users')
+        .insert(defaults)
+        .select(USER_PROFILE_COLUMNS)
+        .single());
+    }
 
     if (error) {
       // If the error is a duplicate key error (user already exists), try to fetch it again
@@ -549,13 +573,19 @@ export class SupabaseUserService {
   }
 
   private async findProfileRow(userId: string): Promise<UserProfileRow | null> {
-    const { data, error } = await this.client
+    let { data, error } = await this.client
       .from('users')
-      .select(
-        'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at, app_locale'
-      )
+      .select(USER_PROFILE_COLUMNS_WITH_LOCALE)
       .eq('id', userId)
       .maybeSingle();
+
+    if (error && isMissingColumnError(error, 'app_locale')) {
+      ({ data, error } = await this.client
+        .from('users')
+        .select(USER_PROFILE_COLUMNS)
+        .eq('id', userId)
+        .maybeSingle());
+    }
 
     if (error) {
       console.error('[SupabaseUserService] findProfileRow query failed', {

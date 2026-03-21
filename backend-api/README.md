@@ -44,6 +44,10 @@ Example:
 cp .env.example .env
 ```
 
+## Database migrations
+
+Some API features expect extra columns on `public.users`. If you see errors like `column users.app_locale does not exist`, open the Supabase dashboard → **SQL Editor**, and run the scripts under `scripts/migrations/` (for example `add-app-locale.sql`). That adds `app_locale` (default `en`) so locale preferences persist. The backend also retries profile queries without that column if the migration has not been applied yet, but you should still run the SQL so updates and AI locale behavior stay consistent.
+
 ## API Endpoints
 
 ### Authentication
