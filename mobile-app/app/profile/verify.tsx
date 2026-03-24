@@ -123,11 +123,8 @@ export default function VerifyProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.title}>Verify your identity</Text>
-          <Text style={styles.description}>
-            Upload a clear selfie to confirm it's really you.
-            It won't appear on your profile.
-          </Text>
+          <Text style={styles.title}>{t('profile.verifyTitle')}</Text>
+          <Text style={styles.description}>{t('profile.verifyDescription')}</Text>
 
           {illustration ? (
             <Image

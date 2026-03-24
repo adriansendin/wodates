@@ -80,13 +80,35 @@ type Feedback = {
   message: string;
 };
 
+/** Preferred match age range: fixed product window (slider + API). */
+const PREFERRED_AGE_MIN = 29;
+const PREFERRED_AGE_MAX = 65;
+const DEFAULT_PREFERRED_MIN_AGE = 29;
+const DEFAULT_PREFERRED_MAX_AGE = 40;
+
+function normalizePreferredAgeRange(
+  min: number | null | undefined,
+  max: number | null | undefined
+): { min_age: number; max_age: number } {
+  let m = min ?? DEFAULT_PREFERRED_MIN_AGE;
+  let M = max ?? DEFAULT_PREFERRED_MAX_AGE;
+  m = Math.max(PREFERRED_AGE_MIN, Math.min(PREFERRED_AGE_MAX, m));
+  M = Math.max(PREFERRED_AGE_MIN, Math.min(PREFERRED_AGE_MAX, M));
+  if (m > M) {
+    const t = m;
+    m = M;
+    M = t;
+  }
+  return { min_age: m, max_age: M };
+}
+
 const emptyForm: FormState = {
   name: '',
   birthDate: null,
   gender: 'male',
   looking_for: 'both',
-  min_age: 18,
-  max_age: 99,
+  min_age: DEFAULT_PREFERRED_MIN_AGE,
+  max_age: DEFAULT_PREFERRED_MAX_AGE,
   bio: '',
   city: '',
   show_bio_in_feed: true,
@@ -101,13 +123,24 @@ const emptyForm: FormState = {
 
 const DEFAULT_BIRTH_DATE = '1996-01-01';
 
+const formatDateAsLocalISO = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateOnlyString = (value: string): Date => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 const mapProfileToForm = (nextProfile: UserProfile | null): FormState => ({
   name: nextProfile?.name ?? '',
   birthDate: nextProfile?.birthDate ?? null,
   gender: nextProfile?.gender ?? 'male',
   looking_for: nextProfile?.looking_for ?? 'both',
-  min_age: nextProfile?.min_age ?? 18,
-  max_age: nextProfile?.max_age ?? 99,
+  ...normalizePreferredAgeRange(nextProfile?.min_age, nextProfile?.max_age),
   bio: nextProfile?.bio ?? '',
   city: nextProfile?.city ?? '',
   show_bio_in_feed: nextProfile?.show_bio_in_feed ?? true,
@@ -128,7 +161,7 @@ const calculateAge = (birthDate: string): number => {
   }
 
   const today = new Date();
-  const birth = new Date(birthDate);
+  const birth = parseDateOnlyString(birthDate);
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
 
@@ -359,7 +392,7 @@ export default function ProfileScreen() {
   };
 
   const handleBirthDateChange = (date: Date) => {
-    const iso = date.toISOString().slice(0, 10);
+    const iso = formatDateAsLocalISO(date);
     setForm((prev) => ({ ...prev, birthDate: iso }));
     autoSave('birthDate', iso);
   };
@@ -465,8 +498,10 @@ export default function ProfileScreen() {
             // Actualizar el formulario con los valores confirmados de la BD
             setForm((prev) => ({
               ...prev,
-              min_age: updatedProfile.min_age ?? 18,
-              max_age: updatedProfile.max_age ?? 99,
+              ...normalizePreferredAgeRange(
+                updatedProfile.min_age,
+                updatedProfile.max_age
+              ),
             }));
 
             console.log('[Profile] Age range saved successfully:', {

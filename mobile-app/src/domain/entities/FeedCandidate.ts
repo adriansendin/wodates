@@ -6,7 +6,7 @@ export const FeedCandidateSchema = z.object({
   name: z.string().min(1),
   bio: z.string().nullable().optional(),
   birthDate: z.string().datetime().nullable().optional(),
-  age: z.number().int().min(18).max(100).nullable().optional(),
+  age: z.number().int().min(29).max(65).nullable().optional(),
   gender: GenderSchema.nullable().optional(),
   photoUrl: z.string().url().nullable().optional(),
   city: z.string().nullable().optional(),

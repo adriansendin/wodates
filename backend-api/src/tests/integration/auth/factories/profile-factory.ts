@@ -21,10 +21,14 @@ export class ProfileFactory {
   static create(
     overrides: Partial<ProfileFactoryAttributes> = {}
   ): ProfileFactoryAttributes {
-    const year = 1990 + Math.floor(Math.random() * 10);
-    const month = Math.floor(Math.random() * 12);
-    const day = Math.max(1, Math.floor(Math.random() * 28));
-    const birthDate = new Date(Date.UTC(year, month, day)).toISOString();
+    const currentYear = new Date().getUTCFullYear();
+    const minBirthYear = currentYear - 65;
+    const maxBirthYear = currentYear - 29;
+    const year =
+      minBirthYear +
+      Math.floor(Math.random() * (maxBirthYear - minBirthYear + 1));
+    // Fixed Jan 1 so random year always yields age in [29, 65] (avoids "not yet birthday" underflow)
+    const birthDate = new Date(Date.UTC(year, 0, 1)).toISOString();
     return {
       birthDate: overrides.birthDate ?? birthDate,
       gender: overrides.gender ?? 'male',

@@ -18,8 +18,8 @@ interface AgeRangePickerProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const MIN_AGE = 18;
-const MAX_AGE = 99;
+const MIN_AGE = 29;
+const MAX_AGE = 65;
 
 export const AgeRangePicker: React.FC<AgeRangePickerProps> = ({
   minAge,

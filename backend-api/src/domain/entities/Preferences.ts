@@ -4,8 +4,8 @@ import { GenderSchema } from './User';
 export const PreferencesSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
-  ageMin: z.number().min(18).max(100),
-  ageMax: z.number().min(18).max(100),
+  ageMin: z.number().min(29).max(60),
+  ageMax: z.number().min(29).max(60),
   genderFilter: z.array(GenderSchema),
   maxDistance: z.number().min(1).max(1000), // in kilometers
   createdAt: z.string().datetime(),

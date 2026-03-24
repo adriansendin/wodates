@@ -47,8 +47,12 @@ export default function Step2Screen() {
   const handleNext = () => {
     const age = calculateAge(date);
     
-    if (age < 18 || age > 99) {
-      setError(age < 18 ? t('register.minAgeError', { min: 18 }) : t('register.maxAge99'));
+    if (age < 29 || age > 65) {
+      setError(
+        age < 29
+          ? t('register.minAgeError', { min: 29 })
+          : t('register.maxAgeError', { max: 65 })
+      );
       return;
     }
 

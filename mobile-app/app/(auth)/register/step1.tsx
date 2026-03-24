@@ -221,13 +221,13 @@ export default function Step1Screen() {
         return;
       }
 
-      if (typeof registrationData.minAge !== 'number' || isNaN(registrationData.minAge) || registrationData.minAge < 18 || registrationData.minAge > 100) {
+      if (typeof registrationData.minAge !== 'number' || isNaN(registrationData.minAge) || registrationData.minAge < 29 || registrationData.minAge > 65) {
         setFeedback({ type: 'error', message: t('register.minAgeValid') });
         setIsLoading(false);
         return;
       }
 
-      if (typeof registrationData.maxAge !== 'number' || isNaN(registrationData.maxAge) || registrationData.maxAge < 18 || registrationData.maxAge > 100) {
+      if (typeof registrationData.maxAge !== 'number' || isNaN(registrationData.maxAge) || registrationData.maxAge < 29 || registrationData.maxAge > 65) {
         setFeedback({ type: 'error', message: t('register.maxAgeValid') });
         setIsLoading(false);
         return;
@@ -303,9 +303,9 @@ export default function Step1Screen() {
       // Actualizar perfil con rango de edad, plan familiar y hábitos
       // IMPORTANTE: Incluir TODOS los campos, incluso si son null, para asegurar que se actualicen en la BD
       
-      // min_age y max_age - usar valores del store o valores por defecto (18 y 99)
-      const minAge = typeof registrationData.minAge === 'number' && !isNaN(registrationData.minAge) ? registrationData.minAge : 18;
-      const maxAge = typeof registrationData.maxAge === 'number' && !isNaN(registrationData.maxAge) ? registrationData.maxAge : 99;
+      // min_age y max_age - usar valores del store o valores por defecto (29 y 40)
+      const minAge = typeof registrationData.minAge === 'number' && !isNaN(registrationData.minAge) ? registrationData.minAge : 29;
+      const maxAge = typeof registrationData.maxAge === 'number' && !isNaN(registrationData.maxAge) ? registrationData.maxAge : 40;
 
       // Construir profileUpdates con TODOS los campos (incluso si son null)
       const profileUpdates: Record<string, any> = {

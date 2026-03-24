@@ -11,7 +11,7 @@ export const CreateContactUsMessageSchema = z.object({
   userId: z.string().uuid(),
   content: z
     .string()
-    .transform((val) => val.trim())
+    .trim()
     .min(10, 'Message must be at least 10 characters')
     .max(300, 'Message must be at most 300 characters'),
 });

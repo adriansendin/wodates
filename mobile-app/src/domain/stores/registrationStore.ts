@@ -45,8 +45,8 @@ const initialData: RegistrationData = {
   country: '',
   gender: '',
   lookingFor: '',
-  minAge: 28,
-  maxAge: 35,
+  minAge: 29,
+  maxAge: 40,
   avatarUrl: null,
   // Plan familiar
   hasChildren: null,

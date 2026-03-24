@@ -16,20 +16,20 @@ interface BirthDatePickerProps {
   onError?: (error: string | null) => void;
 }
 
-const MIN_AGE = 18;
-const MAX_AGE = 99;
+const MIN_AGE = 29;
+const MAX_AGE = 65;
 
 /**
  * Componente multiplataforma para seleccionar fecha de nacimiento
  * Compatible con Web, Android e iOS sin dependencias externas
- * Valida automáticamente que la edad esté entre 18 y 99 años
+ * Valida automáticamente que la edad esté entre 29 y 65 años
  */
 export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
   value,
   onChange,
   onError,
 }) => {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const [isVisible, setIsVisible] = useState(false);
   const [tempYear, setTempYear] = useState(value.getFullYear());
   const [tempMonth, setTempMonth] = useState(value.getMonth());
@@ -114,7 +114,8 @@ export const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
    * Formatea la fecha para mostrar al usuario
    */
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('en-US', {
+    const locale = i18n.language?.startsWith('es') ? 'es-ES' : 'en-US';
+    return date.toLocaleDateString(locale, {
       day: 'numeric',
       month: 'long',
       year: 'numeric',

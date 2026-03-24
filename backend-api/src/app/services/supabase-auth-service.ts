@@ -7,6 +7,11 @@ import {
 } from '../../domain/errors/DomainError';
 import { AuthService, AuthUser } from './auth-service';
 import { RegisterRequest } from '../../domain/entities/Auth';
+import {
+  USER_BIRTH_AGE_MAX,
+  USER_BIRTH_AGE_MIN,
+  ageFromIsoDateTime,
+} from '../../domain/utils/birthDateAge';
 
 type SupabaseAuthConfig = {
   url: string;
@@ -159,6 +164,17 @@ export class SupabaseAuthService implements AuthService {
       if (isNaN(birthDateObj.getTime())) {
         throw new InternalError(
           'birthDate must be a valid ISO datetime string'
+        );
+      }
+
+      const chronologicalAge = ageFromIsoDateTime(registerRequest.birthDate);
+      if (
+        chronologicalAge === null ||
+        chronologicalAge < USER_BIRTH_AGE_MIN ||
+        chronologicalAge > USER_BIRTH_AGE_MAX
+      ) {
+        throw new InternalError(
+          `birthDate must correspond to age between ${USER_BIRTH_AGE_MIN} and ${USER_BIRTH_AGE_MAX}`
         );
       }
 

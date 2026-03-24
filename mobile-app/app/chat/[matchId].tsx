@@ -1872,7 +1872,7 @@ export default function ChatScreen() {
                 }}
               >
                 <Ionicons name="information-circle" size={20} color="#e91e63" />
-                <Text style={styles.menuItemText}>About Doc Love</Text>
+                <Text style={styles.menuItemText}>Sobre Doc Love</Text>
               </TouchableOpacity>
             ) : (
               <>

@@ -21,6 +21,11 @@ import {
 import { GenerateUserProfileFromChats } from '../../domain/use-cases/chat/GenerateUserProfileFromChats';
 import { ProcessUserProfileService } from '../services/process-user-profile-service';
 import { getLocaleFromRequest } from '../utils/locale';
+import {
+  USER_BIRTH_AGE_MAX,
+  USER_BIRTH_AGE_MIN,
+  ageFromYmd,
+} from '../../domain/utils/birthDateAge';
 
 const dateSchema = z.preprocess(
   (value) => {
@@ -103,8 +108,8 @@ const UpdateProfileSchema = z
     birthDate: dateSchema.optional(),
     gender: nullableEnum(GENDER_VALUES).optional(),
     looking_for: nullableEnum(LOOKING_FOR_VALUES).optional(),
-    min_age: nullableInt(18, 100).optional(),
-    max_age: nullableInt(18, 100).optional(),
+    min_age: nullableInt(29, 65).optional(),
+    max_age: nullableInt(29, 65).optional(),
     bio: nullableText(500).optional(),
     city: nullableString(100).optional(),
     avatarUrl: nullableString(500).optional(),
@@ -136,6 +141,27 @@ const UpdateProfileSchema = z
     {
       message: 'min_age must be less than or equal to max_age',
       path: ['min_age'],
+    }
+  )
+  .refine(
+    (data) => {
+      if (
+        data.birthDate === null ||
+        data.birthDate === undefined ||
+        data.birthDate === ''
+      ) {
+        return true;
+      }
+      const age = ageFromYmd(data.birthDate);
+      return (
+        age !== null &&
+        age >= USER_BIRTH_AGE_MIN &&
+        age <= USER_BIRTH_AGE_MAX
+      );
+    },
+    {
+      message: `birthDate must correspond to age between ${USER_BIRTH_AGE_MIN} and ${USER_BIRTH_AGE_MAX}`,
+      path: ['birthDate'],
     }
   );
 

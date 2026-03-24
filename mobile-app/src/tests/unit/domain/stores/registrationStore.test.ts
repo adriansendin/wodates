@@ -16,8 +16,8 @@ const resetStore = () => {
       country: '',
       gender: '',
       lookingFor: '',
-      minAge: 18,
-      maxAge: 99,
+      minAge: 29,
+      maxAge: 40,
       avatarUrl: null,
       hasChildren: null,
       wantsChildren: null,
@@ -40,8 +40,8 @@ describe('registrationStore', () => {
       name: '',
       email: '',
       birthDate: null,
-      minAge: 18,
-      maxAge: 99,
+      minAge: 29,
+      maxAge: 40,
     });
   });
 
@@ -74,7 +74,7 @@ describe('registrationStore', () => {
       email: 'alice@example.com',
       birthDate: new Date('1995-05-15T00:00:00.000Z'),
       gender: 'female',
-      minAge: 24,
+      minAge: 35,
     };
 
     updateData(updates);
@@ -84,8 +84,8 @@ describe('registrationStore', () => {
       name: 'Alice',
       email: 'alice@example.com',
       gender: 'female',
-      minAge: 24,
-      maxAge: 99,
+      minAge: 35,
+      maxAge: 40,
     });
     expect(state.data.birthDate).toEqual(new Date('1995-05-15T00:00:00.000Z'));
   });

@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Text, Dimensions } from 'react-native';
 import { UserPhoto } from '../../../domain/models/UserPhoto';
 import { PhotoItem } from './PhotoItem';
 import { PhotoAddButton } from './PhotoAddButton';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   photos: UserPhoto[];
@@ -32,6 +33,7 @@ export function PhotoGrid({
   onAdd,
   disabled = false,
 }: Props) {
+  const { t } = useTranslation('common');
   const canAddMore = photos.length < 5;
 
   // Sort photos: main first, then others by position
@@ -48,10 +50,12 @@ export function PhotoGrid({
       <View style={styles.content}>
         {/* Photo counter */}
         <View style={styles.counterContainer}>
-          <Text style={styles.counterText}>{photos.length} / 5 photos</Text>
+          <Text style={styles.counterText}>
+            {t('profile.photoCounter', { count: photos.length, max: 5 })}
+          </Text>
           {photos.length >= 5 && (
             <Text style={styles.counterWarning}>
-              You&apos;ve reached the maximum limit
+              {t('profile.photosMaxLimitReached')}
             </Text>
           )}
         </View>

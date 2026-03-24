@@ -10,6 +10,11 @@ import {
   Smoking,
   CaresAboutPartnerSmoking,
 } from '../../domain/entities/Habits';
+import {
+  USER_BIRTH_AGE_MAX,
+  USER_BIRTH_AGE_MIN,
+  ageFromYmd,
+} from '../../domain/utils/birthDateAge';
 
 type SupabaseConfig = {
   url: string;
@@ -188,7 +193,25 @@ export class SupabaseUserService {
       const updatePayload: Record<string, unknown> = {};
 
       if ('birthDate' in input) {
-        updatePayload.birthDate = input.birthDate ?? null;
+        const bd = input.birthDate ?? null;
+        if (
+          bd !== null &&
+          bd !== undefined &&
+          typeof bd === 'string' &&
+          bd.trim() !== ''
+        ) {
+          const age = ageFromYmd(bd);
+          if (
+            age === null ||
+            age < USER_BIRTH_AGE_MIN ||
+            age > USER_BIRTH_AGE_MAX
+          ) {
+            throw new InternalError(
+              `birthDate must correspond to age between ${USER_BIRTH_AGE_MIN} and ${USER_BIRTH_AGE_MAX}`
+            );
+          }
+        }
+        updatePayload.birthDate = bd;
       }
       if ('gender' in input) {
         updatePayload.gender = input.gender ?? null;
@@ -203,11 +226,11 @@ export class SupabaseUserService {
           if (
             typeof input.min_age !== 'number' ||
             isNaN(input.min_age) ||
-            input.min_age < 18 ||
-            input.min_age > 100
+            input.min_age < 29 ||
+            input.min_age > 65
           ) {
             throw new InternalError(
-              'min_age must be a valid number between 18 and 100'
+              'min_age must be a valid number between 29 and 65'
             );
           }
           updatePayload.min_age = input.min_age;
@@ -231,11 +254,11 @@ export class SupabaseUserService {
           if (
             typeof input.max_age !== 'number' ||
             isNaN(input.max_age) ||
-            input.max_age < 18 ||
-            input.max_age > 100
+            input.max_age < 29 ||
+            input.max_age > 65
           ) {
             throw new InternalError(
-              'max_age must be a valid number between 18 and 100'
+              'max_age must be a valid number between 29 and 65'
             );
           }
           updatePayload.max_age = input.max_age;
