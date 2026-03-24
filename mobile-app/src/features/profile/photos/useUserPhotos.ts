@@ -12,6 +12,24 @@ import { getApiUrl } from '../../../utils/apiConfig';
 const MAX_IMAGE_SIZE_KB = 500;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024;
 
+/** content:// URIs often have no file extension; OkHttp multipart needs a sensible name/type. */
+function androidMultipartFile(uri: string): {
+  uri: string;
+  name: string;
+  type: string;
+} {
+  const raw = uri.split('/').pop()?.split('?')[0] ?? 'photo.jpg';
+  const name = /\.[a-zA-Z0-9]{2,5}$/.test(raw) ? raw : `${raw}.jpg`;
+  const ext = /\.(\w+)$/.exec(name)?.[1]?.toLowerCase() ?? 'jpg';
+  const type =
+    ext === 'png'
+      ? 'image/png'
+      : ext === 'webp'
+        ? 'image/webp'
+        : 'image/jpeg';
+  return { uri, name, type };
+}
+
 export function useUserPhotos(userId: string | null) {
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -135,19 +153,17 @@ export function useUserPhotos(userId: string | null) {
           });
           formData.append('file', file);
         } else {
-          const filename = imageUri.split('/').pop() || 'photo.jpg';
-          const match = /\.(\w+)$/.exec(filename);
-          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          const { uri, name, type } = androidMultipartFile(imageUri);
           // @ts-expect-error - FormData in React Native accepts this format
           formData.append('file', {
-            uri: imageUri,
-            type: type,
-            name: filename,
+            uri,
+            type,
+            name,
           });
           console.log('[useUserPhotos] FormData created for React Native:', {
-            uri: imageUri,
+            uri,
             type,
-            filename,
+            filename: name,
           });
         }
 

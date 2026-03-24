@@ -1,6 +1,13 @@
 import * as ImagePicker from 'expo-image-picker';
+import type {
+  ImagePickerAsset,
+  ImagePickerErrorResult,
+  ImagePickerOptions,
+  ImagePickerResult,
+} from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Platform } from 'react-native';
+// eslint-disable-next-line no-restricted-imports -- production diagnostics: show raw JSON in Alert (closed testing)
+import { Alert, Platform } from 'react-native';
 import axios from 'axios';
 import { useAuthStore } from '../../domain/stores/authStore';
 import { Result, success, failure } from '../../domain/Result';
@@ -18,6 +25,67 @@ const API_URL = getApiUrl();
 
 const MAX_IMAGE_SIZE_KB = 500;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024;
+
+/** Set false after diagnosing production issues (alerts on image-flow errors). */
+const IMAGE_FLOW_DEBUG_ALERTS = true;
+
+/** Extra console logs (visible via adb logcat / Metro); safe to leave on. */
+const IMAGE_FLOW_VERBOSE_LOGS = true;
+
+function isPickerNativeError(
+  value: ImagePickerResult | ImagePickerErrorResult | null
+): value is ImagePickerErrorResult {
+  return value != null && 'code' in value && 'message' in value;
+}
+
+function serializeUnknownError(error: unknown): Record<string, unknown> {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+  if (typeof error === 'object' && error !== null) {
+    try {
+      return JSON.parse(JSON.stringify(error)) as Record<string, unknown>;
+    } catch {
+      return { value: String(error) };
+    }
+  }
+  return { value: String(error) };
+}
+
+function imageFlowAlert(title: string, payload: unknown) {
+  if (!IMAGE_FLOW_DEBUG_ALERTS) return;
+  try {
+    const body =
+      typeof payload === 'string'
+        ? payload
+        : JSON.stringify(
+            payload,
+            (_, v) => {
+              if (v instanceof Error) {
+                return {
+                  name: v.name,
+                  message: v.message,
+                  stack: v.stack,
+                };
+              }
+              return v;
+            },
+            2
+          );
+    Alert.alert(title, body.length > 3500 ? `${body.slice(0, 3500)}…` : body);
+  } catch {
+    Alert.alert(title, String(payload));
+  }
+}
+
+function logImageFlow(tag: string, data: unknown) {
+  if (!IMAGE_FLOW_VERBOSE_LOGS) return;
+  console.log(`[ImageService][${tag}]`, data);
+}
 
 /**
  * Compresses an image if it exceeds the maximum size
@@ -252,15 +320,6 @@ const buildBlobFromDataUri = (uri: string): Blob => {
 };
 
 /**
- * Requests camera roll permissions
- * @returns {Promise<boolean>} True if permission granted, false otherwise
- */
-async function requestMediaLibraryPermissions(): Promise<boolean> {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  return status === 'granted';
-}
-
-/**
  * Requests camera permissions
  * @returns {Promise<boolean>} True if permission granted, false otherwise
  */
@@ -467,46 +526,145 @@ async function pickImageFromWeb(
 }
 
 /**
- * Picks an image from the device gallery
- * Note: Only allows selecting a single image (no multiple selection)
- * @returns {Promise<Result<string, DomainError>>} Result with image URI or error
+ * Gallery flow: permissions → picker → optional Android pending result → compress.
+ * Each failure stage triggers `imageFlowAlert` when {@link IMAGE_FLOW_DEBUG_ALERTS} is true.
  */
-export async function pickImageFromGallery(): Promise<
-  Result<string | null, DomainError>
-> {
-  try {
-    // Check if running on web
-    if (Platform.OS === 'web') {
-      const uri = await pickImageFromWeb(false); // false = gallery, not camera
+export async function pickImage(): Promise<Result<string | null, DomainError>> {
+  if (Platform.OS === 'web') {
+    try {
+      const uri = await pickImageFromWeb(false);
+      logImageFlow('pickImage-web-done', { uri });
       return success(uri);
+    } catch (error) {
+      const payload = {
+        stage: 'WEB_FILE_INPUT',
+        error: serializeUnknownError(error),
+      };
+      logImageFlow('pickImage-web-error', payload);
+      imageFlowAlert('[pickImage] WEB', payload);
+      return failure(
+        new ImagePickerError(
+          "Couldn't open file picker. Please try again.",
+          error
+        )
+      );
     }
+  }
 
-    const hasPermission = await requestMediaLibraryPermissions();
+  try {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    logImageFlow('permission', perm);
 
-    if (!hasPermission) {
+    if (perm.status !== 'granted') {
+      imageFlowAlert('[pickImage] PERMISSION', {
+        stage: 'PERMISSION_DENIED',
+        perm,
+      });
       return failure(
         new PermissionDeniedError('Photo library permission is required.')
       );
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      // mediaTypes: ['images'],
+    const pickerOptions: ImagePickerOptions = {
+      mediaTypes: ['images'],
       allowsEditing: true,
       allowsMultipleSelection: false,
       aspect: [1, 1],
       quality: 1,
-    });
+    };
+
+    let result: ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+    } catch (error) {
+      const payload = {
+        stage: 'LAUNCH_LIBRARY_THROW',
+        error: serializeUnknownError(error),
+      };
+      logImageFlow('launch-throw', payload);
+      imageFlowAlert('[pickImage] OPEN_GALLERY', payload);
+      return failure(
+        new ImagePickerError(
+          "Couldn't open the photo library. Please try again.",
+          error
+        )
+      );
+    }
+
+    logImageFlow('picker-result', result);
 
     if (result.canceled) {
+      logImageFlow('picker-canceled', { canceled: true, assets: null });
       return success(null);
     }
 
-    const imageUri = result.assets[0].uri;
-    const compressedUri = await compressImageIfNeeded(imageUri);
+    let asset: ImagePickerAsset | undefined = result.assets?.[0];
 
-    return success(compressedUri);
+    if (!asset?.uri && Platform.OS === 'android') {
+      const pending = await ImagePicker.getPendingResultAsync();
+      logImageFlow('android-pending', pending);
+      if (isPickerNativeError(pending)) {
+        imageFlowAlert('[pickImage] PENDING_ERROR', pending);
+        return failure(
+          new ImagePickerError(
+            pending.message || 'Image picker returned an error.',
+            pending
+          )
+        );
+      }
+      if (pending && !pending.canceled && pending.assets?.[0]?.uri) {
+        asset = pending.assets[0];
+      }
+    }
+
+    if (!asset?.uri) {
+      const payload = {
+        stage: 'NO_ASSET_URI',
+        result,
+      };
+      imageFlowAlert('[pickImage] SELECTION', payload);
+      return failure(
+        new ImagePickerError(
+          'No image was returned after selection. Try again.',
+          payload
+        )
+      );
+    }
+
+    logImageFlow('selected-asset', {
+      uriScheme: asset.uri.split(':')[0],
+      uriLength: asset.uri.length,
+      mimeType: asset.mimeType,
+      fileName: asset.fileName,
+      canceled: false,
+    });
+
+    try {
+      const compressedUri = await compressImageIfNeeded(asset.uri);
+      return success(compressedUri);
+    } catch (error) {
+      const payload = {
+        stage: 'COMPRESS_OR_READ_URI',
+        uri: asset.uri,
+        uriScheme: asset.uri.split(':')[0],
+        error: serializeUnknownError(error),
+      };
+      logImageFlow('compress-error', payload);
+      imageFlowAlert('[pickImage] COMPRESS', payload);
+      return failure(
+        new ImagePickerError(
+          "Couldn't read or compress the image. Try another photo.",
+          error
+        )
+      );
+    }
   } catch (error) {
-    console.error('[ImageService] Error picking image from gallery:', error);
+    const payload = {
+      stage: 'UNEXPECTED',
+      error: serializeUnknownError(error),
+    };
+    logImageFlow('pickImage-unexpected', payload);
+    imageFlowAlert('[pickImage] UNEXPECTED', payload);
     return failure(
       new ImagePickerError(
         "Couldn't select the image. Please try again.",
@@ -514,6 +672,15 @@ export async function pickImageFromGallery(): Promise<
       )
     );
   }
+}
+
+/**
+ * Same as {@link pickImage} (kept for existing imports).
+ */
+export async function pickImageFromGallery(): Promise<
+  Result<string | null, DomainError>
+> {
+  return pickImage();
 }
 
 /**
@@ -608,38 +775,32 @@ export async function takePictureWithCamera(): Promise<
  * @returns {Promise<Result<string, DomainError>>} Result with public URL or error
  */
 export async function uploadAvatarToBackend(
-  imageUri: string
+  imageUri: string,
+  meta?: { mimeType?: string; fileName?: string }
 ): Promise<Result<string, DomainError>> {
   try {
-    console.log('[ImageService] Uploading avatar via backend:', imageUri);
+    logImageFlow('upload-start', {
+      uriScheme: imageUri.split(':')[0],
+      uriLength: imageUri.length,
+      meta,
+    });
 
-    // Get auth token from store
     const tokens = useAuthStore.getState().tokens;
     if (!tokens?.accessToken) {
       return failure(new UploadError('No authentication token available'));
     }
 
-    // Create FormData with the image file
     const formData = new FormData();
 
     if (Platform.OS === 'web') {
-      // On web, blob URLs need to be converted to File/Blob objects
       if (imageUri.startsWith('blob:')) {
-        // Fetch the blob URL to get the Blob
         const response = await fetch(imageUri);
         const blob = await response.blob();
-
-        // Determine MIME type from blob or default to jpeg
         const mimeType = blob.type || 'image/jpeg';
-
-        // Create a File object from the Blob
         const filename = `avatar.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
         const file = new File([blob], filename, { type: mimeType });
-
-        // Append File object to FormData (standard web format)
         formData.append('file', file);
       } else {
-        // If it's not a blob URL, try to fetch it as a file
         const response = await fetch(imageUri);
         const blob = await response.blob();
         const mimeType = blob.type || 'image/jpeg';
@@ -648,35 +809,52 @@ export async function uploadAvatarToBackend(
         formData.append('file', file);
       }
     } else {
-      // In React Native, we need to provide file info in a specific format
-      const filename = imageUri.split('/').pop() || 'avatar.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      const rawName =
+        meta?.fileName ??
+        imageUri.split('/').pop()?.split('?')[0] ??
+        'avatar.jpg';
+      const filename = /\.[a-zA-Z0-9]+$/.test(rawName) ? rawName : 'avatar.jpg';
+      let type = meta?.mimeType;
+      if (!type) {
+        const match = /\.(\w+)$/.exec(filename);
+        type = match ? `image/${match[1]}` : 'image/jpeg';
+      }
 
       // @ts-expect-error - FormData in React Native accepts this format
       formData.append('file', {
         uri: imageUri,
-        type: type,
+        type,
         name: filename,
       });
     }
 
-    // Upload to backend API endpoint using axios directly
+    // Do not set Content-Type: axios must add multipart boundary automatically.
     const response = await axios.post(`${API_URL}/users/me/avatar`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
         Authorization: `Bearer ${tokens.accessToken}`,
       },
     });
 
     const { avatarUrl } = response.data;
-    console.log('[ImageService] Upload successful:', avatarUrl);
+    logImageFlow('upload-ok', { avatarUrl });
 
     return success(avatarUrl);
   } catch (error: unknown) {
-    console.error('[ImageService] Unexpected error uploading avatar:', error);
+    const payload = {
+      stage: 'UPLOAD_AVATAR',
+      uriScheme: imageUri.split(':')[0],
+      error: serializeUnknownError(error),
+      axios: axios.isAxiosError(error)
+        ? {
+            code: error.code,
+            status: error.response?.status,
+            data: error.response?.data,
+          }
+        : undefined,
+    };
+    logImageFlow('upload-error', payload);
+    imageFlowAlert('[uploadAvatar]', payload);
 
-    // Handle axios error format
     if (axios.isAxiosError(error) && error.response) {
       const message =
         error.response.data?.message ||

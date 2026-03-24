@@ -151,6 +151,16 @@
     "matchConfirmed": "Match confirmed",
     "notificationMessage": "You have a new exclusive chat with {{name}}. Discover has been paused so you can get to know each other."
   },
+  "chat": {
+    "unavailable": "Chat unavailable",
+    "typeMessagePlaceholder": "Type a message...",
+    "docLoveInfoTitle": "Info",
+    "docLoveInfoParagraph1": "Doc Love helps you discover better matches by asking thoughtful questions over time.",
+    "docLoveInfoParagraph2": "If you don't feel like answering a question, you can simply skip it or ask for a different one. You can answer briefly or go into more detail — whatever feels natural.",
+    "docLoveInfoParagraph3": "What you share with Doc Love (and your in-app chats) helps Wodates improve your future match recommendations.",
+    "docLoveInfoParagraph4": "One key rule: you can only have one active human chat at a time — while you're matched, Discover pauses.",
+    "gotIt": "Got it"
+  },
   "modals": {
     "connectionConfirmed": "Connection confirmed",
     "startExclusiveWith": "Do you want to start an exclusive conversation with {{name}}?",

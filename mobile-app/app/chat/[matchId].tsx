@@ -1749,7 +1749,11 @@ export default function ChatScreen() {
                 ]}
                 value={message}
                 onChangeText={handleTextChange}
-                placeholder={isBlocked ? 'Chat unavailable' : 'Type a message...'}
+                placeholder={
+                  isBlocked
+                    ? t('chat.unavailable')
+                    : t('chat.typeMessagePlaceholder')
+                }
                 multiline
                 maxLength={MESSAGE_MAX_LENGTH}
                 editable={!isBlocked}
@@ -2062,23 +2066,23 @@ export default function ChatScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.aboutDocLoveTitle}>Info</Text>
+            <Text style={styles.aboutDocLoveTitle}>{t('chat.docLoveInfoTitle')}</Text>
             <View style={styles.modalTextContainer}>
               <Text style={styles.modalText}>
-                Doc Love helps you discover better matches by asking thoughtful questions over time.
+                {t('chat.docLoveInfoParagraph1')}
                 {'\n\n'}
-                If you don't feel like answering a question, you can simply skip it or ask for a different one. You can answer briefly or go into more detail — whatever feels natural.
+                {t('chat.docLoveInfoParagraph2')}
                 {'\n\n'}
-                What you share with Doc Love (and your in-app chats) helps Wodates improve your future match recommendations.
+                {t('chat.docLoveInfoParagraph3')}
                 {'\n\n'}
-                One key rule: you can only have one active human chat at a time — while you're matched, Discover pauses.
+                {t('chat.docLoveInfoParagraph4')}
               </Text>
             </View>
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonConfirm]}
               onPress={() => setShowAboutDocLoveModal(false)}
             >
-              <Text style={styles.modalButtonTextConfirm}>Got it</Text>
+              <Text style={styles.modalButtonTextConfirm}>{t('chat.gotIt')}</Text>
             </TouchableOpacity>
           </View>
         </View>

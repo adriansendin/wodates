@@ -1,8 +1,8 @@
 {
   "app": {
     "title": "Wodates",
-    "tagline": "Dating by affinity",
-    "taglineSub": "Una conversación. Conexión real.",
+    "tagline": "Conecta por afinidad",
+    "taglineSub": "Una conversación. Afinidad real.",
     "cta": {
       "join": "Crear cuenta",
       "signIn": "Iniciar sesión"
@@ -151,6 +151,16 @@
     "matchConfirmed": "¡Match!",
     "notificationMessage": "Tienes un nuevo chat exclusivo con {{name}}. Descubrir está pausado para que os conozcáis."
   },
+  "chat": {
+    "unavailable": "Chat no disponible",
+    "typeMessagePlaceholder": "Escribe un mensaje...",
+    "docLoveInfoTitle": "Info",
+    "docLoveInfoParagraph1": "Doc Love te ayuda a descubrir mejores matches haciéndote preguntas con intención a lo largo del tiempo.",
+    "docLoveInfoParagraph2": "Si no te apetece responder una pregunta, puedes saltarla o pedir otra distinta. Puedes responder breve o en detalle, como te salga natural.",
+    "docLoveInfoParagraph3": "Lo que compartes con Doc Love (y tus chats en la app) ayuda a Wodates a mejorar tus recomendaciones de match futuras.",
+    "docLoveInfoParagraph4": "Regla clave: solo puedes tener un chat humano activo a la vez; mientras estés en match, Discover se pausa.",
+    "gotIt": "Entendido"
+  },
   "modals": {
     "connectionConfirmed": "Conexión confirmada",
     "startExclusiveWith": "¿Quieres empezar una conversación exclusiva con {{name}}?",
@@ -261,7 +271,7 @@
     "affinityFromDialogue": "Afinidad construida desde el diálogo real.",
     "radicalTransparency": "Transparencia radical.",
     "peopleOverMetrics": "Personas por encima de métricas de engagement.",
-    "taglineAffinity": "Dating by affinity",
+    "taglineAffinity": "Conecta por afinidad",
     "taglineOneConversation": "Una conversación a la vez."
   },
   "notFound": {

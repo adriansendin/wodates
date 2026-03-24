@@ -27,6 +27,10 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.wodates.app",
+      "permissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA"
+      ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW"
@@ -54,7 +58,15 @@
     },
     "plugins": [
       "expo-font",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow WODATES to access your photos to set your profile picture.",
+          "cameraPermission": "Allow WODATES to use the camera for your profile picture.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "scheme": "wodates",
     "extra": {

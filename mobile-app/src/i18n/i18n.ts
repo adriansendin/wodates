@@ -11,6 +11,12 @@ export { normalizeLanguage, SUPPORTED_LANGS };
 export type { SupportedLng } from './normalizeLanguage';
 
 let initialized = false;
+/**
+ * Force the application UI language.
+ * - Keep the browser language detection code below (so it can be re-enabled later)
+ * - But ensure the app never switches away from Spanish.
+ */
+const FORCE_APP_LANGUAGE: (typeof SUPPORTED_LANGS)[number] | null = 'es';
 
 /**
  * Initializes i18n once. Idempotent: safe to call multiple times.
@@ -26,7 +32,8 @@ export function initI18n(): void {
     .use(initReactI18next)
     .init({
       supportedLngs: [...SUPPORTED_LANGS],
-      fallbackLng: 'en',
+      fallbackLng: FORCE_APP_LANGUAGE ?? 'es',
+      lng: FORCE_APP_LANGUAGE ?? 'es',
       resources: {
         en: { common: enCommon },
         es: { common: esCommon },
@@ -47,16 +54,21 @@ export function initI18n(): void {
     });
 
   i18n.on('languageDetected', (lng: string) => {
+    // Forced language mode: ignore detected language changes.
+    if (FORCE_APP_LANGUAGE) return;
     const normalized = normalizeLanguage(lng);
     if (i18n.language !== normalized) {
       i18n.changeLanguage(normalized);
     }
   });
 
-  const detected = i18n.language ?? '';
-  const normalized = normalizeLanguage(detected);
-  if (normalized !== i18n.language) {
-    i18n.changeLanguage(normalized);
+  // In forced-language mode we don't normalize detected language.
+  if (!FORCE_APP_LANGUAGE) {
+    const detected = i18n.language ?? '';
+    const normalized = normalizeLanguage(detected);
+    if (normalized !== i18n.language) {
+      i18n.changeLanguage(normalized);
+    }
   }
 }
 

@@ -696,19 +696,47 @@ export default function ProfileScreen() {
 
     setIsSubmitting(true);
 
-    // Simular envío (500ms)
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      if (!tokens?.accessToken) {
+        notifySystem(
+          t('errors.somethingWentWrong'),
+          t('errors.tryAgain'),
+          undefined
+        );
+        return;
+      }
 
-    // Mostrar mensaje de éxito (sin limpiar el texto)
-    setIsSubmitting(false);
-    setShowToast(true);
+      const result = await profileApi.sendContactUsMessage(
+        contactMessage.trim(),
+        tokens.accessToken
+      );
 
-    // Cerrar modal después de 2 segundos (y limpiar texto al cerrar)
-    setTimeout(() => {
-      setShowToast(false);
-      setContactMessage(''); // Limpiar aquí, cuando el usuario ya no lo ve
-      setIsContactModalVisible(false);
-    }, 2000);
+      if (!result.success) {
+        if (result.error.code === 'VALIDATION_ERROR') {
+          setShowValidationError(true);
+          setTimeout(() => setShowValidationError(false), 3000);
+        } else {
+          notifySystem(
+            t('errors.somethingWentWrong'),
+            t('errors.tryAgain'),
+            result.error
+          );
+        }
+        return;
+      }
+
+      // Mostrar mensaje de éxito (sin limpiar el texto)
+      setShowToast(true);
+
+      // Cerrar modal después de 2 segundos (y limpiar texto al cerrar)
+      setTimeout(() => {
+        setShowToast(false);
+        setContactMessage(''); // Limpiar aquí, cuando el usuario ya no lo ve
+        setIsContactModalVisible(false);
+      }, 2000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteConfirm = useCallback(async () => {

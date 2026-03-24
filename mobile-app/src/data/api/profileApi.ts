@@ -30,6 +30,19 @@ export class ProfileApi {
     );
   }
 
+  sendContactUsMessage(
+    message: string,
+    token: string
+  ): Promise<
+    Result<{ ok: boolean; id: string; createdAt: string }, DomainError>
+  > {
+    return this.apiClient.post<{ ok: boolean; id: string; createdAt: string }>(
+      '/contact-us',
+      { message },
+      token
+    );
+  }
+
   /** Build AI profile from chat messages (summary, embedding, bio). */
   generateProfile(
     token: string

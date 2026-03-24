@@ -40,9 +40,16 @@ export const AIModelConstants = {
 export type Locale = 'en' | 'es';
 
 /**
- * Normalizes a locale string to Locale. Defaults to 'en' when not Spanish.
+ * Normalizes a locale string to Locale.
+ * Forced to Spanish in this project (English code/prompt strings remain intact).
  */
+const FORCE_AI_LOCALE: Locale | null = 'es';
+
 export function normalizeLocale(locale?: string | null): Locale {
+  // Forced Spanish mode:
+  // - Keep English prompt strings/code intact
+  // - But ensure all locale resolution uses Spanish
+  if (FORCE_AI_LOCALE) return FORCE_AI_LOCALE;
   if (locale?.toLowerCase().startsWith('es')) return 'es';
   return 'en';
 }
@@ -112,7 +119,7 @@ export const AIConfig = {
   affinitySentencesEnabled: process.env.AFFINITY_ENABLED === 'true',
 
   /** Returns fallback sentence(s) for affinity when profiles are missing, in the given locale. */
-  getAffinitySentencesFallback(locale: Locale = 'en'): string[] {
+  getAffinitySentencesFallback(locale: Locale = 'es'): string[] {
     return locale === 'es'
       ? ['La afinidad inicial es baja—la conversación afinará las recomendaciones.']
       : ['Initial affinity is low—conversation will refine the recommendations.'];
@@ -161,14 +168,14 @@ Other rules:
 Initial affinity is low—conversation will refine the recommendations.
 - Return ONLY the sentence. No extra text. No explanation.
 `,
-      basePrompt(locale: Locale = 'en'): string {
+      basePrompt(locale: Locale = 'es'): string {
         return locale === 'es' ? this._basePromptEs : this._basePromptEn;
       },
       /** Builds the complete prompt with user profiles. Pass locale for prompt language and fallback text. */
       buildPrompt(
         currentUserProfile: string,
         candidateUserProfile: string,
-        locale: Locale = 'en'
+        locale: Locale = 'es'
       ): string {
         const base = this.basePrompt(locale);
         if (locale === 'es') {
@@ -205,7 +212,7 @@ Now generate the sentence strictly based on these profiles.`;
     /**
      * System instructions for Doc Love. Pass locale so Doc Love responds in the user's language.
      */
-    systemInstructions(locale: Locale = 'en'): string {
+    systemInstructions(locale: Locale = 'es'): string {
       const seedTopicsEs = [
         // Culture & curiosity
         'libros, series, pelis, podcasts o contenido que te haya gustado últimamente',
@@ -506,7 +513,7 @@ Never speak as if you were a person.
      * Instructions for generating user bio from structured profile summary
      * Used by backend to generate short bios for display in Discover feed
      */
-    bioGeneration(locale: Locale = 'en'): string {
+    bioGeneration(locale: Locale = 'es'): string {
       if (locale !== 'es') {
         return `ROLE:
 You are an assistant that writes a short bio for a Discover card (mobile).

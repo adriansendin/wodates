@@ -11,6 +11,10 @@ import i18n from '../src/i18n/i18n';
 import { normalizeLanguage } from '../src/i18n/normalizeLanguage';
 import { useAuthStore } from '../src/domain/stores/authStore';
 
+// In forced-language mode we keep the code that syncs from browser language,
+// but prevent it from changing away from Spanish.
+const FORCE_APP_LANGUAGE: 'es' | null = 'es';
+
 function HeaderTitle() {
   const { t } = useTranslation('common');
   return (
@@ -51,6 +55,7 @@ function PWAInitializer() {
 // Sync i18n with browser language after mount (web only; init can run before navigator is ready)
 function BrowserLanguageSync() {
   useEffect(() => {
+    if (FORCE_APP_LANGUAGE) return;
     if (typeof navigator === 'undefined') return;
     const browserLang =
       navigator.languages?.[0] ?? navigator.language ?? '';

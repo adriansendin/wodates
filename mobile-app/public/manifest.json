@@ -1,14 +1,14 @@
 {
   "name": "Wodates",
   "short_name": "Wodates",
-  "description": "Wodates - Dating app",
+  "description": "Wodates - App de citas",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#e91e63",
   "background_color": "#ffffff",
-  "lang": "en-US",
+  "lang": "es-ES",
   "icons": [
     {
       "src": "/assets/icon-192.png",
@@ -41,14 +41,14 @@
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Wodates mobile view"
+      "label": "Vista móvil de Wodates"
     },
     {
       "src": "/assets/screenshot-desktop.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Wodates desktop view"
+      "label": "Vista de escritorio de Wodates"
     }
   ]
 }

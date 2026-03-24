@@ -18,6 +18,7 @@ import { userVerificationRoutes } from './routes/user-verification-routes';
 import { adminVerificationRoutes } from './routes/admin-verification-routes';
 import { questionBankRoutes } from './routes/question-bank-routes';
 import { waitlistRoutes } from './routes/waitlist-routes';
+import { contactUsRoutes } from './routes/contact-us-routes';
 import { SupabaseLikeRepository } from '../data/repositories/SupabaseLikeRepository';
 import { SupabasePassRepository } from '../data/repositories/SupabasePassRepository';
 import { SupabaseMatchRepository } from '../data/repositories/SupabaseMatchRepository';
@@ -361,6 +362,7 @@ async function buildApp() {
     { prefix: '/api/v1' }
   );
   await fastify.register(waitlistRoutes, { prefix: '/api/v1/waitlist' });
+  await fastify.register(contactUsRoutes, { prefix: '/api/v1' });
 
   // Health check
   fastify.get('/health', async () => {

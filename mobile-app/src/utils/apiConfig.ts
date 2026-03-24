@@ -15,8 +15,21 @@ export function getApiUrl(): string {
   const ipAddressRegex = /http:\/\/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)/;
   const ipMatch = configuredUrl.match(ipAddressRegex);
 
-  // If no IP address is found, return as-is (already localhost or domain)
+  // If no IP address is found, return as-is — except Android emulator + localhost
   if (!ipMatch) {
+    const isAndroidEmulator =
+      Platform.OS === 'android' &&
+      Constants?.isDevice === false;
+    if (isAndroidEmulator && /localhost|127\.0\.0\.1/.test(configuredUrl)) {
+      const androidLocal = configuredUrl.replace(
+        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)/,
+        'http://10.0.2.2$2'
+      );
+      console.log(
+        `[getApiUrl] Android emulator + localhost API host -> ${androidLocal}`
+      );
+      return androidLocal;
+    }
     console.log(
       `[getApiUrl] No IP address detected, using as-is: ${configuredUrl}`
     );
@@ -106,7 +119,24 @@ export function getApiUrl(): string {
   );
 
   if (isSimulator) {
-    // Running in simulator/emulator - can use localhost
+    // iOS simulator: host machine is localhost. Android emulator: localhost is the VM;
+    // use special alias to reach the dev machine (see Android docs: 10.0.2.2).
+    if (Platform.OS === 'android') {
+      const androidUrl = configuredUrl.replace(
+        ipAddressRegex,
+        `http://10.0.2.2:${port}`
+      );
+      const withHost = androidUrl.includes('10.0.2.2')
+        ? androidUrl
+        : androidUrl.replace(
+            /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/,
+            `http://10.0.2.2$2`
+          );
+      console.log(
+        `[getApiUrl] Android emulator: ${configuredUrl} -> ${withHost}`
+      );
+      return withHost;
+    }
     console.log(
       `[getApiUrl] Simulator/Emulator detected: ${configuredUrl} -> ${localhostUrl}`
     );

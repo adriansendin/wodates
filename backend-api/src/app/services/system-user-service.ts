@@ -35,7 +35,7 @@ export class SystemUserService {
   ) {}
 
   /**
-   * Returns welcome messages in the requested locale (en | es). Defaults to en.
+   * Returns welcome messages in the requested locale (en | es).
    */
   private getWelcomeMessages(locale: string): string[] {
     const lang = locale?.toLowerCase().startsWith('es') ? 'es' : 'en';
@@ -157,7 +157,7 @@ export class SystemUserService {
       // Send welcome messages from Doc Love (static messages, not AI-generated)
       // Each sentence in its own chat bubble. Language from locale (default en).
       if (this.messageRepository) {
-        const welcomeMessages = this.getWelcomeMessages(locale ?? 'en');
+        const welcomeMessages = this.getWelcomeMessages(locale ?? 'es');
 
         // Create each message sequentially
         for (const content of welcomeMessages) {

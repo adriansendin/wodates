@@ -7,15 +7,12 @@ import {
   ActivityIndicator,
   Platform,
   ActionSheetIOS,
-  Alert,
+  Alert, // eslint-disable-line no-restricted-imports -- Android photo source dialog
   Text,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  pickImageFromGallery,
-  takePictureWithCamera,
-} from '../data/api/imageService';
+import { pickImage, takePictureWithCamera } from '../data/api/imageService';
 
 type Props = {
   uri: string | null | undefined;
@@ -42,7 +39,7 @@ export function AvatarPicker({
 
     const pickFromGallery = async () => {
       setBusy(true);
-      const result = await pickImageFromGallery();
+      const result = await pickImage();
       if (result.success && result.data) {
         await onChange(result.data);
       }

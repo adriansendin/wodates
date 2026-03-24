@@ -54,19 +54,19 @@ export default function AppTabsLayout() {
       <Tabs.Screen
         name="feed"
         options={{
-          title: 'Discover',
+          title: 'Descubrir',
         }}
       />
       <Tabs.Screen
         name="matches"
         options={{
-          title: 'Chats',
+          title: 'Chat',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Perfil',
         }}
       />
     </Tabs>

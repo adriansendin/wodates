@@ -1,4 +1,5 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { Platform } from 'react-native';
 import { Result, success, failure } from '../../domain/Result';
 import {
   ConflictError,
@@ -12,6 +13,9 @@ import {
   ValidationError,
 } from '../../domain/errors/DomainError';
 
+/** Multipart uploads (emulator / slow I/O) can exceed the default 10s client timeout. */
+const FORM_DATA_UPLOAD_TIMEOUT_MS = 120_000;
+
 export class ApiClient {
   private client: AxiosInstance;
 
@@ -22,14 +26,18 @@ export class ApiClient {
       // Don't set Content-Type by default - we'll set it per request
     });
 
-    // Request interceptor - no longer needed since we handle Content-Type in post method
-
     // Response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
         if (!error.response) {
-          throw new NetworkError('Network error');
+          const message =
+            axios.isAxiosError(error) && error.code === 'ECONNABORTED'
+              ? 'Request timed out'
+              : axios.isAxiosError(error) && error.message
+                ? error.message
+                : 'Network error';
+          throw new NetworkError(message);
         }
 
         if (error.response.status === 401) {
@@ -73,6 +81,15 @@ export class ApiClient {
     token?: string,
     signal?: AbortSignal
   ): Promise<Result<T, DomainError>> {
+    // Axios + React Native FormData (file/content URIs) often fails with a generic
+    // "Network Error". Native fetch uses the RN networking stack correctly.
+    if (
+      data instanceof FormData &&
+      Platform.OS !== 'web'
+    ) {
+      return this.postFormDataNative<T>(url, data, token, signal);
+    }
+
     try {
       const fullUrl = `${this.client.defaults.baseURL}${url}`;
       console.log(`[ApiClient] POST ${fullUrl}`, {
@@ -84,18 +101,25 @@ export class ApiClient {
         ? { Authorization: `Bearer ${token}` }
         : {};
 
-      // For FormData, explicitly don't set Content-Type - let browser/axios set it with boundary
-      // For other data, set Content-Type to application/json
       if (data instanceof FormData) {
-        // Explicitly set to undefined so axios doesn't use the default
         headers['Content-Type'] = undefined;
       } else {
         headers['Content-Type'] = 'application/json';
       }
 
+      const extraConfig: AxiosRequestConfig =
+        data instanceof FormData
+          ? {
+              timeout: FORM_DATA_UPLOAD_TIMEOUT_MS,
+              maxBodyLength: Infinity,
+              maxContentLength: Infinity,
+            }
+          : {};
+
       const response: AxiosResponse<T> = await this.client.post(url, data, {
         headers,
         signal,
+        ...extraConfig,
       });
       return success(response.data);
     } catch (error) {
@@ -122,7 +146,6 @@ export class ApiClient {
         };
         console.error(`[ApiClient] POST ${fullUrl} failed:`, errorDetails);
 
-        // Log specific troubleshooting info for network errors
         if (!error.response && !error.request) {
           console.error(
             `[ApiClient] TROUBLESHOOTING: Request never left the device. Check:`
@@ -145,6 +168,121 @@ export class ApiClient {
     }
   }
 
+  /**
+   * Multipart POST for native: avoids Axios + RN FormData issues (generic "Network Error").
+   */
+  private async postFormDataNative<T>(
+    url: string,
+    formData: FormData,
+    token?: string,
+    signal?: AbortSignal
+  ): Promise<Result<T, DomainError>> {
+    const fullUrl = `${this.client.defaults.baseURL}${url}`;
+    console.log(`[ApiClient] POST (fetch/native) ${fullUrl}`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      FORM_DATA_UPLOAD_TIMEOUT_MS
+    );
+
+    const onExternalAbort = () => controller.abort();
+    if (signal) {
+      signal.addEventListener('abort', onExternalAbort);
+    }
+
+    try {
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const res = await fetch(fullUrl, {
+        method: 'POST',
+        body: formData,
+        headers,
+        signal: controller.signal,
+      });
+
+      const text = await res.text();
+      let body: unknown = {};
+      if (text) {
+        try {
+          body = JSON.parse(text) as unknown;
+        } catch {
+          body = { raw: text };
+        }
+      }
+
+      if (res.ok) {
+        return success(body as T);
+      }
+
+      return failure(this.domainErrorFromHttpResponse(res.status, body));
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return failure(new NetworkError('Request timed out'));
+      }
+      console.error(`[ApiClient] POST (fetch/native) ${fullUrl} failed:`, error);
+      return failure(
+        new NetworkError(
+          error instanceof Error ? error.message : 'Network error'
+        )
+      );
+    } finally {
+      clearTimeout(timeoutId);
+      if (signal) {
+        signal.removeEventListener('abort', onExternalAbort);
+      }
+    }
+  }
+
+  private domainErrorFromHttpResponse(
+    status: number,
+    body: unknown
+  ): DomainError {
+    const message = this.messageFromErrorBody(body, `HTTP ${status}`);
+
+    if (status === 400) {
+      const details =
+        typeof body === 'object' && body !== null && 'details' in body
+          ? (body as { details: unknown }).details
+          : undefined;
+      return new ValidationError(message, details);
+    }
+    if (status === 401) {
+      return new UnauthorizedError(message);
+    }
+    if (status === 403) {
+      return new ForbiddenError(message);
+    }
+    if (status === 404) {
+      return new NotFoundError(message);
+    }
+    if (status === 409) {
+      return new ConflictError(message);
+    }
+    if (status === 429) {
+      return new UnexpectedError(message);
+    }
+    if (status >= 500) {
+      return new ServerError(message);
+    }
+    return new UnexpectedError(message);
+  }
+
+  private messageFromErrorBody(body: unknown, fallback: string): string {
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      'message' in body &&
+      (body as { message?: unknown }).message != null
+    ) {
+      return String((body as { message: unknown }).message);
+    }
+    return fallback;
+  }
+
   async put<T>(
     url: string,
     data?: unknown,
@@ -155,7 +293,6 @@ export class ApiClient {
         ? { Authorization: `Bearer ${token}` }
         : {};
 
-      // Set Content-Type to application/json to ensure proper JSON serialization
       headers['Content-Type'] = 'application/json';
 
       console.log(`[ApiClient] PUT ${this.client.defaults.baseURL}${url}`, {
