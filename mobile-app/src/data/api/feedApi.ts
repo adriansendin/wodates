@@ -49,14 +49,12 @@ export class FeedApi {
       return result;
     }
 
-    const validation = FeedResponseSchema.safeParse(result.data);
-    if (!validation.success) {
-      return failure(
-        new ValidationError('Invalid feed payload', validation.error)
-      );
+    const parsed = parseFeedPayload(result.data);
+    if (!parsed.success) {
+      return failure(parsed.error);
     }
 
-    return success(validation.data);
+    return success(parsed.data);
   }
 
   async likeUser(
@@ -95,3 +93,34 @@ const FeedResponseSchema = z.object({
     hasMore: z.boolean(),
   }),
 });
+
+/** Parse envelope + pagination; validate each candidate so one bad row does not empty the whole feed. */
+function parseFeedPayload(
+  data: unknown
+): Result<FeedResponse, ValidationError> {
+  const envelope = z
+    .object({
+      users: z.array(z.unknown()),
+      pagination: FeedResponseSchema.shape.pagination,
+    })
+    .safeParse(data);
+
+  if (!envelope.success) {
+    return failure(new ValidationError('Invalid feed payload', envelope.error));
+  }
+
+  const validUsers: FeedCandidate[] = [];
+  for (const raw of envelope.data.users) {
+    const one = FeedCandidateSchema.safeParse(raw);
+    if (one.success) {
+      validUsers.push(one.data);
+    } else if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn('[FeedApi] Skipping invalid feed candidate', one.error.format());
+    }
+  }
+
+  return success({
+    users: validUsers,
+    pagination: envelope.data.pagination,
+  });
+}

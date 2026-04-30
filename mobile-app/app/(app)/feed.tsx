@@ -278,7 +278,9 @@ export default function FeedScreen() {
       if (result.success) {
         if (append) {
           // Filter out users that are already in the feed to avoid duplicates
-          const existingUserIds = new Set(users.map((u) => u.id));
+          const existingUserIds = new Set(
+            useFeedStore.getState().users.map((u) => u.id)
+          );
           const newUsers = result.data.users.filter((u) => !existingUserIds.has(u.id));
           if (newUsers.length > 0) {
             addUsers(newUsers);
@@ -304,7 +306,7 @@ export default function FeedScreen() {
         setIsInitialLoad(false);
       }
     }
-  }, [tokens?.accessToken, feedApi, addUsers, setUsers, setHasMore, setLoading, setError]);
+  }, [tokens?.accessToken, feedApi, addUsers, setUsers, setHasMore, setLoading, setError, t]);
 
   // Reload profile when screen comes into focus to get latest show_bio_in_feed value.
   // When feed was invalidated (e.g. after changing "Looking for" in profile), reload discover.
@@ -321,20 +323,15 @@ export default function FeedScreen() {
 
   // Load more users when approaching the end
   const loadMoreIfNeeded = useCallback(async () => {
+    if (users.length === 0) {
+      return;
+    }
     // Load more when we're within 5 users of the end
     const remainingUsers = users.length - currentIndex;
     if (remainingUsers <= 5 && hasMore && !isLoading) {
       await loadFeed(users.length, true);
     }
   }, [users.length, currentIndex, hasMore, isLoading, loadFeed]);
-
-  useEffect(() => {
-    console.log('[FeedScreen] useEffect triggered - calling loadFeed');
-    if (tokens?.accessToken && users.length === 0) {
-      loadFeed(0, false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tokens?.accessToken]);
 
   // Load more users when approaching the end
   useEffect(() => {
@@ -800,21 +797,22 @@ export default function FeedScreen() {
   }
 
   if (!currentUser) {
-    // Try to load more if we still have more available
-    if (hasMore && !isLoading) {
-      loadMoreIfNeeded();
-    }
-    
+    const emptyMessage = isLoading
+      ? t('feed.loadingFeed')
+      : hasMore
+        ? t('feed.emptyNoCandidates')
+        : t('feed.emptyQuality');
+
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>
-          {hasMore ? t('feed.loadingMore') : t('feed.emptyQuality')}
-        </Text>
-        {!hasMore && (
-          <TouchableOpacity style={styles.refreshButton} onPress={() => loadFeed(0, false)}>
-            <Text style={styles.refreshButtonText}>{t('common.refresh')}</Text>
-          </TouchableOpacity>
-        )}
+        <Text style={styles.emptyText}>{emptyMessage}</Text>
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={() => loadFeed(0, false)}
+          disabled={isLoading}
+        >
+          <Text style={styles.refreshButtonText}>{t('common.refresh')}</Text>
+        </TouchableOpacity>
         {isLoading && <ActivityIndicator size="small" color="#e91e63" style={{ marginTop: 10 }} />}
       </View>
     );

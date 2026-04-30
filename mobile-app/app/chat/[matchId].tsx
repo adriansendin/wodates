@@ -51,34 +51,8 @@ const API_URL = getApiUrl();
 // Debug logging helper (only in development)
 const debugLog = (...args: unknown[]): void => { if (__DEV__) console.log(...args); };
 
-// Two-part Spanish opener templates for blank human-human chats
-const OPENER_TEMPLATES = [
-  // Warm / open (no question)
-  "Nice to meet you here 🙂 No rush — happy to start easy and see how it feels.",
-  "Good to see you here. I’m more into calm, genuine chats than forced small talk.",
-  "A pleasure to meet you 🙂 I’m {name}. Just saying hi properly — happy to keep this simple.",
-  "Glad we matched. If now’s hectic, no worries — when you get a moment, I’d love to hear what kind of chat you enjoy.",
-  "Hello 🙂 I like that we’re focusing on one conversation at a time — no pressure, just happy to say hi.",
-  "Hey! It’s been a good day — hope yours is going well too.",
-
-  // Options (choice, not a question-heavy “interview”)
-  "Pleasure meeting you. Want to start with something light, or something a bit more real?",
-  "Hi there 🙂 We can go slow and casual, or be a bit more direct — whatever feels best.",
-  "Good evening. Pick a lane: plans / work / interests / life — I’ll follow.",
-  "Nice to meet you 🙂 Would you rather do one question each, or just chat naturally?",
-  "Glad we crossed paths. We can keep it short-and-sweet, or do proper messages — whatever feels easiest.",
-  "Hello! We can keep it short-and-sweet, or do proper messages — your call.",
-  "Hey 🙂 Either we start super light, or we skip to something meaningful — both work for me.",
-
-  // Questions (gentle, not “a saco”)
-  "I’m {name} 🙂 What kind of pace feels comfortable for you when getting to know someone?",
-  "Not going to do the empty “how are you?” — what’s been the best part of your week so far?",
-  "Hi! What’s a topic you actually enjoy talking about, even with someone new?",
-  "Good to see you here 🙂 What’s a small thing that’s made you smile recently?",
-  "Honestly curious — what’s a green flag you appreciate early on?",
-  "No pressure at all: are you more of a quick replier, or more ‘when I can’?",
-  "Nice to meet you 🙂 If we start with one thing, what would you like to know about me first?"
-];
+/** Must match the length of `chat.openers` in `en/common.json` and `es/common.json`. */
+const OPENER_TEMPLATE_COUNT = 20;
 
 
 // Simple global flag to prevent any duplicate API calls during the entire chat session
@@ -245,7 +219,11 @@ const isSameDay = (date1: Date, date2: Date): boolean => {
 };
 
 export default function ChatScreen() {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
+  const openerTemplates = useMemo((): string[] => {
+    const raw = t('chat.openers', { returnObjects: true });
+    return Array.isArray(raw) ? (raw as string[]) : [];
+  }, [t, i18n.language]);
   const componentInstanceId = useRef(++globalComponentCounter);
   const mountTime = useRef(Date.now());
 
@@ -352,7 +330,7 @@ export default function ChatScreen() {
     for (let i = 0; i < combinedId.length; i++) {
       hash += combinedId.charCodeAt(i);
     }
-    return hash % OPENER_TEMPLATES.length;
+    return hash % OPENER_TEMPLATE_COUNT;
   });
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -1097,17 +1075,19 @@ export default function ChatScreen() {
     !hasSentMessageInSessionRef.current; // Also check session ref for immediate feedback
     
   useEffect(() => {
-    // Check if current message is one of the templates
-    const isTemplateMessage = OPENER_TEMPLATES.includes(message);
-    
+    if (openerTemplates.length === 0) return;
+    const safeIndex = openerTemplateIndex % openerTemplates.length;
+    // Check if current message is one of the templates (current locale)
+    const isTemplateMessage = openerTemplates.includes(message);
+
     if (shouldShowOpener && message === '' && !userClearedInputRef.current) {
       // Only set initial template when chat is blank, input is empty, user hasn't cleared it, and hasn't sent a message yet
-      setMessage(OPENER_TEMPLATES[openerTemplateIndex]);
+      setMessage(openerTemplates[safeIndex]);
     } else if (!shouldShowOpener && isTemplateMessage && !userClearedInputRef.current) {
       // Clear template if chat is no longer blank (messages were loaded) or if loading is still in progress
       setMessage('');
     }
-  }, [shouldShowOpener, message, openerTemplateIndex, isLoading]);
+  }, [shouldShowOpener, message, openerTemplateIndex, isLoading, openerTemplates]);
 
   // Redirect if blocked
   useEffect(() => {
@@ -1327,9 +1307,13 @@ export default function ChatScreen() {
   // Blank chat opener functions
   const handleChangeOpener = useCallback(() => {
     userClearedInputRef.current = false; // Reset clear flag when changing template
-    setOpenerTemplateIndex((prev) => (prev + 1) % OPENER_TEMPLATES.length);
-    setMessage(OPENER_TEMPLATES[(openerTemplateIndex + 1) % OPENER_TEMPLATES.length]);
-  }, [openerTemplateIndex]);
+    if (openerTemplates.length === 0) return;
+    setOpenerTemplateIndex((prev) => {
+      const next = (prev + 1) % openerTemplates.length;
+      setMessage(openerTemplates[next]);
+      return next;
+    });
+  }, [openerTemplates]);
 
   const handleClearOpener = useCallback(() => {
     userClearedInputRef.current = true; // Mark that user intentionally cleared

@@ -114,6 +114,21 @@ export class SupabaseFeedService {
       }
 
       if (!data || data.length === 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[SupabaseFeedService] Feed query returned 0 rows', {
+            userId,
+            offset,
+            limit,
+            viewerGender: currentUser.gender,
+            viewerLookingFor: currentUser.looking_for,
+            normalizedViewerGender: currentUserGender,
+            genderFilter,
+            reverseLookingForOr: this.buildReverseLookingForFilter(
+              currentUserGender
+            ),
+            excludedCount: excludedIds.size,
+          });
+        }
         return [];
       }
 

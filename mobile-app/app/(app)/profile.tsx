@@ -1517,6 +1517,14 @@ export default function ProfileScreen() {
             >
               <Text style={styles.actionButtonText}>{t('profile.contactUs')}</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={handleDeleteAccount}
+            >
+              <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
+                {t('profile.deleteAccount')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 

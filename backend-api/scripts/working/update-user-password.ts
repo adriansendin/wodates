@@ -28,8 +28,8 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-const TARGET_EMAIL = 'doclove@wodates.com';
-const NEW_PASSWORD = '1ahwmeWBCl3456';
+const TARGET_EMAIL = 'lauragomezromero27@gmail.com';
+const NEW_PASSWORD = 'hTen5#ywe';
 
 async function updateUserPassword() {
   console.log('🔄 Iniciando actualización de contraseña...\n');
