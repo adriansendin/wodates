@@ -13,7 +13,7 @@ export const RegisterSchema = z.object({
   name: z.string().min(1).max(100), // Se almacena como display_name en auth.users.raw_user_meta_data
   birthDate: z.string().datetime(),
   gender: GenderSchema, // REQUERIDO - debe coincidir con el backend
-  location: z.string().min(1), // REQUERIDO - debe coincidir con el backend
+  location: z.string(), // ciudad / ubicación; puede ir vacía (misma regla que backend)
   country: z.string().optional(),
   lookingFor: LookingForSchema, // REQUERIDO - debe coincidir con el backend
   locale: z.enum(['en', 'es']).optional(), // Idioma para mensajes de bienvenida de Doc Love

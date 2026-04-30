@@ -1,5 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Image,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -10,8 +20,12 @@ import { AuthApi } from '../../src/data/api/authApi';
 import { AuthTokens } from '../../src/domain/entities/Auth';
 import { User, Gender } from '../../src/domain/entities/User';
 import { getApiUrl } from '../../src/utils/apiConfig';
-import { notifyActionable, notifySystem } from '../../src/utils/notificationService';
+import {
+  notifyActionable,
+  notifySystem,
+} from '../../src/utils/notificationService';
 import { trackLoginSuccess } from '../../src/analytics/ga4';
+import { ManualPasswordRecoveryModal } from '../../src/components/ManualPasswordRecoveryModal';
 
 const API_URL = getApiUrl();
 
@@ -31,7 +45,8 @@ const normalizeUser = (rawUser: Record<string, unknown>): User => {
     birthDate: typeof rawUser.birthDate === 'string' ? rawUser.birthDate : now,
     gender,
     bio: typeof rawUser.bio === 'string' ? rawUser.bio : undefined,
-    photoUrl: typeof rawUser.photoUrl === 'string' ? rawUser.photoUrl : undefined,
+    photoUrl:
+      typeof rawUser.photoUrl === 'string' ? rawUser.photoUrl : undefined,
     location: rawUser.location as User['location'],
     createdAt: typeof rawUser.createdAt === 'string' ? rawUser.createdAt : now,
     updatedAt: typeof rawUser.updatedAt === 'string' ? rawUser.updatedAt : now,
@@ -43,6 +58,7 @@ export default function LoginScreen() {
   const { t } = useTranslation('common');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
   const { login, setLoading, setError, isLoading, error } = useAuthStore();
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
@@ -79,16 +95,21 @@ export default function LoginScreen() {
       };
 
       login(normalizedUser, tokens);
-      
+
       // Track GA4 event: login success
       trackLoginSuccess('email');
-      
-      router.replace('/(app)/matches');
+
+      router.replace('/(app)/questionnaire');
     } catch (err) {
       console.error('Login error', err);
       const message = t('errors.networkError');
       setError(message);
-      notifySystem(t('errors.somethingWentWrong'), t('errors.tryAgain'), err, handleLogin);
+      notifySystem(
+        t('errors.somethingWentWrong'),
+        t('errors.tryAgain'),
+        err,
+        handleLogin
+      );
     } finally {
       setLoading(false);
     }
@@ -96,11 +117,11 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
@@ -111,8 +132,8 @@ export default function LoginScreen() {
           <View style={styles.innerContent}>
             {/* Logo completo: icono + palabra Wodates */}
             <View style={styles.logoContainer}>
-              <Image 
-                source={require('../../assets/icon.png')} 
+              <Image
+                source={require('../../assets/icon.png')}
                 style={styles.logoIcon}
                 resizeMode="contain"
               />
@@ -120,7 +141,9 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.contextualBlock}>
-              <Text style={styles.contextualText}>{t('manifesto.taglineAffinity')}</Text>
+              <Text style={styles.contextualText}>
+                {t('manifesto.taglineAffinity')}
+              </Text>
             </View>
 
             <View style={styles.form}>
@@ -145,19 +168,40 @@ export default function LoginScreen() {
               />
 
               <TouchableOpacity
-                style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+                onPress={() => setForgotModalVisible(true)}
+                style={styles.forgotPasswordRow}
+                accessibilityRole="button"
+                accessibilityLabel={t('auth.forgotPasswordQuestion')}
+                hitSlop={{ top: 8, bottom: 8 }}
+              >
+                <Text style={styles.forgotPasswordText}>
+                  {t('auth.forgotPasswordQuestion')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  isLoading && styles.buttonDisabled,
+                ]}
                 onPress={handleLogin}
                 disabled={isLoading}
               >
-                <Text style={styles.primaryButtonText}>{isLoading ? t('auth.signingIn') : t('auth.login')}</Text>
+                <Text style={styles.primaryButtonText}>
+                  {isLoading ? t('auth.signingIn') : t('auth.login')}
+                </Text>
               </TouchableOpacity>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
-              
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ManualPasswordRecoveryModal
+        visible={forgotModalVisible}
+        onClose={() => setForgotModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -219,6 +263,16 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 280,
     gap: 16,
+  },
+  forgotPasswordRow: {
+    alignSelf: 'flex-start',
+    marginTop: -4,
+    marginBottom: -4,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#6B6B6B',
+    textDecorationLine: 'underline',
   },
   input: {
     borderWidth: 1,

@@ -2,11 +2,60 @@
   "app": {
     "title": "Wodates",
     "tagline": "Dating by affinity",
-    "taglineSub": "One conversation. Real connection.",
+    "taglineSub": "For people seeking a stable relationship",
     "cta": {
       "join": "Create account",
       "signIn": "Sign in"
     }
+  },
+  "deepOnboarding": {
+    "blockTitle": "Block {{current}} of {{total}}",
+    "continue": "Continue",
+    "finish": "Finish",
+    "loading": "Loading form…",
+    "loadError": "Could not load the form.",
+    "retry": "Try again",
+    "validationIncomplete": "Please answer every question in this block.",
+    "validationMultiOther": "Please complete the text for any «Other» option you selected.",
+    "validationTextLength": "Some answers exceed the maximum length.",
+    "saveError": "Could not save your answers. Please try again.",
+    "completeTitle": "All done!",
+    "completeMessage": "Thanks for completing the questionnaire.",
+    "charactersCount": "{{used}} / {{max}}",
+    "otherDetailPlaceholder": "Please specify…",
+    "createAccountScreenTitle": "Your account",
+    "createAccountSubtitle": "Final step: create your account with the same details you edit in your profile.",
+    "buttonCreateAccount": "Create account",
+    "nameRequired": "Please enter your name."
+  },
+  "tabs": {
+    "questionnaire": "Signup",
+    "profile": "Profile",
+    "discover": "Discover",
+    "chat": "Chat"
+  },
+  "questionnaire": {
+    "hubSubtitle": "Your signup is complete. You can review or edit any section.",
+    "hubFooter": "We'll start looking for the most promising affinities for you. We'll share more information soon.",
+    "saveBlock": "Save this block",
+    "hubCards": [
+      {
+        "title": "Your way of being",
+        "subtitle": "How you connect, decide, and move through everyday life."
+      },
+      {
+        "title": "Your lifestyle",
+        "subtitle": "Your pace, your habits, and the plans you enjoy most."
+      },
+      {
+        "title": "What you're looking for",
+        "subtitle": "Your intention, values, and vision for partnership."
+      },
+      {
+        "title": "Real-life fit",
+        "subtitle": "What needs to work in day-to-day life together."
+      }
+    ]
   },
   "auth": {
     "login": "Sign in",
@@ -18,7 +67,20 @@
     "loginContextTitle": "Sign in to your account",
     "loginContextSub": "For people who are done with swipe culture.",
     "enterWodates": "Enter Wodates",
-    "back": "Back"
+    "back": "Back",
+    "forgotPasswordQuestion": "Forgot your password?",
+    "manualRecoveryIntro": "For now, account recovery is handled manually.",
+    "manualRecoveryBeforeEmail": "Email us at ",
+    "manualRecoveryAfterEmail": " from the same address you used to register, and we'll help you recover your account.",
+    "manualRecoveryResponseLabel": "Typical response time:",
+    "manualRecoveryResponseHours": "24–48 hours.",
+    "manualRecoveryNoteLabel": "Note:",
+    "manualRecoveryNoteBody": "To protect your account, we may ask for extra verification.",
+    "manualRecoveryUnderstood": "Got it",
+    "manualRecoveryCopyEmail": "Copy email",
+    "manualRecoveryEmailCopied": "Email copied.",
+    "manualRecoveryBackdropA11y": "Close dialog",
+    "manualRecoveryCloseIconA11y": "Close"
   },
   "register": {
     "emailRequired": "Please enter your email",
@@ -68,6 +130,7 @@
     "maxAgeError": "The maximum allowed age is {{max}} years",
     "futureDateError": "You can't select a future date",
     "labelEmail": "Email",
+    "emailContactHint": "This is the email we'll use to get in touch with you.",
     "labelPassword": "Password"
   },
   "common": {
@@ -221,6 +284,7 @@
     "whereGetPhoto": "Where would you like to get your photo from?",
     "selectGenderTitle": "Select your gender",
     "sectionBasicInfo": "Basic information",
+    "labelEmail": "Email",
     "labelName": "Name",
     "labelCity": "City",
     "labelBirthDate": "When were you born?",

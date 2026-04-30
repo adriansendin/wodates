@@ -360,7 +360,7 @@ export default function Step1Screen() {
       setFeedback({ type: 'success', message: t('register.welcomeSuccess') });
       
       setTimeout(() => {
-        router.replace('/(app)/matches');
+        router.replace('/(app)/questionnaire');
       }, 1500);
 
     } catch (err) {
@@ -401,6 +401,7 @@ export default function Step1Screen() {
             <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>{t('register.labelEmail')}</Text>
+                <Text style={styles.inputHint}>{t('register.emailContactHint')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder={t('auth.emailExample')}
@@ -596,6 +597,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2C3E50',
+    marginLeft: 4,
+  },
+  inputHint: {
+    fontSize: 13,
+    color: '#7F8C8D',
     marginLeft: 4,
   },
   input: {

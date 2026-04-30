@@ -584,7 +584,7 @@ export default function FeedScreen() {
       setPotentialMatch(null);
 
       // Navigate to matches tab first, then to the chat
-      router.push('/(app)/matches');
+      router.push('/(app)/questionnaire');
       
       // Small delay to ensure navigation completes
       setTimeout(() => {

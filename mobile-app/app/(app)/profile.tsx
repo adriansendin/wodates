@@ -1232,6 +1232,19 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>{t('profile.sectionBasicInfo')}</Text>
 
           <View style={styles.field}>
+            <Text style={styles.label}>{t('profile.labelEmail')}</Text>
+            <TextInput
+              style={[styles.input, styles.inputLocked]}
+              value={user?.email ?? ''}
+              editable={false}
+              selectTextOnFocus={false}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+            />
+          </View>
+
+          <View style={styles.field}>
             <Text style={styles.label}>{t('profile.labelName')}</Text>
             <TextInput
               style={[styles.input, formErrors.name ? styles.inputError : null]}
@@ -1446,6 +1459,9 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Hidden on request:
+              - Bio section title + textarea
+              - Show profile to others toggle
           <Text style={styles.sectionTitle}>{t('profile.sectionBio')}</Text>
 
           <View style={styles.field}>
@@ -1496,11 +1512,13 @@ export default function ProfileScreen() {
               {t('profile.showBioInFeedOff')}
             </Text>
           </View>
+          */}
 
           <Text style={styles.autoSaveMessage}>
             {t('profile.autoSaveMessage')}
           </Text>
 
+          {/* Hidden on request: Read Wodates manifesto link
           <TouchableOpacity
             style={styles.manifestoLinkContainer}
             onPress={() => router.push('/manifesto')}
@@ -1508,6 +1526,7 @@ export default function ProfileScreen() {
           >
             <Text style={styles.manifestoLink}>{t('profile.readManifesto')}</Text>
           </TouchableOpacity>
+          */}
 
           {/* Contact option */}
           <View style={styles.actionButtonsContainer}>
@@ -1814,6 +1833,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     color: '#666',
     borderColor: '#ddd',
+  },
+  inputLocked: {
+    backgroundColor: '#e8e8e8',
+    color: '#555',
+    borderColor: '#cfcfcf',
   },
   multiline: {
     minHeight: 100,

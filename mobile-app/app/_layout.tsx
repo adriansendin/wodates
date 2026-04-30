@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../src/i18n/i18n';
 import { normalizeLanguage } from '../src/i18n/normalizeLanguage';
 import { useAuthStore } from '../src/domain/stores/authStore';
+import { ToastContainer } from '../src/components/Toast';
 
 // In forced-language mode we keep the code that syncs from browser language,
 // but prevent it from changing away from Spanish.
@@ -57,8 +58,7 @@ function BrowserLanguageSync() {
   useEffect(() => {
     if (FORCE_APP_LANGUAGE) return;
     if (typeof navigator === 'undefined') return;
-    const browserLang =
-      navigator.languages?.[0] ?? navigator.language ?? '';
+    const browserLang = navigator.languages?.[0] ?? navigator.language ?? '';
     const normalized = normalizeLanguage(browserLang);
     if (normalized !== i18n.language) {
       i18n.changeLanguage(normalized);
@@ -91,7 +91,12 @@ export default function RootLayout() {
             color: '#000000',
           },
           headerTitle: '',
-          headerShown: !route.name?.includes('chat') && !route.name?.includes('(auth)') && !route.name?.includes('(app)') && !route.name?.includes('(preview)'),
+          headerShown:
+            !route.name?.includes('chat') &&
+            !route.name?.includes('(auth)') &&
+            !route.name?.includes('(app)') &&
+            !route.name?.includes('(preview)') &&
+            !route.name?.includes('deep-onboarding'),
           headerLeft: () => <HeaderTitle />,
           headerBackVisible: false,
           contentStyle: {
@@ -99,6 +104,7 @@ export default function RootLayout() {
           },
         })}
       />
+      <ToastContainer />
     </SafeAreaProvider>
   );
 }

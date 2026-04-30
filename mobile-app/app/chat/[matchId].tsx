@@ -1100,7 +1100,7 @@ export default function ChatScreen() {
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/(app)/matches'),
+            onPress: () => router.replace('/(app)/questionnaire'),
           },
         ],
         { cancelable: false }
@@ -1342,7 +1342,7 @@ export default function ChatScreen() {
       }
 
       // Navigate back to matches screen
-      router.replace('/(app)/matches');
+      router.replace('/(app)/questionnaire');
     } catch (error) {
       console.error('Failed to block user', error);
       // Network errors are system errors with retry
@@ -1505,11 +1505,11 @@ export default function ChatScreen() {
   }
 
   if (!matchId) {
-    return <Redirect href="/(app)/matches" />;
+    return <Redirect href="/(app)/questionnaire" />;
   }
 
   if (isBlocked) {
-    return <Redirect href="/(app)/matches" />;
+    return <Redirect href="/(app)/questionnaire" />;
   }
 
   return (
@@ -1522,7 +1522,7 @@ export default function ChatScreen() {
             <TouchableOpacity
               onPress={() => {
                 if (fromDiscover) {
-                  router.push('/(app)/matches');
+                  router.push('/(app)/questionnaire');
                 } else {
                   router.back();
                 }

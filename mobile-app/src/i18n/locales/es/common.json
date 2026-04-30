@@ -2,11 +2,60 @@
   "app": {
     "title": "Wodates",
     "tagline": "Conecta por afinidad",
-    "taglineSub": "Una conversación. Afinidad real.",
+    "taglineSub": "Para gente que busca relación estable",
     "cta": {
       "join": "Crear cuenta",
       "signIn": "Iniciar sesión"
     }
+  },
+  "deepOnboarding": {
+    "blockTitle": "Bloque {{current}} de {{total}}",
+    "continue": "Continuar",
+    "finish": "Finalizar",
+    "loading": "Cargando formulario…",
+    "loadError": "No se pudo cargar el formulario.",
+    "retry": "Reintentar",
+    "validationIncomplete": "Por favor responde todas las preguntas de este bloque.",
+    "validationMultiOther": "Completa el texto para «Otro» donde lo hayas marcado.",
+    "validationTextLength": "Alguna respuesta supera el máximo de caracteres.",
+    "saveError": "No se pudieron guardar las respuestas. Inténtalo de nuevo.",
+    "completeTitle": "¡Listo!",
+    "completeMessage": "Gracias por completar el cuestionario.",
+    "charactersCount": "{{used}} / {{max}}",
+    "otherDetailPlaceholder": "Especifica cuál…",
+    "createAccountScreenTitle": "Tu cuenta",
+    "createAccountSubtitle": "Último paso: crea tu cuenta con los mismos datos que editas en tu perfil.",
+    "buttonCreateAccount": "Crear cuenta",
+    "nameRequired": "Indica tu nombre."
+  },
+  "tabs": {
+    "questionnaire": "Registro",
+    "profile": "Perfil",
+    "discover": "Descubrir",
+    "chat": "Chat"
+  },
+  "questionnaire": {
+    "hubSubtitle": "Tu registro está completo. Puedes revisar o editar cualquier sección.",
+    "hubFooter": "Empezaremos a buscar las afinidades más prometedoras para ti. Próximamente te daremos más información.",
+    "saveBlock": "Guardar este bloque",
+    "hubCards": [
+      {
+        "title": "Tu forma de ser",
+        "subtitle": "Cómo te relacionas, decides y afrontas el día a día."
+      },
+      {
+        "title": "Tu estilo de vida",
+        "subtitle": "Tu ritmo, tus hábitos y el tipo de planes que disfrutas."
+      },
+      {
+        "title": "Lo que buscas",
+        "subtitle": "Tu intención, tus valores y tu visión de pareja."
+      },
+      {
+        "title": "Encaje en la práctica",
+        "subtitle": "Lo que necesitas que encaje en el día a día."
+      }
+    ]
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -18,7 +67,20 @@
     "loginContextTitle": "Inicia sesión en tu cuenta",
     "loginContextSub": "Para quien está harto de la cultura del swipe.",
     "enterWodates": "Entrar en Wodates",
-    "back": "Atrás"
+    "back": "Atrás",
+    "forgotPasswordQuestion": "¿Has olvidado tu contraseña?",
+    "manualRecoveryIntro": "Por ahora, la recuperación de acceso se gestiona manualmente.",
+    "manualRecoveryBeforeEmail": "Escríbenos a ",
+    "manualRecoveryAfterEmail": " desde el mismo email con el que te registraste y te ayudaremos a recuperar tu cuenta.",
+    "manualRecoveryResponseLabel": "Tiempo de respuesta habitual:",
+    "manualRecoveryResponseHours": "24–48 horas.",
+    "manualRecoveryNoteLabel": "Nota:",
+    "manualRecoveryNoteBody": "para proteger tu cuenta, podemos pedirte una verificación adicional.",
+    "manualRecoveryUnderstood": "Entendido",
+    "manualRecoveryCopyEmail": "Copiar email",
+    "manualRecoveryEmailCopied": "Correo copiado.",
+    "manualRecoveryBackdropA11y": "Cierra este mensaje",
+    "manualRecoveryCloseIconA11y": "Cerrar"
   },
   "register": {
     "emailRequired": "Introduce tu correo electrónico",
@@ -68,6 +130,7 @@
     "maxAgeError": "La edad máxima permitida es {{max}} años",
     "futureDateError": "No puedes seleccionar una fecha futura",
     "labelEmail": "Correo electrónico",
+    "emailContactHint": "Es el correo que usaremos para ponernos en contacto contigo.",
     "labelPassword": "Contraseña"
   },
   "common": {
@@ -221,6 +284,7 @@
     "whereGetPhoto": "¿De dónde quieres obtener tu foto?",
     "selectGenderTitle": "Selecciona tu género",
     "sectionBasicInfo": "Información básica",
+    "labelEmail": "Correo electrónico",
     "labelName": "Nombre",
     "labelCity": "Ciudad",
     "labelBirthDate": "¿Cuándo naciste?",

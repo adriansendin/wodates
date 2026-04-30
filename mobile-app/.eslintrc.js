@@ -57,7 +57,8 @@ module.exports = {
       files: [
         'src/utils/notificationService.ts',
         'src/utils/showAlert.ts',
-        'src/utils/notify.ts'
+        'src/utils/notify.ts',
+        'src/utils/crossPlatformAlert.ts'
       ],
       rules: {
         'no-restricted-imports': 'off'

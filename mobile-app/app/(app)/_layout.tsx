@@ -1,5 +1,6 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { usePreviewStore } from '../../src/domain/stores/previewStore';
 import { View, Text } from 'react-native';
@@ -7,6 +8,7 @@ import { View, Text } from 'react-native';
 export default function AppTabsLayout() {
   const { user } = useAuthStore();
   const { isPreviewMode } = usePreviewStore();
+  const { t } = useTranslation('common');
 
   if (isPreviewMode) {
     return <Redirect href="/(preview)/feed" />;
@@ -18,6 +20,7 @@ export default function AppTabsLayout() {
 
   return (
     <Tabs
+      initialRouteName="questionnaire"
       screenOptions={({ route }: { route: { name: string } }) => ({
         tabBarActiveTintColor: '#e91e63',
         tabBarInactiveTintColor: 'gray',
@@ -42,6 +45,7 @@ export default function AppTabsLayout() {
         headerBackVisible: false,
         tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+            questionnaire: focused ? 'clipboard' : 'clipboard-outline',
             feed: focused ? 'heart' : 'heart-outline',
             matches: focused ? 'people' : 'people-outline',
             profile: focused ? 'person' : 'person-outline',
@@ -52,21 +56,32 @@ export default function AppTabsLayout() {
       })}
     >
       <Tabs.Screen
-        name="feed"
+        name="questionnaire"
         options={{
-          title: 'Descubrir',
-        }}
-      />
-      <Tabs.Screen
-        name="matches"
-        options={{
-          title: 'Chat',
+          title: t('tabs.questionnaire'),
+          headerShown: false,
+          tabBarLabel: t('tabs.questionnaire'),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Perfil',
+          title: t('tabs.profile'),
+          tabBarLabel: t('tabs.profile'),
+        }}
+      />
+      <Tabs.Screen
+        name="feed"
+        options={{
+          title: t('tabs.discover'),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="matches"
+        options={{
+          title: t('tabs.chat'),
+          href: null,
         }}
       />
     </Tabs>

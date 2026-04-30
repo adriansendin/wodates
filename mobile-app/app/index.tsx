@@ -13,13 +13,9 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
-      router.replace('/(app)/matches');
+      router.replace('/(app)/questionnaire');
     }
   }, [user, router]);
-
-  const handleCreateAccount = () => {
-    router.push('/(auth)/register/step1');
-  };
 
   return (
     <>
@@ -45,11 +41,10 @@ export default function Home() {
           <Text style={styles.subheadline}>{t('app.taglineSub')}</Text>
         </View>
 
-        {/* Primary CTA: Create account */}
         <View style={styles.buttonsContainer}>
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={handleCreateAccount}
+            onPress={() => router.push('/deep-onboarding')}
             activeOpacity={0.8}
           >
             <Text style={styles.primaryButtonText}>{t('app.cta.join')}</Text>
