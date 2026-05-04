@@ -9,6 +9,11 @@ export const VerificationStatusSchema = z.enum([
   'rejected',
 ]);
 
+export const SocialProfileInterestEntrySchema = z.object({
+  code: z.string(),
+  created_at: z.string(),
+});
+
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -28,6 +33,11 @@ export const UserProfileSchema = z.object({
   // Habits
   smoking: z.enum(['no', 'occasionally', 'regularly']).nullable(),
   cares_about_partner_smoking: z.enum(['yes', 'no']).nullable(),
+  social_profile_interests: z
+    .array(SocialProfileInterestEntrySchema)
+    .default([]),
+  /** Assigned at signup; unique public handle on Wodates. */
+  public_profile_code: z.string().nullable().optional(),
 });
 
 export const UpdateUserProfileSchema = z.object({

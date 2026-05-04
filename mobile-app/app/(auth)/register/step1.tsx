@@ -27,6 +27,12 @@ import { getApiUrl } from '../../../src/utils/apiConfig';
 import { GENDER_OPTIONS, GenderOption } from '../../../src/domain/entities/Gender';
 import { LOOKING_FOR_OPTIONS, LookingForOption } from '../../../src/domain/entities/LookingFor';
 import { trackSignupComplete, trackLoginSuccess } from '../../../src/analytics/ga4';
+import {
+  normalizeSocialInterestCodes,
+  isValidSocialInterestCodeInput,
+  tripleFromStoredCodes,
+} from '../../../src/utils/socialInterestCodes';
+import { SocialInterestCodesFormBlock } from '../../../src/components/SocialInterestCodesFormBlock';
 
 const API_URL = getApiUrl();
 
@@ -72,6 +78,12 @@ export default function Step1Screen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [socialInterestTriple, setSocialInterestTriple] = useState<
+    [string, string, string]
+  >(() => tripleFromStoredCodes(data.socialProfileInterestCodes));
+  const [socialInterestError, setSocialInterestError] = useState<string | null>(
+    null
+  );
 
   const GENDER_LABELS: Record<GenderOption, string> = useMemo(
     () => ({
@@ -186,12 +198,26 @@ export default function Step1Screen() {
       return;
     }
 
+    let socialProfileInterestCodes = data.socialProfileInterestCodes ?? [];
+
+    if (!data.pastBirthAgeStep) {
+      setSocialInterestError(null);
+      if (!socialInterestTriple.every(isValidSocialInterestCodeInput)) {
+        setSocialInterestError(t('register.socialInterestInvalidCode'));
+        return;
+      }
+      socialProfileInterestCodes = normalizeSocialInterestCodes([
+        ...socialInterestTriple,
+      ]);
+    }
+
     // Actualizar datos del formulario en el store (incl. género y looking for para el payload)
     updateData({
       email,
       password,
       gender: gender as GenderOption,
       lookingFor: lookingFor as LookingForOption,
+      ...(!data.pastBirthAgeStep ? { socialProfileInterestCodes } : {}),
     });
 
     // Ahora ejecutar el registro completo
@@ -201,7 +227,11 @@ export default function Step1Screen() {
     try {
       // Nombre derivado del email (parte antes de @) para cumplir con el backend; el usuario puede cambiarlo en el perfil
       const nameFromEmail = (email.trim().split('@')[0] || 'User').trim() || 'User';
-      const registrationData = { ...data, email, password };
+      const registrationData = {
+        ...useRegistrationStore.getState().data,
+        email,
+        password,
+      };
 
       if (!registrationData.email || registrationData.email.trim() === '') {
         setFeedback({ type: 'error', message: t('register.emailRequiredShort') });
@@ -353,6 +383,24 @@ export default function Step1Screen() {
 
       console.log('[Register] Profile updated successfully:', updateResult.data);
 
+      const codesToSave = normalizeSocialInterestCodes(
+        registrationData.socialProfileInterestCodes ?? []
+      );
+      if (codesToSave.length > 0) {
+        const interestsResult = await profileApi.replaceSocialProfileInterests(
+          codesToSave,
+          token
+        );
+        if (!interestsResult.success) {
+          setFeedback({
+            type: 'error',
+            message: t('register.saveInterestCodesError'),
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Limpiar el store de registro
       resetRegistration();
 
@@ -468,6 +516,23 @@ export default function Step1Screen() {
               </View>
             </View>
 
+            {!data.pastBirthAgeStep ? (
+              <View style={styles.socialInterestWrap}>
+                <SocialInterestCodesFormBlock
+                  optionalHint={t('register.socialInterestOptional')}
+                  description={t('register.socialInterestDescription')}
+                  footnote={t('register.socialInterestFootnote')}
+                  values={socialInterestTriple}
+                  onChange={(next) => {
+                    setSocialInterestTriple(next);
+                    setSocialInterestError(null);
+                  }}
+                  fieldError={socialInterestError}
+                  inputPlaceholder={t('register.socialInterestPlaceholder')}
+                />
+              </View>
+            ) : null}
+
             <TouchableOpacity
               style={[
                 styles.button,
@@ -542,6 +607,9 @@ const styles = StyleSheet.create({
   section: {
     marginTop: 8,
     marginBottom: 4,
+  },
+  socialInterestWrap: {
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 16,

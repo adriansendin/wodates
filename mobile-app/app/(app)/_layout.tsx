@@ -46,6 +46,7 @@ export default function AppTabsLayout() {
         tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
             questionnaire: focused ? 'clipboard' : 'clipboard-outline',
+            affinity: focused ? 'star' : 'star-outline',
             feed: focused ? 'heart' : 'heart-outline',
             matches: focused ? 'people' : 'people-outline',
             profile: focused ? 'person' : 'person-outline',
@@ -61,6 +62,13 @@ export default function AppTabsLayout() {
           title: t('tabs.questionnaire'),
           headerShown: false,
           tabBarLabel: t('tabs.questionnaire'),
+        }}
+      />
+      <Tabs.Screen
+        name="affinity"
+        options={{
+          title: t('tabs.affinity'),
+          tabBarLabel: t('tabs.affinity'),
         }}
       />
       <Tabs.Screen

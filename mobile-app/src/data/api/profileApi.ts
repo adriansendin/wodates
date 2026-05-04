@@ -20,6 +20,18 @@ export class ProfileApi {
     return this.apiClient.put<UserProfile>('/users/me', input, token);
   }
 
+  /** Replaces up to 3 social profile interest codes (optional affinity signal). */
+  replaceSocialProfileInterests(
+    codes: string[],
+    token: string
+  ): Promise<Result<UserProfile, DomainError>> {
+    return this.apiClient.put<UserProfile>(
+      '/users/me/social-profile-interests',
+      { codes },
+      token
+    );
+  }
+
   deactivateAccount(
     token: string
   ): Promise<Result<{ message: string }, DomainError>> {

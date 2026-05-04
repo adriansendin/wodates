@@ -16,6 +16,9 @@ import {
 /** Multipart uploads (emulator / slow I/O) can exceed the default 10s client timeout. */
 const FORM_DATA_UPLOAD_TIMEOUT_MS = 120_000;
 
+/** Axios uses this when the response body has no usable message — never show it to users. */
+const AXIOS_GENERIC_STATUS_MESSAGE = /^Request failed with status code \d+$/i;
+
 export class ApiClient {
   private client: AxiosInstance;
 
@@ -241,7 +244,10 @@ export class ApiClient {
     status: number,
     body: unknown
   ): DomainError {
-    const message = this.messageFromErrorBody(body, `HTTP ${status}`);
+    const message = this.messageFromErrorBody(
+      body,
+      this.defaultHttpErrorMessage(status)
+    );
 
     if (status === 400) {
       const details =
@@ -281,6 +287,24 @@ export class ApiClient {
       return String((body as { message: unknown }).message);
     }
     return fallback;
+  }
+
+  private isGenericAxiosStatusMessage(message: string | undefined): boolean {
+    return (
+      message !== undefined && AXIOS_GENERIC_STATUS_MESSAGE.test(message.trim())
+    );
+  }
+
+  /** Short English fallback for DomainError.message when the transport gives no API message. */
+  private defaultHttpErrorMessage(status: number): string {
+    if (status === 400) return 'Invalid request';
+    if (status === 401) return 'Unauthorized';
+    if (status === 403) return 'Forbidden';
+    if (status === 404) return 'Not found';
+    if (status === 409) return 'Conflict';
+    if (status === 429) return 'Too many requests';
+    if (status >= 500) return 'Service unavailable';
+    return 'Unexpected response';
   }
 
   async put<T>(
@@ -331,7 +355,7 @@ export class ApiClient {
 
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;
-      const message =
+      const rawMessage =
         typeof error.response?.data === 'object' &&
         error.response?.data !== null &&
         'message' in error.response.data
@@ -341,9 +365,19 @@ export class ApiClient {
             )
           : error.message;
 
+      const message = this.isGenericAxiosStatusMessage(rawMessage)
+        ? undefined
+        : rawMessage;
+
       if (!status) {
-        return new NetworkError(message ?? 'Network error');
+        const netMsg =
+          message && !this.isGenericAxiosStatusMessage(message)
+            ? message
+            : 'Network error';
+        return new NetworkError(netMsg);
       }
+
+      const fallback = this.defaultHttpErrorMessage(status);
 
       if (status === 400) {
         const details =
@@ -352,28 +386,28 @@ export class ApiClient {
           'details' in error.response.data
             ? error.response.data.details
             : undefined;
-        return new ValidationError(message ?? 'Invalid request', details);
+        return new ValidationError(message ?? fallback, details);
       }
       if (status === 401) {
-        return new UnauthorizedError(message ?? 'Unauthorized');
+        return new UnauthorizedError(message ?? fallback);
       }
       if (status === 403) {
-        return new ForbiddenError(message ?? 'Forbidden');
+        return new ForbiddenError(message ?? fallback);
       }
       if (status === 404) {
-        return new NotFoundError(message ?? 'Not found');
+        return new NotFoundError(message ?? fallback);
       }
       if (status === 409) {
-        return new ConflictError(message ?? 'Conflict detected');
+        return new ConflictError(message ?? fallback);
       }
       if (status === 429) {
-        return new UnexpectedError(message ?? 'Rate limit exceeded');
+        return new UnexpectedError(message ?? fallback);
       }
       if (status >= 500) {
-        return new ServerError(message ?? 'Server error');
+        return new ServerError(message ?? fallback);
       }
 
-      return new UnexpectedError(message ?? 'Unexpected response');
+      return new UnexpectedError(message ?? fallback);
     }
 
     return new NetworkError('Unknown error');

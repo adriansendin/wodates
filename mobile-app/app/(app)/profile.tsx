@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next';
 import { useUserPhotos } from '../../src/features/profile/photos/useUserPhotos';
 import { AgeRangePicker } from '../../src/components/AgeRangePicker';
 import { BirthDatePicker } from '../../src/components/BirthDatePicker';
+import { SocialInterestCodesFormBlock } from '../../src/components/SocialInterestCodesFormBlock';
 import { useAuthStore } from '../../src/domain/stores/authStore';
 import { useFeedStore } from '../../src/domain/stores/feedStore';
 import { ApiClient } from '../../src/data/api/apiClient';
@@ -35,7 +36,6 @@ import { ProfileApi } from '../../src/data/api/profileApi';
 import {
   UpdateUserProfile,
   UserProfile,
-  VerificationStatus,
 } from '../../src/domain/entities/UserProfile';
 import { GENDER_OPTIONS, GenderOption } from '../../src/domain/entities/Gender';
 import {
@@ -48,6 +48,11 @@ import {
 } from '../../src/data/api/imageService';
 import { getSupabaseClient } from '../../src/data/api/supabaseClient';
 import { getApiUrl } from '../../src/utils/apiConfig';
+import {
+  isValidSocialInterestCodeInput,
+  normalizeSocialInterestCodes,
+  tripleFromStoredCodes,
+} from '../../src/utils/socialInterestCodes';
 import { notifySystem } from '../../src/utils/notificationService';
 
 const API_URL = getApiUrl();
@@ -194,15 +199,6 @@ export default function ProfileScreen() {
     }),
     [t]
   );
-  const VERIFICATION_LABELS: Record<VerificationStatus, string> = useMemo(
-    () => ({
-      pending: t('profile.verifyProfile'),
-      verifying: t('profile.verificationInProgress'),
-      verified: t('profile.verifiedProfile'),
-      rejected: t('profile.retryVerification'),
-    }),
-    [t]
-  );
   const WANTS_CHILDREN_LABELS: Record<'yes' | 'no' | 'not_sure', string> = useMemo(
     () => ({
       yes: t('register.yes'),
@@ -268,8 +264,6 @@ export default function ProfileScreen() {
   );
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [verificationStatus, setVerificationStatus] =
-    useState<VerificationStatus>('pending');
   const [form, setForm] = useState<FormState>(emptyForm);
   const [isLoading, setIsLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<
@@ -295,6 +289,12 @@ export default function ProfileScreen() {
   const [showToast, setShowToast] = useState(false);
   const [showValidationError, setShowValidationError] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [socialInterestSlots, setSocialInterestSlots] = useState<
+    [string, string, string]
+  >(['', '', '']);
+  const [socialInterestFieldError, setSocialInterestFieldError] = useState<
+    string | null
+  >(null);
 
   const apiClient = useMemo(() => new ApiClient(API_URL), []);
   const profileApi = useMemo(() => new ProfileApi(apiClient), [apiClient]);
@@ -313,8 +313,13 @@ export default function ProfileScreen() {
       if (result.success) {
         const nextProfile = result.data;
         setProfile(nextProfile);
-        setVerificationStatus(nextProfile.verification_status ?? 'pending');
         setForm(mapProfileToForm(nextProfile));
+        setSocialInterestSlots(
+          tripleFromStoredCodes(
+            nextProfile.social_profile_interests?.map((r) => r.code)
+          )
+        );
+        setSocialInterestFieldError(null);
         setFormErrors({});
       } else {
         setFeedback({
@@ -352,6 +357,9 @@ export default function ProfileScreen() {
       }
       if (nameTimeoutRef.current) {
         clearTimeout(nameTimeoutRef.current);
+      }
+      if (socialInterestTimeoutRef.current) {
+        clearTimeout(socialInterestTimeoutRef.current);
       }
     };
   }, []);
@@ -435,6 +443,10 @@ export default function ProfileScreen() {
   const ageRangeTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const cityTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const nameTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const socialInterestTimeoutRef = useRef<NodeJS.Timeout | undefined>(
+    undefined
+  );
+  const socialInterestRequestIdRef = useRef(0);
 
   const handleAgeRangeChange = (minAge: number, maxAge: number) => {
     // Actualizar ambos valores juntos en el formulario
@@ -714,6 +726,80 @@ export default function ProfileScreen() {
     [profileApi, tokens?.accessToken, isAutoSaving]
   );
 
+  const handleSocialInterestSlotsChange = useCallback(
+    (next: [string, string, string]) => {
+      setSocialInterestSlots(next);
+
+      const allValid = next.every(isValidSocialInterestCodeInput);
+      setSocialInterestFieldError(
+        allValid ? null : t('register.socialInterestInvalidCode')
+      );
+
+      if (socialInterestTimeoutRef.current) {
+        clearTimeout(socialInterestTimeoutRef.current);
+        socialInterestTimeoutRef.current = undefined;
+      }
+
+      if (!tokens?.accessToken || !allValid) {
+        return;
+      }
+
+      socialInterestTimeoutRef.current = setTimeout(() => {
+        void (async () => {
+          const token = tokens.accessToken;
+          if (!token) {
+            return;
+          }
+          const codes = normalizeSocialInterestCodes([
+            next[0],
+            next[1],
+            next[2],
+          ]);
+          socialInterestRequestIdRef.current += 1;
+          const reqId = socialInterestRequestIdRef.current;
+
+          try {
+            const result = await profileApi.replaceSocialProfileInterests(
+              codes,
+              token
+            );
+
+            if (reqId !== socialInterestRequestIdRef.current) {
+              return;
+            }
+
+            if (result.success) {
+              setProfile(result.data);
+              setSocialInterestSlots(
+                tripleFromStoredCodes(
+                  result.data.social_profile_interests.map((r) => r.code)
+                )
+              );
+              setSocialInterestFieldError(null);
+              return;
+            }
+
+            setFeedback({
+              type: 'error',
+              message:
+                result.error.message ??
+                t('register.saveInterestCodesError'),
+            });
+          } catch {
+            if (reqId !== socialInterestRequestIdRef.current) {
+              return;
+            }
+            setFeedback({
+              type: 'error',
+              message: t('errors.saveChangesError'),
+            });
+          }
+        })();
+      }, 800);
+    },
+    [profileApi, t, tokens?.accessToken]
+  );
+
   const handleContactUs = () => {
     setIsContactModalVisible(true);
   };
@@ -830,22 +916,6 @@ export default function ProfileScreen() {
     logout,
     router,
   ]);
-  const resolvedVerificationStatus =
-    profile?.verification_status ?? verificationStatus;
-  const verificationLabel =
-    VERIFICATION_LABELS[resolvedVerificationStatus] ??
-    VERIFICATION_LABELS.pending;
-  const isVerificationActionable =
-    resolvedVerificationStatus === 'pending' ||
-    resolvedVerificationStatus === 'rejected';
-
-  const handleVerifyProfile = () => {
-    if (!isVerificationActionable) {
-      return;
-    }
-    router.push('/profile/verify');
-  };
-
   if (!tokens?.accessToken) {
     return (
       <View style={styles.centered}>
@@ -1213,21 +1283,31 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            onPress={handleVerifyProfile}
-            activeOpacity={0.85}
-            disabled={!isVerificationActionable}
-            style={[
-              styles.verificationButton,
-              !isVerificationActionable
-                ? styles.verificationButtonDisabled
-                : null,
-            ]}
-          >
-            <Text style={styles.verificationButtonText}>
-              {verificationLabel}
-            </Text>
-          </TouchableOpacity>
+          {profile ? (
+            <View style={styles.field}>
+              <Text style={styles.label}>
+                {t('profile.labelPublicProfileCode')}
+              </Text>
+              <TextInput
+                style={[styles.input, styles.inputLocked]}
+                value={profile.public_profile_code ?? ''}
+                placeholder={
+                  profile.public_profile_code
+                    ? undefined
+                    : t('profile.publicProfileCodePending')
+                }
+                placeholderTextColor="#999"
+                editable={false}
+                selectTextOnFocus={false}
+                autoCapitalize="none"
+              />
+              <Text style={styles.hintText}>
+                {profile.public_profile_code
+                  ? t('profile.publicProfileCodeHint')
+                  : t('profile.publicProfileCodeUnavailableHint')}
+              </Text>
+            </View>
+          ) : null}
 
           <Text style={styles.sectionTitle}>{t('profile.sectionBasicInfo')}</Text>
 
@@ -1458,6 +1538,20 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          <Text style={styles.sectionTitle}>
+            {t('profile.sectionSocialProfileInterests')}
+          </Text>
+
+          <SocialInterestCodesFormBlock
+            optionalHint={t('register.socialInterestOptional')}
+            description={t('profile.socialInterestManageDescription')}
+            footnote={t('register.socialInterestFootnote')}
+            values={socialInterestSlots}
+            onChange={handleSocialInterestSlotsChange}
+            fieldError={socialInterestFieldError}
+            inputPlaceholder={t('register.socialInterestPlaceholder')}
+          />
 
           {/* Hidden on request:
               - Bio section title + textarea
@@ -1864,6 +1958,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#d32f2f',
   },
+  hintText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 6,
+    lineHeight: 18,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
@@ -2043,21 +2143,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
     textDecorationLine: 'underline',
-  },
-  verificationButton: {
-    width: '100%',
-    backgroundColor: '#e91e63',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  verificationButtonDisabled: {
-    backgroundColor: '#f3a5c3',
-  },
-  verificationButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
   },
   // Action buttons styles
   actionButtonsContainer: {

@@ -48,6 +48,8 @@ type FakeUserProfile = {
   city: string | null;
   avatarUrl: string | null;
   show_bio_in_feed: boolean | null;
+  public_profile_code?: string | null;
+  social_profile_interests?: Array<{ code: string; created_at: string }>;
 };
 
 class FakeUserService {
@@ -58,12 +60,20 @@ class FakeUserService {
   }
 
   seedProfile(profile: FakeUserProfile): void {
-    this.profiles.set(profile.id, { ...profile });
+    this.profiles.set(profile.id, {
+      ...profile,
+      public_profile_code: profile.public_profile_code ?? null,
+      social_profile_interests: profile.social_profile_interests ?? [],
+    });
   }
 
   async getProfile(userId: string): Promise<FakeUserProfile> {
     const profile = this.ensureProfile(userId);
-    return { ...profile };
+    return {
+      ...profile,
+      public_profile_code: profile.public_profile_code ?? null,
+      social_profile_interests: profile.social_profile_interests ?? [],
+    };
   }
 
   async updateProfile(
@@ -101,7 +111,31 @@ class FakeUserService {
     }
 
     this.profiles.set(userId, profile);
-    return { ...profile };
+    return this.getProfile(userId);
+  }
+
+  async replaceSocialProfileInterests(
+    userId: string,
+    codes: string[]
+  ): Promise<FakeUserProfile> {
+    const profile = { ...this.ensureProfile(userId) };
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of codes) {
+      const t = raw.trim();
+      if (!t) continue;
+      const key = t.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(t.slice(0, 48));
+      if (out.length >= 3) break;
+    }
+    profile.social_profile_interests = out.map((code) => ({
+      code,
+      created_at: new Date().toISOString(),
+    }));
+    this.profiles.set(userId, profile);
+    return this.getProfile(userId);
   }
 
   async uploadAvatar(userId: string): Promise<string> {
@@ -162,7 +196,16 @@ const UserProfileResponseSchema = z.object({
   bio: z.string().nullable(),
   city: z.string().nullable(),
   avatarUrl: z.string().nullable(),
+  public_profile_code: z.string().nullable().optional(),
   show_bio_in_feed: z.boolean().nullable(),
+  social_profile_interests: z
+    .array(
+      z.object({
+        code: z.string(),
+        created_at: z.string(),
+      })
+    )
+    .optional(),
 });
 
 type RegisteredUser = {
@@ -403,6 +446,8 @@ function seedProfile(
     city: profileData.location ?? null,
     avatarUrl: null,
     show_bio_in_feed: null,
+    public_profile_code: 'testuser042',
+    social_profile_interests: [],
     ...overrides,
   });
 }

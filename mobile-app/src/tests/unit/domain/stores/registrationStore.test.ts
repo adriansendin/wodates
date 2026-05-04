@@ -24,6 +24,8 @@ const resetStore = () => {
       caresAboutPartnerChildren: null,
       smoking: null,
       caresAboutPartnerSmoking: null,
+      socialProfileInterestCodes: [],
+      pastBirthAgeStep: false,
     },
   });
 };

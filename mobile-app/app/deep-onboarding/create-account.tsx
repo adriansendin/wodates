@@ -36,6 +36,11 @@ import { useAuthStore } from '../../src/domain/stores/authStore';
 import { useDeepOnboardingStore } from '../../src/domain/stores/deepOnboardingStore';
 import { getApiUrl } from '../../src/utils/apiConfig';
 import { trackSignupComplete, trackLoginSuccess } from '../../src/analytics/ga4';
+import { SocialInterestCodesFormBlock } from '../../src/components/SocialInterestCodesFormBlock';
+import {
+  isValidSocialInterestCodeInput,
+  normalizeSocialInterestCodes,
+} from '../../src/utils/socialInterestCodes';
 
 const normalizeUser = (rawUser: Record<string, unknown>): User => {
   const now = new Date().toISOString();
@@ -101,6 +106,15 @@ export default function DeepOnboardingCreateAccountScreen() {
   const [lookingFor, setLookingFor] = useState<LookingForOption | ''>('');
   const [minAge, setMinAge] = useState(29);
   const [maxAge, setMaxAge] = useState(40);
+
+  const [socialTriple, setSocialTriple] = useState<[string, string, string]>([
+    '',
+    '',
+    '',
+  ]);
+  const [socialTripleError, setSocialTripleError] = useState<string | null>(
+    null
+  );
 
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -224,6 +238,12 @@ export default function DeepOnboardingCreateAccountScreen() {
       return;
     }
 
+    setSocialTripleError(null);
+    if (!socialTriple.every(isValidSocialInterestCodeInput)) {
+      setSocialTripleError(t('register.socialInterestInvalidCode'));
+      return;
+    }
+
     setIsCheckingEmail(true);
     try {
       const check = await authApi.checkEmail(email.trim());
@@ -292,6 +312,22 @@ export default function DeepOnboardingCreateAccountScreen() {
         });
         setIsSubmitting(false);
         return;
+      }
+
+      const socialCodes = normalizeSocialInterestCodes([...socialTriple]);
+      if (socialCodes.length > 0) {
+        const interestRes = await profileApi.replaceSocialProfileInterests(
+          socialCodes,
+          token
+        );
+        if (!interestRes.success) {
+          setFeedback({
+            type: 'error',
+            message: t('register.saveInterestCodesError'),
+          });
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       const sessionId = useDeepOnboardingStore.getState().clientSessionId;
@@ -491,6 +527,21 @@ export default function DeepOnboardingCreateAccountScreen() {
               <Text style={styles.sectionHint}>{t('register.changeLater')}</Text>
             </View>
 
+            <View style={styles.optionalSection}>
+              <SocialInterestCodesFormBlock
+                optionalHint={t('register.socialInterestOptional')}
+                description={t('register.socialInterestDescription')}
+                footnote={t('register.socialInterestFootnote')}
+                values={socialTriple}
+                onChange={(next) => {
+                  setSocialTriple(next);
+                  setSocialTripleError(null);
+                }}
+                fieldError={socialTripleError}
+                inputPlaceholder={t('register.socialInterestPlaceholder')}
+              />
+            </View>
+
             <TouchableOpacity
               style={[styles.cta, disabledMain && styles.ctaDisabled]}
               onPress={() => void handleCreateAccount()}
@@ -612,6 +663,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#222',
+  },
+  optionalSection: {
+    marginTop: 4,
+    marginBottom: 8,
   },
   cta: {
     backgroundColor: '#F45C5C',

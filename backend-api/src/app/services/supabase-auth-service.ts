@@ -12,6 +12,7 @@ import {
   USER_BIRTH_AGE_MIN,
   ageFromIsoDateTime,
 } from '../../domain/utils/birthDateAge';
+import { assignUniquePublicProfileCode } from '../utils/assignUniquePublicProfileCode';
 
 type SupabaseAuthConfig = {
   url: string;
@@ -198,35 +199,94 @@ export class SupabaseAuthService implements AuthService {
 
       // Create profile in public.users without name and email (those are in auth.users)
       // city puede ser null (ciudad en blanco por defecto para cuentas nuevas)
-      const { data, error } = await this.adminClient
-        .from('users')
-        .insert({
-          id: userId,
-          // email and name are no longer stored in public.users
-          birthDate: validatedBirthDate, // REQUERIDO - ya validado arriba (ISO datetime string)
-          gender: validatedGender, // REQUERIDO - ya validado arriba (string no vacío)
-          city: validatedCity, // null si no se indicó ciudad (en blanco por defecto)
-          country: registerRequest.country?.trim() || null,
-          looking_for: validatedLookingFor, // REQUERIDO - ya validado arriba (string no vacío)
-          show_bio_in_feed: true, // New users should show bio in feed by default
-        })
-        .select('id, birthDate, gender, city, looking_for, show_bio_in_feed')
-        .single();
+      const displayNameSeed =
+        typeof registerRequest.name === 'string' &&
+        registerRequest.name.trim().length > 0
+          ? registerRequest.name.trim()
+          : 'user';
 
-      if (error) {
-        console.error('[SupabaseAuthService] Failed to create user profile', {
-          error: error.message,
-          details: error.details,
-          hint: error.hint,
-          userId,
-          attemptedData: {
-            birthDate: validatedBirthDate,
-            gender: validatedGender,
-            city: validatedCity,
-            looking_for: validatedLookingFor,
-          },
-        });
-        throw new InternalError('Failed to create user profile', error);
+      const MAX_CODE_INSERT_ATTEMPTS = 8;
+
+      const isUniqueViolation = (err: { code?: string; message?: string }) =>
+        err.code === '23505' ||
+        (typeof err.message === 'string' &&
+          err.message.toLowerCase().includes('duplicate'));
+
+      let data:
+        | {
+            id: string;
+            birthDate: unknown;
+            gender: unknown;
+            city: unknown;
+            looking_for: unknown;
+            show_bio_in_feed: unknown;
+            public_profile_code?: string | null;
+          }
+        | null = null;
+
+      for (let attempt = 0; attempt < MAX_CODE_INSERT_ATTEMPTS; attempt++) {
+        const public_profile_code = await assignUniquePublicProfileCode(
+          this.adminClient,
+          displayNameSeed
+        );
+
+        const result = await this.adminClient
+          .from('users')
+          .insert({
+            id: userId,
+            // email and name are no longer stored in public.users
+            birthDate: validatedBirthDate, // REQUERIDO - ya validado arriba (ISO datetime string)
+            gender: validatedGender, // REQUERIDO - ya validado arriba (string no vacío)
+            city: validatedCity, // null si no se indicó ciudad (en blanco por defecto)
+            country: registerRequest.country?.trim() || null,
+            looking_for: validatedLookingFor, // REQUERIDO - ya validado arriba (string no vacío)
+            show_bio_in_feed: true, // New users should show bio in feed by default
+            public_profile_code,
+          })
+          .select(
+            'id, birthDate, gender, city, looking_for, show_bio_in_feed, public_profile_code'
+          )
+          .single();
+
+        const error = result.error;
+        if (!error && result.data) {
+          data = result.data;
+          break;
+        }
+
+        if (
+          error &&
+          isUniqueViolation(error) &&
+          attempt < MAX_CODE_INSERT_ATTEMPTS - 1
+        ) {
+          console.warn(
+            '[SupabaseAuthService] public_profile_code collision on insert; retrying',
+            { userId, attempt }
+          );
+          continue;
+        }
+
+        if (error) {
+          console.error('[SupabaseAuthService] Failed to create user profile', {
+            error: error.message,
+            details: error.details,
+            hint: error.hint,
+            userId,
+            attemptedData: {
+              birthDate: validatedBirthDate,
+              gender: validatedGender,
+              city: validatedCity,
+              looking_for: validatedLookingFor,
+            },
+          });
+          throw new InternalError('Failed to create user profile', error);
+        }
+      }
+
+      if (!data) {
+        throw new InternalError(
+          'Failed to create user profile after public_profile_code retries'
+        );
       }
 
       // Verificar que los datos se guardaron correctamente

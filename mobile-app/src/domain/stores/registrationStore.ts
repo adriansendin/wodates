@@ -21,6 +21,10 @@ export interface RegistrationData {
   // Hábitos importantes
   smoking: 'no' | 'occasionally' | 'regularly' | null;
   caresAboutPartnerSmoking: 'yes' | 'no' | null;
+  /** hasta 3 códigos de perfiles en redes (opcional); seña de afinidad, no restricción */
+  socialProfileInterestCodes: string[];
+  /** True tras completar fecha de nacimiento + rango de edad (step2): el bloque de códigos va ahí */
+  pastBirthAgeStep: boolean;
 }
 
 interface RegistrationState {
@@ -55,6 +59,8 @@ const initialData: RegistrationData = {
   // Hábitos importantes
   smoking: null,
   caresAboutPartnerSmoking: null,
+  socialProfileInterestCodes: [],
+  pastBirthAgeStep: false,
 };
 
 export const useRegistrationStore = create<

@@ -29,7 +29,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const TARGET_EMAIL = 'lauragomezromero27@gmail.com';
-const NEW_PASSWORD = 'hTen5#ywe';
+const NEW_PASSWORD = 'qwerty123';
 
 async function updateUserPassword() {
   console.log('🔄 Iniciando actualización de contraseña...\n');

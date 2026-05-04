@@ -7,6 +7,12 @@ import { useRegistrationStore } from '../../../src/domain/stores/registrationSto
 import { ProgressBar } from '../../../src/components/ProgressBar';
 import { BirthDatePicker } from '../../../src/components/BirthDatePicker';
 import { AgeRangePicker } from '../../../src/components/AgeRangePicker';
+import { SocialInterestCodesFormBlock } from '../../../src/components/SocialInterestCodesFormBlock';
+import {
+  isValidSocialInterestCodeInput,
+  normalizeSocialInterestCodes,
+  tripleFromStoredCodes,
+} from '../../../src/utils/socialInterestCodes';
 
 export default function Step2Screen() {
   const router = useRouter();
@@ -17,6 +23,12 @@ export default function Step2Screen() {
   const [error, setError] = useState<string | null>(null);
   const [minAge, setMinAge] = useState(data.minAge);
   const [maxAge, setMaxAge] = useState(data.maxAge);
+  const [interestTriple, setInterestTriple] = useState<[string, string, string]>(
+    () => tripleFromStoredCodes(data.socialProfileInterestCodes)
+  );
+  const [interestInputError, setInterestInputError] = useState<string | null>(
+    null
+  );
 
   const calculateAge = (birthDate: Date): number => {
     const today = new Date();
@@ -56,7 +68,22 @@ export default function Step2Screen() {
       return;
     }
 
-    updateData({ birthDate: date, minAge, maxAge });
+    setInterestInputError(null);
+    if (!interestTriple.every(isValidSocialInterestCodeInput)) {
+      setInterestInputError(t('register.socialInterestInvalidCode'));
+      return;
+    }
+    const socialProfileInterestCodes = normalizeSocialInterestCodes([
+      ...interestTriple,
+    ]);
+
+    updateData({
+      birthDate: date,
+      minAge,
+      maxAge,
+      socialProfileInterestCodes,
+      pastBirthAgeStep: true,
+    });
     nextStep();
     router.push('/(auth)/register/step5');
   };
@@ -109,6 +136,21 @@ export default function Step2Screen() {
             </View>
 
             <Text style={styles.infoText}>{t('register.changeLater')}</Text>
+
+            <View style={styles.optionalBlock}>
+              <SocialInterestCodesFormBlock
+                optionalHint={t('register.socialInterestOptional')}
+                description={t('register.socialInterestDescription')}
+                footnote={t('register.socialInterestFootnote')}
+                values={interestTriple}
+                onChange={(next) => {
+                  setInterestTriple(next);
+                  setInterestInputError(null);
+                }}
+                fieldError={interestInputError}
+                inputPlaceholder={t('register.socialInterestPlaceholder')}
+              />
+            </View>
           </View>
 
           <View style={styles.buttonContainer}>
@@ -185,6 +227,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 16,
     lineHeight: 20,
+  },
+  optionalBlock: {
+    marginTop: 8,
+    paddingTop: 4,
+    paddingHorizontal: 2,
   },
   buttonContainer: {
     gap: 12,

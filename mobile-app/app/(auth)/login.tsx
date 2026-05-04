@@ -26,8 +26,34 @@ import {
 } from '../../src/utils/notificationService';
 import { trackLoginSuccess } from '../../src/analytics/ga4';
 import { ManualPasswordRecoveryModal } from '../../src/components/ManualPasswordRecoveryModal';
+import {
+  DomainError,
+  NetworkError,
+  ServerError,
+  UnexpectedError,
+  ValidationError,
+} from '../../src/domain/errors/DomainError';
 
 const API_URL = getApiUrl();
+
+function loginFailureUserMessage(
+  error: DomainError,
+  t: (key: string) => string
+): string {
+  if (error instanceof ValidationError) {
+    return error.message.trim() ? error.message : t('errors.signInError');
+  }
+  if (error instanceof NetworkError) {
+    return t('errors.networkError');
+  }
+  if (error instanceof ServerError) {
+    return t('errors.serviceUnavailable');
+  }
+  if (error instanceof UnexpectedError) {
+    return t('errors.generic');
+  }
+  return t('errors.signInError');
+}
 
 const normalizeUser = (rawUser: Record<string, unknown>): User => {
   const now = new Date().toISOString();
@@ -80,9 +106,27 @@ export default function LoginScreen() {
       console.log('[Login] API response', result);
 
       if (!result.success) {
-        const message = result.error.message ?? t('errors.signInError');
-        setError(message);
-        notifyActionable(t('errors.somethingWentWrong'), message, result.error);
+        const err = result.error;
+        const userMessage = loginFailureUserMessage(err, t);
+        setError(userMessage);
+
+        const retryable =
+          err instanceof NetworkError ||
+          err instanceof ServerError ||
+          err instanceof UnexpectedError;
+
+        if (retryable) {
+          notifySystem(
+            t('errors.somethingWentWrong'),
+            userMessage,
+            err,
+            handleLogin
+          );
+        } else if (err instanceof ValidationError && err.message.trim()) {
+          notifyActionable(t('errors.signInError'), err.message, err);
+        } else {
+          notifyActionable(t('errors.signInError'), undefined, err);
+        }
         return;
       }
 

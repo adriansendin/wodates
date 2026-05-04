@@ -165,6 +165,10 @@ const UpdateProfileSchema = z
     }
   );
 
+const ReplaceSocialProfileInterestsSchema = z.object({
+  codes: z.array(z.string()).max(3).default([]),
+});
+
 export class UsersController {
   constructor(
     private readonly userService: SupabaseUserService,
@@ -329,6 +333,37 @@ export class UsersController {
       const profile = await this.userService.updateProfile(
         authUser.id,
         updateInput
+      );
+      return reply.send(profile);
+    } catch (error) {
+      return this.handleError(reply, error);
+    }
+  }
+
+  async replaceSocialProfileInterests(
+    request: FastifyRequest,
+    reply: FastifyReply
+  ) {
+    try {
+      const authUser = request.user;
+      if (!authUser) {
+        throw new UnauthorizedError('Missing authenticated user');
+      }
+
+      const parsed = ReplaceSocialProfileInterestsSchema.safeParse(
+        request.body ?? {}
+      );
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid request body',
+          details: parsed.error.format(),
+        });
+      }
+
+      const profile = await this.userService.replaceSocialProfileInterests(
+        authUser.id,
+        parsed.data.codes
       );
       return reply.send(profile);
     } catch (error) {

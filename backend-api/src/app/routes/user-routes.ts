@@ -39,6 +39,15 @@ export async function userRoutes(fastify: FastifyInstance) {
     null,
   ];
 
+  const socialProfileInterestItem = {
+    type: 'object',
+    properties: {
+      code: { type: 'string' },
+      created_at: { type: 'string' },
+    },
+    required: ['code', 'created_at'],
+  };
+
   fastify.get(
     '/users/me',
     {
@@ -60,6 +69,7 @@ export async function userRoutes(fastify: FastifyInstance) {
               max_age: { type: ['number', 'null'] },
               bio: { type: ['string', 'null'] },
               city: { type: ['string', 'null'] },
+              public_profile_code: { type: ['string', 'null'] },
               show_bio_in_feed: { type: ['boolean', 'null'] },
               verification_status: {
                 type: 'string',
@@ -78,6 +88,10 @@ export async function userRoutes(fastify: FastifyInstance) {
               cares_about_partner_smoking: {
                 type: ['string', 'null'],
                 enum: caresAboutPartnerSmokingEnum,
+              },
+              social_profile_interests: {
+                type: 'array',
+                items: socialProfileInterestItem,
               },
             },
           },
@@ -136,6 +150,7 @@ export async function userRoutes(fastify: FastifyInstance) {
               max_age: { type: ['number', 'null'] },
               bio: { type: ['string', 'null'] },
               city: { type: ['string', 'null'] },
+              public_profile_code: { type: ['string', 'null'] },
               show_bio_in_feed: { type: ['boolean', 'null'] },
               verification_status: {
                 type: 'string',
@@ -155,6 +170,10 @@ export async function userRoutes(fastify: FastifyInstance) {
                 type: ['string', 'null'],
                 enum: caresAboutPartnerSmokingEnum,
               },
+              social_profile_interests: {
+                type: 'array',
+                items: socialProfileInterestItem,
+              },
             },
           },
         },
@@ -162,6 +181,71 @@ export async function userRoutes(fastify: FastifyInstance) {
       preHandler: fastify.authMiddleware,
     },
     controller.updateProfile.bind(controller)
+  );
+
+  fastify.put(
+    '/users/me/social-profile-interests',
+    {
+      schema: {
+        description:
+          'Replace optional social profile interest codes (max 3; affinity signal only)',
+        tags: ['users'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          properties: {
+            codes: {
+              type: 'array',
+              maxItems: 3,
+              items: { type: 'string' },
+            },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              name: { type: 'string' },
+              email: { type: 'string', format: 'email' },
+              birthDate: { type: ['string', 'null'], format: 'date' },
+              gender: { type: ['string', 'null'], enum: genderEnum },
+              looking_for: { type: ['string', 'null'], enum: lookingForEnum },
+              min_age: { type: ['number', 'null'] },
+              max_age: { type: ['number', 'null'] },
+              bio: { type: ['string', 'null'] },
+              city: { type: ['string', 'null'] },
+              public_profile_code: { type: ['string', 'null'] },
+              show_bio_in_feed: { type: ['boolean', 'null'] },
+              verification_status: {
+                type: 'string',
+                enum: ['none', 'pending', 'verified', 'rejected'],
+              },
+              has_children: { type: ['boolean', 'null'] },
+              wants_children: {
+                type: ['string', 'null'],
+                enum: wantsChildrenEnum,
+              },
+              cares_about_partner_children: {
+                type: ['string', 'null'],
+                enum: caresAboutPartnerChildrenEnum,
+              },
+              smoking: { type: ['string', 'null'], enum: smokingEnum },
+              cares_about_partner_smoking: {
+                type: ['string', 'null'],
+                enum: caresAboutPartnerSmokingEnum,
+              },
+              social_profile_interests: {
+                type: 'array',
+                items: socialProfileInterestItem,
+              },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authMiddleware,
+    },
+    controller.replaceSocialProfileInterests.bind(controller)
   );
 
   fastify.post(

@@ -30,6 +30,7 @@
   },
   "tabs": {
     "questionnaire": "Registro",
+    "affinity": "Afinidad",
     "profile": "Perfil",
     "discover": "Descubrir",
     "chat": "Chat"
@@ -131,7 +132,13 @@
     "futureDateError": "No puedes seleccionar una fecha futura",
     "labelEmail": "Correo electrónico",
     "emailContactHint": "Es el correo que usaremos para ponernos en contacto contigo.",
-    "labelPassword": "Contraseña"
+    "labelPassword": "Contraseña",
+    "socialInterestOptional": "Opcional",
+    "socialInterestDescription": "¿Has visto a alguien en redes y te gustaría saber si podríais encajar? Introduce aquí hasta 3 códigos de perfiles que te hayan interesado.",
+    "socialInterestFootnote": "* Introducir un código no limita tu búsqueda a ese perfil. También tendremos en cuenta otras compatibilidades que puedan encajar contigo.",
+    "socialInterestPlaceholder": "Código de perfil",
+    "socialInterestInvalidCode": "Cada código puede usar letras, números, guiones y guiones bajos (entre 2 y 48 caracteres).",
+    "saveInterestCodesError": "No pudimos guardar los códigos. Inténtalo de nuevo; si el problema continúa, escríbenos."
   },
   "common": {
     "continue": "Continuar",
@@ -169,7 +176,8 @@
     "generic": "Algo ha ido mal. Inténtalo de nuevo.",
     "tryAgain": "Reintentar",
     "somethingWentWrong": "Algo ha ido mal",
-    "signInError": "No se pudo iniciar sesión. Comprueba tus credenciales.",
+    "signInError": "No se pudo iniciar sesión. Comprueba tu contraseña..",
+    "serviceUnavailable": "El servicio no está disponible ahora. Inténtalo de nuevo en unos minutos.",
     "networkError": "Error de red. Inténtalo de nuevo.",
     "loadProfile": "No se pudo cargar el perfil.",
     "loadProfileRetry": "No se pudo cargar el perfil. Inténtalo de nuevo.",
@@ -286,6 +294,10 @@
     "sectionBasicInfo": "Información básica",
     "labelEmail": "Correo electrónico",
     "labelName": "Nombre",
+    "labelPublicProfileCode": "Tu código de perfil",
+    "publicProfileCodePending": "Aún no asignado",
+    "publicProfileCodeUnavailableHint": "Este código se crea al registrar la cuenta. Desliza hacia abajo para actualizar. Si sigue vacío, puede faltar la migración en la base de datos.",
+    "publicProfileCodeHint": "Este es tu código único en Wodates. Otras personas pueden usarlo si añaden códigos de perfiles que vieron en redes.",
     "labelCity": "Ciudad",
     "labelBirthDate": "¿Cuándo naciste?",
     "labelGender": "Género",
@@ -298,6 +310,8 @@
     "sectionHabits": "Hábitos importantes",
     "labelSmoking": "¿Fumas?",
     "labelCarePartnerSmoking": "¿Te importa que la otra persona fume?",
+    "sectionSocialProfileInterests": "Personas que te llamaron la atención",
+    "socialInterestManageDescription": "Puedes escribir o cambiar hasta 3 códigos de perfil cuando quieras. Se guardan solos al igual que el resto de campos aquí.",
     "sectionBio": "Bio",
     "bioBasedOnConversations": "Según conversaciones",
     "showProfileToOthers": "Mostrar mi perfil a otros",

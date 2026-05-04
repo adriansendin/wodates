@@ -30,6 +30,7 @@
   },
   "tabs": {
     "questionnaire": "Signup",
+    "affinity": "Affinity",
     "profile": "Profile",
     "discover": "Discover",
     "chat": "Chat"
@@ -131,7 +132,13 @@
     "futureDateError": "You can't select a future date",
     "labelEmail": "Email",
     "emailContactHint": "This is the email we'll use to get in touch with you.",
-    "labelPassword": "Password"
+    "labelPassword": "Password",
+    "socialInterestOptional": "Optional",
+    "socialInterestDescription": "Seen someone on social media and curious if you might be a good fit? Add up to 3 profile codes that caught your attention.",
+    "socialInterestFootnote": "* Adding a code does not limit your search to that profile. We'll still consider other compatible matches for you.",
+    "socialInterestPlaceholder": "Profile code",
+    "socialInterestInvalidCode": "Each code can use letters, numbers, hyphens, and underscores (2–48 characters).",
+    "saveInterestCodesError": "We couldn't save the codes. Please try again—or contact us if this keeps happening."
   },
   "common": {
     "continue": "Continue",
@@ -170,6 +177,7 @@
     "tryAgain": "Try again",
     "somethingWentWrong": "Something went wrong",
     "signInError": "Couldn't sign in. Please check your credentials.",
+    "serviceUnavailable": "The service is unavailable right now. Please try again in a few minutes.",
     "networkError": "Network error. Please try again.",
     "loadProfile": "Could not load profile.",
     "loadProfileRetry": "Could not load profile. Please try again.",
@@ -286,6 +294,10 @@
     "sectionBasicInfo": "Basic information",
     "labelEmail": "Email",
     "labelName": "Name",
+    "labelPublicProfileCode": "Your profile code",
+    "publicProfileCodePending": "Not assigned yet",
+    "publicProfileCodeUnavailableHint": "This code is set when your account is created. Pull down to refresh. If it stays empty, the database migration may not be applied yet.",
+    "publicProfileCodeHint": "This is your unique code on Wodates. Others can use it when they add profile codes they noticed on socials.",
     "labelCity": "City",
     "labelBirthDate": "When were you born?",
     "labelGender": "Gender",
@@ -298,6 +310,8 @@
     "sectionHabits": "Important habits",
     "labelSmoking": "Do you smoke?",
     "labelCarePartnerSmoking": "Does it matter to you if the other person smokes?",
+    "sectionSocialProfileInterests": "People who caught your attention",
+    "socialInterestManageDescription": "You can enter or change up to 3 profile codes anytime. They're saved automatically, like other fields here.",
     "sectionBio": "Bio",
     "bioBasedOnConversations": "Based on conversations",
     "showProfileToOthers": "Show my profile to others",

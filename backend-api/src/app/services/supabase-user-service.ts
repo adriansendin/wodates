@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { DomainError, InternalError } from '../../domain/errors/DomainError';
+import { DomainError, InternalError, ValidationError } from '../../domain/errors/DomainError';
 import { LookingForValue } from '../../domain/entities/LookingFor';
 import { GENDER_VALUES, Gender } from '../../domain/entities/User';
 import {
@@ -15,6 +15,7 @@ import {
   USER_BIRTH_AGE_MIN,
   ageFromYmd,
 } from '../../domain/utils/birthDateAge';
+import { assignUniquePublicProfileCode } from '../utils/assignUniquePublicProfileCode';
 
 type SupabaseConfig = {
   url: string;
@@ -23,7 +24,7 @@ type SupabaseConfig = {
 
 /** Base columns for public.users profile rows (see scripts/migrations/add-app-locale.sql). */
 const USER_PROFILE_COLUMNS =
-  'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, build_profile_cta_tapped_at';
+  'id, birthDate, gender, looking_for, min_age, max_age, bio, city, show_bio_in_feed, verification_status, has_children, wants_children, cares_about_partner_children, smoking, cares_about_partner_smoking, public_profile_code, build_profile_cta_tapped_at';
 
 const USER_PROFILE_COLUMNS_WITH_LOCALE = `${USER_PROFILE_COLUMNS}, app_locale`;
 
@@ -35,6 +36,25 @@ function isMissingColumnError(
   return (
     text.includes(columnName) &&
     (text.includes('does not exist') || text.includes('undefined column'))
+  );
+}
+
+/** True when PostgREST has no relation yet (migration not applied on this project). */
+function isSocialInterestsTableUnavailable(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const e = error as { code?: unknown; message?: unknown };
+  const code = typeof e.code === 'string' ? e.code : '';
+  const message = typeof e.message === 'string' ? e.message : '';
+  if (!message.includes('user_social_profile_interests')) {
+    return false;
+  }
+  const ml = message.toLowerCase();
+  return (
+    code === 'PGRST205' ||
+    ml.includes('could not find the table') ||
+    ml.includes('schema cache')
   );
 }
 
@@ -64,10 +84,18 @@ type UserProfileRow = {
   // Habits
   smoking: Smoking | null;
   cares_about_partner_smoking: CaresAboutPartnerSmoking | null;
+  /** Unique public handle; slug + 3-digit suffix (see public.users.public_profile_code). */
+  public_profile_code: string | null;
   // Doc Love onboarding: set when user taps "Build my profile" (button hidden forever)
   build_profile_cta_tapped_at: string | null;
   /** Present when DB has run scripts/migrations/add-app-locale.sql */
   app_locale?: string | null;
+};
+
+/** Codes from socials the user flagged at signup (affinity signal; not exclusive matching). */
+export type SocialProfileInterestEntry = {
+  code: string;
+  created_at: string;
 };
 
 export type UserProfile = {
@@ -94,6 +122,10 @@ export type UserProfile = {
   /** Set when user taps "Build my profile" in Doc Love chat (CTA hidden forever) */
   build_profile_cta_tapped_at: string | null;
   app_locale: string | null;
+  /** Your public profile code (for sharing / discovery). */
+  public_profile_code: string | null;
+  /** Optional social profile codes flagged by the user (see user_social_profile_interests). */
+  social_profile_interests: SocialProfileInterestEntry[];
 };
 
 export type UpdateUserProfileInput = {
@@ -150,7 +182,7 @@ export class SupabaseUserService {
       // Get name and email from auth.users
       const authUser = await this.getAuthUser(userId);
 
-      return this.mapRow(profile, authUser);
+      return this.composeUserProfile(profile, authUser);
     } catch (error) {
       if (error instanceof DomainError) {
         throw error;
@@ -383,7 +415,7 @@ export class SupabaseUserService {
         );
         // Get auth user data even if no profile updates
         const authUser = await this.getAuthUser(userId);
-        return this.mapRow(profile, authUser);
+        return this.composeUserProfile(profile, authUser);
       }
 
       console.log(
@@ -442,13 +474,85 @@ export class SupabaseUserService {
       // Get name and email from auth.users
       const authUser = await this.getAuthUser(userId);
 
-      return this.mapRow(data as UserProfileRow, authUser);
+      return this.composeUserProfile(data as UserProfileRow, authUser);
     } catch (error) {
       if (error instanceof DomainError) {
         throw error;
       }
 
       throw new InternalError('Unexpected error updating user profile', error);
+    }
+  }
+
+  /**
+   * Replaces optional social profile interest codes (max 3).
+   * Used after registration; not an exclusive matching constraint.
+   */
+  async replaceSocialProfileInterests(
+    userId: string,
+    codes: string[]
+  ): Promise<UserProfile> {
+    try {
+      await this.ensureProfileRow(userId);
+
+      const normalized = this.normalizeSocialInterestCodes(codes);
+      for (const code of normalized) {
+        if (!/^[A-Za-z0-9_-]{2,48}$/.test(code)) {
+          throw new ValidationError('Invalid social profile interest code');
+        }
+      }
+
+      const { error: deleteError } = await this.client
+        .from('user_social_profile_interests')
+        .delete()
+        .eq('user_id', userId);
+
+      if (deleteError) {
+        if (isSocialInterestsTableUnavailable(deleteError)) {
+          console.warn(
+            '[SupabaseUserService] user_social_profile_interests missing; skipping interest save. Apply docs/db/2026-05-01_user_social_profile_interests.sql'
+          );
+          return this.getProfile(userId);
+        }
+        throw new InternalError(
+          `Failed to clear social profile interests: ${this.formatSupabaseError(deleteError)}`,
+          deleteError
+        );
+      }
+
+      if (normalized.length > 0) {
+        const rows = normalized.map((code) => ({
+          user_id: userId,
+          code,
+        }));
+        const { error: insertError } = await this.client
+          .from('user_social_profile_interests')
+          .insert(rows);
+
+        if (insertError) {
+          if (isSocialInterestsTableUnavailable(insertError)) {
+            console.warn(
+              '[SupabaseUserService] user_social_profile_interests missing; skipping interest save. Apply docs/db/2026-05-01_user_social_profile_interests.sql'
+            );
+            return this.getProfile(userId);
+          }
+          throw new InternalError(
+            `Failed to save social profile interests: ${this.formatSupabaseError(insertError)}`,
+            insertError
+          );
+        }
+      }
+
+      return this.getProfile(userId);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        throw error;
+      }
+
+      throw new InternalError(
+        'Unexpected error saving social profile interests',
+        error
+      );
     }
   }
 
@@ -674,6 +778,18 @@ export class SupabaseUserService {
         ? metadata.bio.trim() || null
         : null;
 
+    const displayName =
+      metadata && typeof metadata.display_name === 'string'
+        ? metadata.display_name.trim()
+        : '';
+    const email =
+      typeof data?.user?.email === 'string' ? data.user.email : '';
+
+    const public_profile_code = await assignUniquePublicProfileCode(
+      this.client,
+      displayName || email || 'user'
+    );
+
     return {
       id: userId,
       // name and email are no longer stored in public.users
@@ -686,6 +802,7 @@ export class SupabaseUserService {
       city,
       show_bio_in_feed: true, // Default to true as per database schema
       verification_status: 'pending',
+      public_profile_code,
     };
   }
 
@@ -729,10 +846,72 @@ export class SupabaseUserService {
     return { name, email };
   }
 
+  private normalizeSocialInterestCodes(codes: string[]): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of codes) {
+      if (typeof raw !== 'string') {
+        continue;
+      }
+      const t = raw.trim();
+      if (!t) {
+        continue;
+      }
+      const key = t.toLowerCase();
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      out.push(t.slice(0, 48));
+      if (out.length >= 3) {
+        break;
+      }
+    }
+    return out;
+  }
+
+  private async fetchSocialProfileInterests(
+    userId: string
+  ): Promise<SocialProfileInterestEntry[]> {
+    const { data, error } = await this.client
+      .from('user_social_profile_interests')
+      .select('code, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      if (isSocialInterestsTableUnavailable(error)) {
+        console.warn(
+          '[SupabaseUserService] user_social_profile_interests missing; returning []. Apply docs/db/2026-05-01_user_social_profile_interests.sql'
+        );
+        return [];
+      }
+      throw new InternalError(
+        `Failed to load social profile interests: ${this.formatSupabaseError(error)}`,
+        error
+      );
+    }
+
+    return (data ?? []).map((r: { code: string; created_at: string }) => ({
+      code: r.code,
+      created_at: r.created_at,
+    }));
+  }
+
+  private async composeUserProfile(
+    row: UserProfileRow,
+    authUser: { name: string; email: string }
+  ): Promise<UserProfile> {
+    const social_profile_interests = await this.fetchSocialProfileInterests(
+      row.id
+    );
+    return { ...this.mapRow(row, authUser), social_profile_interests };
+  }
+
   private mapRow(
     row: UserProfileRow,
     authUser: { name: string; email: string }
-  ): UserProfile {
+  ): Omit<UserProfile, 'social_profile_interests'> {
     return {
       id: row.id,
       name: authUser.name, // From auth.users.raw_user_meta_data.display_name
@@ -756,6 +935,7 @@ export class SupabaseUserService {
       cares_about_partner_smoking: row.cares_about_partner_smoking ?? null,
       build_profile_cta_tapped_at: row.build_profile_cta_tapped_at ?? null,
       app_locale: row.app_locale ?? null,
+      public_profile_code: row.public_profile_code ?? null,
     };
   }
 
