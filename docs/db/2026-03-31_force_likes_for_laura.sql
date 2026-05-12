@@ -1,7 +1,8 @@
--- Fuerza likes hacia Laura desde todos los chicos activos.
+-- Fuerza likes hacia un usuario destino desde todos los chicos activos.
+-- Replace placeholders demo-target@example.com / UUID before running.
 -- Objetivo:
--- - Usuario destino: lauragomezromero27@gmail.com
--- - ID esperado en auth.users: 2c9ad9be-e118-4b45-a7ff-5afce71fb79a
+-- - Usuario destino (ejemplo): demo-target@example.com
+-- - ID esperado en auth.users (ejemplo): 00000000-0000-4000-8000-00000000d3b0
 -- - Origen de likes: usuarios con gender = 'male' y auth.users.deleted_at IS NULL (activos)
 -- - Idempotente: la tabla tiene UNIQUE (from_user, to_user) — una sola fila por par;
 --   si ya había "pass", se actualiza a "like" (ON CONFLICT DO UPDATE).
@@ -11,8 +12,8 @@ BEGIN;
 DO $$
 DECLARE
   v_target_id uuid;
-  v_expected_id constant uuid := '2c9ad9be-e118-4b45-a7ff-5afce71fb79a';
-  v_target_email constant text := 'lauragomezromero27@gmail.com';
+  v_expected_id constant uuid := '00000000-0000-4000-8000-00000000d3b0';
+  v_target_email constant text := 'demo-target@example.com';
 BEGIN
   SELECT a.id
   INTO v_target_id
@@ -36,8 +37,8 @@ END $$;
 WITH target_user AS (
   SELECT a.id
   FROM auth.users a
-  WHERE a.id = '2c9ad9be-e118-4b45-a7ff-5afce71fb79a'::uuid
-    AND lower(trim(a.email)) = lower(trim('lauragomezromero27@gmail.com'))
+  WHERE a.id = '00000000-0000-4000-8000-00000000d3b0'::uuid
+    AND lower(trim(a.email)) = lower(trim('demo-target@example.com'))
 ),
 eligible_males AS (
   SELECT u.id AS from_user_id
@@ -69,8 +70,8 @@ SELECT
   (
     SELECT count(*)
     FROM public.interactions i
-    WHERE i.to_user = '2c9ad9be-e118-4b45-a7ff-5afce71fb79a'::uuid
+    WHERE i.to_user = '00000000-0000-4000-8000-00000000d3b0'::uuid
       AND i.action = 'like'
-  ) AS total_likes_hacia_laura;
+  ) AS total_likes_hacia_objetivo;
 
 COMMIT;

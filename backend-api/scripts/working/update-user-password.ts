@@ -1,9 +1,10 @@
 /**
- * Script para actualizar la contraseña de un usuario específico
- * 
- * Este script actualiza la contraseña del usuario testia1@example.com a 123456
- * 
- * Uso:
+ * One-off maintenance script: set a user's password in Supabase Auth (admin API).
+ *
+ * Never hardcode credentials. Set TARGET_EMAIL and NEW_PASSWORD in backend-api/.env
+ * or export them only for the session.
+ *
+ * Usage (from backend-api):
  *   npx tsx scripts/working/update-user-password.ts
  */
 
@@ -28,13 +29,28 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-const TARGET_EMAIL = 'lauragomezromero27@gmail.com';
-const NEW_PASSWORD = 'qwerty123';
+const targetEmailCandidate = process.env.TARGET_EMAIL?.trim();
+const newPasswordCandidate = process.env.NEW_PASSWORD;
+
+if (
+  !targetEmailCandidate ||
+  !newPasswordCandidate ||
+  newPasswordCandidate.length < 8
+) {
+  console.error(
+    '❌ Set TARGET_EMAIL and NEW_PASSWORD (min 8 chars) in .env or the environment before running.'
+  );
+  process.exit(1);
+}
+
+/** Validated inputs (never logged in full — password omitted). */
+const targetEmail = targetEmailCandidate;
+const newPassword = newPasswordCandidate;
 
 async function updateUserPassword() {
   console.log('🔄 Iniciando actualización de contraseña...\n');
-  console.log(`📧 Email objetivo: ${TARGET_EMAIL}`);
-  console.log(`🔑 Nueva contraseña: ${NEW_PASSWORD}\n`);
+  console.log(`📧 Email objetivo: ${targetEmail}`);
+  console.log('🔑 Nueva contraseña: (no se muestra en consola)\n');
 
   const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
     auth: {
@@ -45,7 +61,7 @@ async function updateUserPassword() {
 
   // Buscar usuario por email (con paginación)
   console.log('📥 Buscando usuario...');
-  const normalizedSearchEmail = TARGET_EMAIL.toLowerCase().trim();
+  const normalizedSearchEmail = targetEmail.toLowerCase().trim();
   let page = 1;
   const perPage = 1000;
   let user: { id: string; email?: string; user_metadata?: any } | null = null;
@@ -83,7 +99,7 @@ async function updateUserPassword() {
   }
 
   if (!user) {
-    console.error(`❌ Error: No se encontró el usuario con email ${TARGET_EMAIL}`);
+    console.error(`❌ Error: No se encontró el usuario con email ${targetEmail}`);
     process.exit(1);
   }
 
@@ -97,7 +113,7 @@ async function updateUserPassword() {
   const { data: updateData, error: updateError } = await supabase.auth.admin.updateUserById(
     user.id,
     {
-      password: NEW_PASSWORD,
+      password: newPassword,
     }
   );
 
@@ -114,8 +130,8 @@ async function updateUserPassword() {
   console.log('✅ Contraseña actualizada correctamente!\n');
   console.log('='.repeat(60));
   console.log('📊 Resumen:');
-  console.log(`   Email: ${TARGET_EMAIL}`);
-  console.log(`   Nueva contraseña: ${NEW_PASSWORD}`);
+  console.log(`   Email: ${targetEmail}`);
+  console.log('   Nueva contraseña: (redacted)');
   console.log(`   Estado: ✅ Actualizado`);
   console.log('='.repeat(60));
   console.log('\n✨ Actualización completada exitosamente!');

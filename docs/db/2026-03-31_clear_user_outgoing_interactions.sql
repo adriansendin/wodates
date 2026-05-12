@@ -1,20 +1,22 @@
 -- Borra todos los likes y passes (dislikes) que un usuario ha DADO (salientes).
+-- Replace placeholders before running (no real identities in repo).
 -- Efecto: esas personas vuelven a poder salir en Discover para ese usuario
 -- (SupabaseFeedService excluye to_user cuando from_user = yo y action like/pass).
 --
 -- NO borra interacciones entrantes (otros -> este usuario).
 --
+-- Replace placeholders before running in a real project (no real identities in repo).
 -- Usuario objetivo (mismo que en 2026-03-31_force_likes_for_laura.sql):
--- - Email: lauragomezromero27@gmail.com
--- - ID: 2c9ad9be-e118-4b45-a7ff-5afce71fb79a
+-- - Email: demo-target@example.com
+-- - ID: 00000000-0000-4000-8000-00000000d3b0
 
 BEGIN;
 
 DO $$
 DECLARE
   v_target_id uuid;
-  v_expected_id constant uuid := '2c9ad9be-e118-4b45-a7ff-5afce71fb79a';
-  v_target_email constant text := 'lauragomezromero27@gmail.com';
+  v_expected_id constant uuid := '00000000-0000-4000-8000-00000000d3b0';
+  v_target_email constant text := 'demo-target@example.com';
 BEGIN
   SELECT a.id
   INTO v_target_id
@@ -37,7 +39,7 @@ END $$;
 
 WITH deleted AS (
   DELETE FROM public.interactions i
-  WHERE i.from_user = '2c9ad9be-e118-4b45-a7ff-5afce71fb79a'::uuid
+  WHERE i.from_user = '00000000-0000-4000-8000-00000000d3b0'::uuid
     AND i.action IN ('like', 'pass')
   RETURNING i.id, i.action, i.to_user
 )
