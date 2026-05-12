@@ -25,6 +25,9 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
+# Local copies of secrets (e.g. backups); never commit
+env_/
+
 # ===========================================
 # BUILD OUTPUTS
 # ===========================================

@@ -81,40 +81,13 @@ ai-service/
 
 ## Configuración
 
-El servicio se configura mediante variables de entorno (con valores por defecto razonables):
+El servicio lee variables de entorno desde un archivo `.env` en la raíz de `ai-service` (véase `app/core/settings.py`). Plantilla versionada:
 
 ```bash
-# LLM Provider (for chat/text generation)
-LLM_PROVIDER=gemini  # Options: 'ollama', 'gemini', 'openai'
-
-# Embeddings Provider (can be different from LLM provider)
-EMBEDDINGS_PROVIDER=openai  # Options: 'ollama', 'gemini', 'openai'
-# If not set, defaults to LLM_PROVIDER for backward compatibility
-
-# Ollama Configuration
-OLLAMA_URL=http://localhost:11434
-AI_MODEL_DOC_LOVE=llama3.2:1b
-AI_MODEL_AFFINITY=gemma3:1b
-OLLAMA_TIMEOUT=60000
-
-# Embeddings
-OLLAMA_EMBEDDING_MODEL=yxchia/multilingual-e5-base
-OLLAMA_EMBEDDING_TIMEOUT=30000
-EMBEDDING_DIMENSION=1536  # 1536 for OpenAI text-embedding-3-small, 768 for multilingual-e5-base
-
-# OpenAI Configuration (for embeddings)
-OPENAI_API_KEY=sk-...
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-OPENAI_TIMEOUT=60000
-
-# Gemini Configuration (for chat/text)
-GEMINI_API_KEY=...
-GEMINI_MODEL=gemini-2.0-flash-lite
-GEMINI_TIMEOUT=60000
-
-# CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+cp env.example .env
 ```
+
+Edita `.env` con tus claves y modelos. Resumen de proveedores:
 
 ### Provider Selection
 

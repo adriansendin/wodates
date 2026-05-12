@@ -32,16 +32,17 @@ Once the server is running, visit:
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and configure (or create `.env` from scratch). Required variables include:
+Copy `env.example` to `.env` and configure (or create `.env` from scratch). Required variables include:
 
 - **DOC_LOVE_ID** – UUID of the Doc Love bot user in `auth.users` / `public.users`. Must be set and valid UUID; server fails fast at startup if missing or invalid.
-- **SUPABASE_URL**, **SUPABASE_SERVICE_ROLE_KEY** – Supabase project credentials.
+- **SUPABASE_URL**, **SUPABASE_ANON_KEY**, **SUPABASE_SERVICE_ROLE_KEY** – Supabase project credentials.
 - **AI_PROVIDER** – Must be `ai-service` (backend talks only to ai-service).
+- **AI_SERVICE_BASE_URL** (or **AI_SERVICE_URL**) – Base URL of the Python ai-service (must match the port you run uvicorn on).
 
 Example:
 
 ```bash
-cp .env.example .env
+cp env.example .env
 ```
 
 ## Database migrations
